@@ -12,6 +12,7 @@ import { isPhone, orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Card } from "../shared/Display";
 import { Field, FormError, Input } from "../shared/Field";
+import { PhoneInput } from "../shared/PhoneInput";
 import { QueryState } from "../shared/States";
 
 export function ProfileSettings() {
@@ -38,9 +39,7 @@ export function ProfileSettings() {
             {(p) => <Input {...p} value={fullName} onChange={(e) => setFullName(e.target.value)} data-cy="me-name" />}
           </Field>
           <Field label="Phone">
-            {(p) => (
-              <Input {...p} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} data-cy="me-phone" />
-            )}
+            {(p) => <PhoneInput {...p} value={phone} onChange={setPhone} data-cy="me-phone" />}
           </Field>
         </div>
         <p className="text-sm text-fg-muted">

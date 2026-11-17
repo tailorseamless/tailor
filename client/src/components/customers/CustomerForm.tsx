@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { useCreateCustomer, useUpdateCustomer } from "../../hooks/useCustomers";
@@ -10,6 +10,7 @@ import { emailOptional, orNull, phoneRequired } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Field, FormError, Input, Select, Textarea } from "../shared/Field";
 import { Modal } from "../shared/Modal";
+import { PhoneInput } from "../shared/PhoneInput";
 
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter the customer's name").max(150),
@@ -125,7 +126,21 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
           {(p) => <Input {...p} autoComplete="off" {...form.register("fullName")} data-cy="customer-name" />}
         </Field>
         <Field label="Phone" error={errors.phone?.message}>
-          {(p) => <Input {...p} type="tel" inputMode="tel" {...form.register("phone")} data-cy="customer-phone" />}
+          {(p) => (
+            <Controller
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <PhoneInput
+                  {...p}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  data-cy="customer-phone"
+                />
+              )}
+            />
+          )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Email (optional)" error={errors.email?.message}>

@@ -6,6 +6,7 @@ import { keysOf, ROLE } from "../../utils/labels";
 import { isPhone, orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Field, FormError, Input, Select } from "../shared/Field";
+import { PhoneInput } from "../shared/PhoneInput";
 import { Modal } from "../shared/Modal";
 
 const ROLES = keysOf(ROLE).filter((r): r is AssignableRole => r !== "owner");
@@ -84,15 +85,7 @@ export function MemberForm({ member, onClose }: { member?: TeamMember; onClose: 
             )}
           </Field>
           <Field label="Phone (optional)">
-            {(p) => (
-              <Input
-                {...p}
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                data-cy="member-phone"
-              />
-            )}
+            {(p) => <PhoneInput {...p} value={phone} onChange={setPhone} data-cy="member-phone" />}
           </Field>
         </div>
         {!isOwner && (

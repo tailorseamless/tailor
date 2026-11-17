@@ -12,6 +12,7 @@ import {
 import { Button } from "../../components/shared/Button";
 import { Card } from "../../components/shared/Display";
 import { Field, FormError, Input } from "../../components/shared/Field";
+import { PhoneInput } from "../../components/shared/PhoneInput";
 import { FullPageSpinner } from "../../components/shared/States";
 import { useBook, useBookingPage } from "../../hooks/useAccount";
 import { errorMessage, statusCode } from "../../utils/errors";
@@ -99,16 +100,7 @@ export default function BookingPage() {
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Phone">
-                {(p) => (
-                  <Input
-                    {...p}
-                    type="tel"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    data-cy="booking-phone"
-                  />
-                )}
+                {(p) => <PhoneInput {...p} value={phone} onChange={setPhone} data-cy="booking-phone" />}
               </Field>
               <Field label="Email (optional)" hint="So we can confirm by email.">
                 {(p) => (

@@ -1,21 +1,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../../components/shared/Button";
 import { Field, FormError, Input } from "../../components/shared/Field";
+import { PhoneInput } from "../../components/shared/PhoneInput";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRegisterBusiness } from "../../hooks/useAccount";
 import { errorMessage } from "../../utils/errors";
 import { browserTimeZone } from "../../utils/timezone";
+import { phoneOptional } from "../../utils/validation";
 
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your name").max(120),
   businessName: z.string().trim().min(2, "Enter your business name").max(120),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .refine((v) => !v || /^\+?[\d\s-]{7,20}$/.test(v), "Enter a valid phone number"),
+  phone: phoneOptional,
 });
 type Values = z.infer<typeof schema>;
 
@@ -57,13 +55,33 @@ export function RegisterBusinessForm() {
         )}
       </Field>
       <Field label="Business phone (optional)" error={errors.phone?.message}>
-        {(p) => <Input {...p} type="tel" autoComplete="tel" {...form.register("phone")} data-cy="register-phone" />}
+        {(p) => (
+          <Controller
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <PhoneInput
+                {...p}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                data-cy="register-phone"
+              />
+            )}
+          />
+        )}
       </Field>
       <Button type="submit" className="w-full" loading={register.isPending} data-cy="register-submit">
         Create my business
       </Button>
-      <Button variant="ghost" className="w-full" onClick={() => void auth.signOut()} data-cy="register-sign-out">
-        Sign out ({auth.user?.email})
+      <Button
+        variant="ghost"
+        className="w-full min-w-0"
+        onClick={() => void auth.signOut()}
+        title={auth.user?.email ?? undefined}
+        data-cy="register-sign-out"
+      >
+        <span className="truncate">Sign out ({auth.user?.email})</span>
       </Button>
     </form>
   );

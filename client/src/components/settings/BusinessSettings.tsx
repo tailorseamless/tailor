@@ -10,6 +10,7 @@ import { isPhone, orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Card } from "../shared/Display";
 import { Field, FormError, Input, Select, Toggle } from "../shared/Field";
+import { PhoneInput } from "../shared/PhoneInput";
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/;
 const suggestSlug = (name: string) =>
@@ -71,15 +72,7 @@ export function BusinessSettings() {
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Phone">
-              {(p) => (
-                <Input
-                  {...p}
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => set("phone", e.target.value)}
-                  data-cy="biz-phone"
-                />
-              )}
+              {(p) => <PhoneInput {...p} value={form.phone} onChange={(v) => set("phone", v)} data-cy="biz-phone" />}
             </Field>
             <Field label="Email">
               {(p) => (

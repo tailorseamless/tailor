@@ -8,6 +8,7 @@ import { isPhone, orNull } from "../../utils/validation";
 import { Button, IconButton } from "../shared/Button";
 import { Badge, Card } from "../shared/Display";
 import { Field, FormError, Input, Select } from "../shared/Field";
+import { PhoneInput } from "../shared/PhoneInput";
 import { Modal } from "../shared/Modal";
 import { EmptyState, QueryState } from "../shared/States";
 
@@ -115,9 +116,7 @@ function BranchForm({ branch, onClose }: { branch?: Branch; onClose: () => void 
           )}
         </Field>
         <Field label="Phone (optional)">
-          {(p) => (
-            <Input {...p} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} data-cy="branch-phone" />
-          )}
+          {(p) => <PhoneInput {...p} value={phone} onChange={setPhone} data-cy="branch-phone" />}
         </Field>
         {branch && (
           <Field label="Status" hint="Closed branches keep their history but can't take new work.">
