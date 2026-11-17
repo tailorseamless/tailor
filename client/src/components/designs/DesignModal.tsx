@@ -1,7 +1,7 @@
 import { ImagePlus, Star, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "../../contexts/ToastContext";
-import { useDesign, useDesignActions, useDesignCategories } from "../../hooks/useTeam";
+import { useDesign, useDesignActions } from "../../hooks/useTeam";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { Design, DesignVisibility } from "../../types/workspace.types";
 import { cn } from "../../utils/cn";
@@ -11,9 +11,36 @@ import { Button } from "../shared/Button";
 import { Field, FormError, Input, Textarea, Toggle } from "../shared/Field";
 import { ConfirmDialog, Modal } from "../shared/Modal";
 import { Spinner } from "../shared/States";
+import { CategoryPicker } from "./CategoryPicker";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_PICTURES = 12;
+const MAX_PER_UPLOAD = 5;
+
+/** A picture chosen for a design that isn't saved yet. */
+function PendingThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    const made = URL.createObjectURL(file);
+    setUrl(made);
+    return () => URL.revokeObjectURL(made);
+  }, [file]);
+  return (
+    <div className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-subtle">
+      {url && <img src={url} alt={file.name} className="size-full object-cover" />}
+      <button
+        type="button"
+        className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+        onClick={onRemove}
+        aria-label={`Don't add ${file.name}`}
+        data-cy="design-pending-remove"
+      >
+        <Trash2 className="size-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
 
 /** Create a design, or view and edit one with its pictures. */
 export function DesignModal({ designId, onClose }: { designId: string | "new"; onClose: () => void }) {
@@ -44,7 +71,6 @@ function DesignEditor({
   const { can } = useWorkspace();
   const toast = useToast();
   const actions = useDesignActions();
-  const categories = useDesignCategories();
   const canEdit = can("design.manage");
   const [name, setName] = useState(design?.name ?? "");
   const [category, setCategory] = useState(design?.category ?? "");
@@ -53,8 +79,9 @@ function DesignEditor({
   const [favourite, setFavourite] = useState(design?.isFavourite ?? false);
   const [problem, setProblem] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [pending, setPending] = useState<File[]>([]);
   const input = useRef<HTMLInputElement>(null);
-  const mutation = design ? actions.update : actions.create;
+  const mutation = design ? actions.update : actions.createWithPictures;
 
   const save = () => {
     setProblem(null);
@@ -68,18 +95,49 @@ function DesignEditor({
     };
     if (design)
       actions.update.mutate({ id: design.id, input: body }, { onSuccess: () => toast.success("Design saved") });
-    // A new design stays open so pictures can be added straight away.
-    else actions.create.mutate(body, { onSuccess: (created) => onCreated(created.id) });
+    else
+      actions.createWithPictures.mutate(
+        { input: body, files: pending },
+        {
+          onSuccess: ({ design: created, uploaded, uploadError }) => {
+            if (!uploadError) {
+              toast.success(
+                uploaded
+                  ? `${created.name} added with ${uploaded} picture${uploaded === 1 ? "" : "s"}`
+                  : `${created.name} added`,
+              );
+              return onClose();
+            }
+            // The design is saved; keep it open so the missing pictures can be added again.
+            toast.error(
+              `${created.name} was saved, but ${uploaded ? `only ${uploaded} of ${pending.length}` : "none of the"} pictures uploaded: ${errorMessage(uploadError)}`,
+            );
+            onCreated(created.id);
+          },
+        },
+      );
   };
 
   const pick = (list: FileList | null) => {
     const files = Array.from(list ?? []);
     if (input.current) input.current.value = "";
-    if (!design || !files.length) return;
+    if (!files.length) return;
     const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
     if (bad) return toast.error(`${bad.name} isn't a JPG, PNG or WebP photo under 5 MB.`);
-    if (files.length > 5) return toast.error("Add up to 5 pictures at a time.");
-    actions.addImages.mutate({ id: design.id, files });
+    const room = MAX_PICTURES - (design ? design.images.length : pending.length);
+    if (files.length > room) {
+      return toast.error(
+        room > 0
+          ? `A design can have ${MAX_PICTURES} pictures. You can add ${room} more.`
+          : `A design can have ${MAX_PICTURES} pictures.`,
+      );
+    }
+    if (design) {
+      if (files.length > MAX_PER_UPLOAD) return toast.error(`Add up to ${MAX_PER_UPLOAD} pictures at a time.`);
+      actions.addImages.mutate({ id: design.id, files });
+    } else {
+      setPending([...pending, ...files]);
+    }
   };
 
   return (
@@ -105,7 +163,11 @@ function DesignEditor({
               {design ? "Close" : "Cancel"}
             </Button>
             <Button onClick={save} loading={mutation.isPending} data-cy="design-save">
-              {design ? "Save" : "Create, then add pictures"}
+              {design
+                ? "Save"
+                : pending.length
+                  ? `Create with ${pending.length} picture${pending.length === 1 ? "" : "s"}`
+                  : "Create design"}
             </Button>
           </>
         ) : undefined
@@ -113,72 +175,68 @@ function DesignEditor({
     >
       <div className="space-y-4">
         <FormError message={problem ?? (mutation.error ? errorMessage(mutation.error) : null)} />
-        {design && (
-          <div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {design.images.map((img) => (
-                <div key={img.id} className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-subtle">
-                  <img src={img.url} alt={img.originalName} className="size-full object-cover" loading="lazy" />
-                  {canEdit && (
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
-                      onClick={() => actions.removeImage.mutate({ id: design.id, imageId: img.id })}
-                      aria-label={`Remove ${img.originalName}`}
-                      data-cy="design-image-remove"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => input.current?.click()}
-                  className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong text-sm text-fg-muted hover:bg-subtle"
-                  disabled={actions.addImages.isPending}
-                  data-cy="design-image-add"
-                >
-                  <ImagePlus className="size-5" aria-hidden />
-                  {actions.addImages.isPending ? "Uploading…" : "Add pictures"}
-                </button>
-              )}
-            </div>
-            <input
-              ref={input}
-              type="file"
-              accept={TYPES.join(",")}
-              multiple
-              hidden
-              onChange={(e) => pick(e.target.files)}
-              data-cy="design-image-input"
-            />
+        <div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {design
+              ? design.images.map((img) => (
+                  <div key={img.id} className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-subtle">
+                    <img src={img.url} alt={img.originalName} className="size-full object-cover" loading="lazy" />
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        onClick={() => actions.removeImage.mutate({ id: design.id, imageId: img.id })}
+                        aria-label={`Remove ${img.originalName}`}
+                        data-cy="design-image-remove"
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                ))
+              : pending.map((file, index) => (
+                  <PendingThumb
+                    key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                    file={file}
+                    onRemove={() => setPending(pending.filter((_, i) => i !== index))}
+                  />
+                ))}
+            {canEdit && (design ? design.images.length : pending.length) < MAX_PICTURES && (
+              <button
+                type="button"
+                onClick={() => input.current?.click()}
+                className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong text-sm text-fg-muted hover:bg-subtle"
+                disabled={actions.addImages.isPending || mutation.isPending}
+                data-cy="design-image-add"
+              >
+                <ImagePlus className="size-5" aria-hidden />
+                {actions.addImages.isPending ? "Uploading…" : "Add pictures"}
+              </button>
+            )}
           </div>
-        )}
+          {!design && (
+            <p className="mt-2 text-xs text-fg-subtle">
+              {pending.length
+                ? `${pending.length} picture${pending.length === 1 ? "" : "s"} will be added when you create the design.`
+                : "Optional. JPG, PNG or WebP, up to 5 MB each."}
+            </p>
+          )}
+          <input
+            ref={input}
+            type="file"
+            accept={TYPES.join(",")}
+            multiple
+            hidden
+            onChange={(e) => pick(e.target.files)}
+            data-cy="design-image-input"
+          />
+        </div>
         <fieldset disabled={!canEdit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Name">
               {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} data-cy="design-name" />}
             </Field>
-            <Field label="Category (optional)" hint="e.g. Agbada, Bridal, Kaftan">
-              {(p) => (
-                <>
-                  <Input
-                    {...p}
-                    list="design-categories"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    data-cy="design-category"
-                  />
-                  <datalist id="design-categories">
-                    {(categories.data ?? []).map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </>
-              )}
-            </Field>
+            <CategoryPicker value={category} onChange={setCategory} />
           </div>
           <Field label="Description (optional)">
             {(p) => (

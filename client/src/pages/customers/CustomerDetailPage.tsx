@@ -63,7 +63,7 @@ export default function CustomerDetailPage() {
               </>
             }
           />
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="space-y-5 lg:col-span-2">
               <MeasurementsCard customerId={c.id} />
               {can("order.read") && (

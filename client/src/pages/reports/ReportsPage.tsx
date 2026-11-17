@@ -2,8 +2,8 @@ import { BranchFilter, useBranchFilter } from "../../components/shared/BranchFil
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/shared/Button";
+import { DatePicker } from "../../components/shared/DatePicker";
 import { Card, FilterChips, PageHeader, StatCard } from "../../components/shared/Display";
-import { Input } from "../../components/shared/Field";
 import { EmptyState, QueryState } from "../../components/shared/States";
 import { useExport, useGarmentSales, useIncomeExpenses } from "../../hooks/useOperations";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -68,24 +68,26 @@ export default function ReportsPage() {
         />
         {preset === "custom" && (
           <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              className="w-auto"
+            <DatePicker
+              className="w-auto min-w-40"
               aria-label="From"
-              value={custom.from}
+              value={custom.from ?? ""}
               max={custom.to}
-              onChange={(e) => setCustom({ ...custom, from: e.target.value })}
+              onChange={(from) => from && setCustom({ ...custom, from })}
+              timeZone={timeZone}
+              clearable={false}
               data-cy="report-from"
             />
             <span className="text-fg-subtle">to</span>
-            <Input
-              type="date"
-              className="w-auto"
+            <DatePicker
+              className="w-auto min-w-40"
               aria-label="To"
-              value={custom.to}
+              value={custom.to ?? ""}
               min={custom.from}
               max={today}
-              onChange={(e) => setCustom({ ...custom, to: e.target.value })}
+              onChange={(to) => to && setCustom({ ...custom, to })}
+              timeZone={timeZone}
+              clearable={false}
               data-cy="report-to"
             />
           </div>
@@ -113,7 +115,7 @@ export default function ReportsPage() {
                 />
                 <StatCard label="Orders taken" value={money(r.orderValue)} hint="Value of new orders" />
               </div>
-              <div className="grid gap-5 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <Card title="Month by month">
                   {r.byMonth.length ? (
                     <div className="overflow-x-auto">

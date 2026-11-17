@@ -40,7 +40,7 @@ export default function TeamPage() {
           )
         }
       />
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <QueryState query={query} loadingLabel="Loading your team">
             {({ data }) => (

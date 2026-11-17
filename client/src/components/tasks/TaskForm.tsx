@@ -7,6 +7,7 @@ import { errorMessage } from "../../utils/errors";
 import { keysOf, TASK_STAGE } from "../../utils/labels";
 import { orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
+import { DatePicker } from "../shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../shared/Field";
 import { Modal } from "../shared/Modal";
 
@@ -115,15 +116,7 @@ export function TaskForm({ onClose, task, orderId }: Props) {
             )}
           </Field>
           <Field label="Due (optional)">
-            {(p) => (
-              <Input
-                {...p}
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                data-cy="task-due"
-              />
-            )}
+            {(p) => <DatePicker {...p} value={dueDate} onChange={setDueDate} data-cy="task-due" />}
           </Field>
         </div>
         <Field label="Notes (optional)">

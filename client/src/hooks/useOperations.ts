@@ -8,6 +8,7 @@ import {
 import { newIdempotencyKey } from "../transport/http";
 import type {
   AdminBusiness,
+  AdminBusinessInput,
   AdminUser,
   ExpenseFilters,
   ExpenseInput,
@@ -162,5 +163,10 @@ export function useAdminActions() {
       adminEndpoints.setUserStatus(vars.id, vars.status, vars.reason),
     { invalidate: [admin], success: (_r, v) => (v.status === "disabled" ? "Account disabled" : "Account enabled") },
   );
-  return { businessStatus, userStatus };
+  // The form shows the server's field errors itself.
+  const updateBusiness = useApiMutation(
+    (vars: { id: string; input: AdminBusinessInput }) => adminEndpoints.updateBusiness(vars.id, vars.input),
+    { invalidate: [admin], success: "Business updated", toastError: false },
+  );
+  return { businessStatus, userStatus, updateBusiness };
 }

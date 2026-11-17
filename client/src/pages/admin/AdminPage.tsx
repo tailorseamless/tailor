@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { BusinessEditModal } from "../../components/admin/BusinessEditModal";
 import { Button } from "../../components/shared/Button";
 import { Badge, Card, FilterChips, PageHeader, Pagination, StatCard } from "../../components/shared/Display";
 import { PromptDialog } from "../../components/shared/Modal";
@@ -27,6 +28,7 @@ export default function AdminPage() {
   const users = useAdminUsers({ search: search || undefined, page });
   const { businessStatus, userStatus } = useAdminActions();
   const [pending, setPending] = useState<Pending | null>(null);
+  const [editing, setEditing] = useState<AdminBusiness | null>(null);
 
   const confirm = (reason: string) => {
     if (!pending) return;
@@ -119,6 +121,9 @@ export default function AdminPage() {
                         <Badge tone={b.status === "active" ? "success" : "danger"}>
                           {b.status === "active" ? "Active" : "Suspended"}
                         </Badge>
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(b)} data-cy="admin-business-edit">
+                          Edit
+                        </Button>
                         <Button
                           size="sm"
                           variant={b.status === "active" ? "secondary" : "primary"}
@@ -195,6 +200,7 @@ export default function AdminPage() {
           </QueryState>
         )}
       </Card>
+      {editing && <BusinessEditModal business={editing} onClose={() => setEditing(null)} />}
       <PromptDialog
         open={pending !== null}
         onClose={() => setPending(null)}

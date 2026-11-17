@@ -122,7 +122,7 @@ export function AppShell() {
             data-cy={`tab-${label.toLowerCase()}`}
             className={({ isActive }) =>
               cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
                 isActive ? "font-medium text-link" : "text-fg-subtle",
               )
             }
@@ -135,7 +135,7 @@ export function AppShell() {
           <Menu.Root>
             <Menu.Trigger
               className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[11px]",
                 moreActive ? "font-medium text-link" : "text-fg-subtle",
               )}
               data-cy="tab-more"

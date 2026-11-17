@@ -1,6 +1,6 @@
 import { AppError } from "../../../shared/errors/AppError";
 import { runInTransaction } from "../../../shared/repositories/transaction";
-import { hasTrustedEmail, type FirebaseIdentity } from "../../../shared/services/access.service";
+import { effectivePlatformRole, hasTrustedEmail, type FirebaseIdentity } from "../../../shared/services/access.service";
 import { ActivityService } from "../../activity/services/activity.service";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import { MemberRepository } from "../../businesses/repositories/member.repository";
@@ -26,9 +26,14 @@ export class AuthService {
     private readonly templates = MeasurementTemplateService.Instance,
   ) {}
 
+  /** The account as the app sees it: a person named in PLATFORM_ADMIN_EMAILS shows up as a platform admin. */
+  private describeFor(identity: FirebaseIdentity, user: UserRecord): Promise<MeDTO> {
+    return this.userService.describe({ ...user, platformRole: effectivePlatformRole(identity, user.platformRole) });
+  }
+
   /** GET /auth/me — who am I, which business, what may I do. */
   async me(identity: FirebaseIdentity): Promise<MeDTO> {
-    return this.userService.describe(await this.resolveOrLink(identity));
+    return this.describeFor(identity, await this.resolveOrLink(identity));
   }
 
   /**
@@ -110,6 +115,6 @@ export class AuthService {
     });
 
     this.userService.invalidate(user.id);
-    return this.userService.describe(user);
+    return this.describeFor(identity, user);
   }
 }

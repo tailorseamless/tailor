@@ -1,13 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { CustomerSelect, type PickedCustomer } from "../../components/shared/CustomerSelect";
 import { Button, IconButton } from "../../components/shared/Button";
 import { Card, PageHeader } from "../../components/shared/Display";
+import { DatePicker } from "../../components/shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../../components/shared/Field";
+import { MeasurementForm } from "../../components/customers/MeasurementForm";
 import { useCustomer, useMeasurements } from "../../hooks/useCustomers";
 import { useBranches, useDesigns } from "../../hooks/useTeam";
 import { newOrderKey, useCreateOrder } from "../../hooks/useOrders";
@@ -45,7 +47,7 @@ const blankItem: Values["items"][number] = {
 };
 
 export default function NewOrderPage() {
-  const { timeZone, currency } = useWorkspace();
+  const { timeZone, currency, can } = useWorkspace();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const preset = useCustomer(params.get("customer") ?? undefined);
@@ -71,7 +73,31 @@ export default function NewOrderPage() {
   const items = useFieldArray({ control: form.control, name: "items" });
   const watched = form.watch("items");
   const total = watched.reduce((sum, i) => sum + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
-  const latestMeasurement = customer ? measurements.data?.data[0] : undefined;
+  const savedMeasurements = customer ? (measurements.data?.data ?? []) : [];
+  const latestMeasurement = savedMeasurements[0];
+  const [measuringFor, setMeasuringFor] = useState<number | null>(null);
+
+  /** Why the dropdown is empty or off, and the way out: record measurements right here. */
+  const measurementHint = (index: number): ReactNode => {
+    if (!customer) return "Choose the customer above first. Their saved measurements appear here.";
+    if (measurements.isPending) return "Loading their measurements…";
+    const first = customer.fullName.split(" ")[0];
+    return (
+      <>
+        {savedMeasurements.length === 0 ? `No measurements saved for ${first} yet. ` : ""}
+        {can("measurement.record") && (
+          <button
+            type="button"
+            onClick={() => setMeasuringFor(index)}
+            className="text-link underline"
+            data-cy="order-record-measurements"
+          >
+            {savedMeasurements.length === 0 ? "Record them now" : "Record new measurements"}
+          </button>
+        )}
+      </>
+    );
+  };
 
   const submit = form.handleSubmit((values) => {
     if (!customer) return setCustomerError("Choose who the order is for");
@@ -107,7 +133,7 @@ export default function NewOrderPage() {
   return (
     <>
       <PageHeader back={{ to: "/orders", label: "Orders" }} title="New order" />
-      <form onSubmit={submit} className="grid gap-5 lg:grid-cols-3" noValidate>
+      <form onSubmit={submit} className="grid grid-cols-1 gap-5 lg:grid-cols-3" noValidate>
         <div className="space-y-5 lg:col-span-2">
           <Card className="space-y-4 p-4">
             <FormError message={create.error ? errorMessage(create.error) : null} />
@@ -116,6 +142,8 @@ export default function NewOrderPage() {
               onChange={(c) => {
                 setCustomer(c);
                 setCustomerError(undefined);
+                // Measurements belong to one customer: don't carry the last customer's onto this order.
+                form.getValues("items").forEach((_, i) => form.setValue(`items.${i}.measurementId`, ""));
               }}
               error={customerError}
             />
@@ -141,12 +169,20 @@ export default function NewOrderPage() {
               )}
               <Field label="Due date (optional)" hint="When the customer expects to collect.">
                 {(p) => (
-                  <Input
-                    {...p}
-                    type="date"
-                    min={todayIn(timeZone)}
-                    {...form.register("dueDate")}
-                    data-cy="order-due-date"
+                  <Controller
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <DatePicker
+                        {...p}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        min={todayIn(timeZone)}
+                        timeZone={timeZone}
+                        data-cy="order-due-date"
+                      />
+                    )}
                   />
                 )}
               </Field>
@@ -215,23 +251,37 @@ export default function NewOrderPage() {
                       </Select>
                     )}
                   </Field>
-                  <Field label="Measurements">
+                  <Field label="Measurements" hint={measurementHint(index)}>
                     {(p) => (
-                      <Select
-                        {...p}
-                        {...form.register(`items.${index}.measurementId`)}
-                        disabled={!customer}
-                        data-cy="order-item-measurement"
-                      >
-                        <option value="">None</option>
-                        {(measurements.data?.data ?? []).map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {formatDay(m.measuredOn)}
-                            {m.templateName ? ` · ${m.templateName}` : ""}
-                            {m.id === latestMeasurement?.id ? " (latest)" : ""}
-                          </option>
-                        ))}
-                      </Select>
+                      <Controller
+                        control={form.control}
+                        name={`items.${index}.measurementId`}
+                        render={({ field }) => (
+                          <Select
+                            {...p}
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            disabled={!customer}
+                            data-cy="order-item-measurement"
+                          >
+                            <option value="">
+                              {!customer
+                                ? "Choose a customer first"
+                                : savedMeasurements.length
+                                  ? "None"
+                                  : "None saved yet"}
+                            </option>
+                            {savedMeasurements.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {formatDay(m.measuredOn)}
+                                {m.templateName ? ` · ${m.templateName}` : ""}
+                                {m.id === latestMeasurement?.id ? " (latest)" : ""}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                      />
                     )}
                   </Field>
                   {(designs.data?.data.length ?? 0) > 0 && (
@@ -294,6 +344,16 @@ export default function NewOrderPage() {
           </Card>
         </div>
       </form>
+      {measuringFor !== null && customer && (
+        <MeasurementForm
+          open
+          onClose={() => setMeasuringFor(null)}
+          customerId={customer.id}
+          previous={latestMeasurement}
+          // Pick what was just recorded for the item that asked.
+          onSaved={(saved) => form.setValue(`items.${measuringFor}.measurementId`, saved.id, { shouldDirty: true })}
+        />
+      )}
     </>
   );
 }

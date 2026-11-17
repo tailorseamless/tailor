@@ -11,6 +11,7 @@ const admin = authorise("admin.platform");
 router.get("/admin/overview", admin, validate(s.noInputSchema), A.overview);
 router.get("/admin/businesses", admin, validate(s.listBusinessesSchema), A.businesses);
 router.get("/admin/businesses/:id", admin, validate(s.adminBusinessIdSchema), A.business);
+router.patch("/admin/businesses/:id", admin, validate(s.updateBusinessProfileSchema), A.updateBusinessProfile);
 router.post("/admin/businesses/:id/status", admin, validate(s.setBusinessStatusSchema), A.setBusinessStatus);
 router.get("/admin/users", admin, validate(s.listUsersSchema), A.users);
 router.post("/admin/users/:id/status", admin, validate(s.setUserStatusSchema), A.setUserStatus);

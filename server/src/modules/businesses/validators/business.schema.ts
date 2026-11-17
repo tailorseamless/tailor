@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { email, optionalText, phone, timeZone, trimmed } from "../../../shared/utils/zod";
+import { optionalText, phone, trimmed } from "../../../shared/utils/zod";
 import { MEASUREMENT_UNITS } from "../dto/business.dto";
 
 export const currencyCode = z
@@ -10,15 +10,17 @@ export const currencyCode = z
 
 export const getBusinessSchema = z.object({});
 
+/**
+ * What the OWNER may change. The business email, currency and time zone are not here on purpose:
+ * the email is the one the owner signed up with, and orders and money are recorded in the currency and
+ * zone chosen at sign-up. Only a platform admin can change them (PATCH /admin/businesses/:id).
+ */
 export const updateBusinessSchema = z.object({
   body: z
     .object({
       name: trimmed(2, 150),
-      email: email.nullable(),
       phone: phone.nullable(),
       address: optionalText(500),
-      currency: currencyCode,
-      timeZone,
       measurementUnit: z.enum(MEASUREMENT_UNITS),
       emailCustomerReminders: z.boolean(),
       emailReceipts: z.boolean(),

@@ -29,7 +29,6 @@ export function BusinessSettings() {
   const [form, setForm] = useState({
     name: business.name,
     phone: business.phone ?? "",
-    email: business.email ?? "",
     address: business.address ?? "",
     measurementUnit: business.measurementUnit,
     slug: business.slug ?? suggestSlug(business.name),
@@ -48,7 +47,6 @@ export function BusinessSettings() {
     const body: BusinessInput = patch ?? {
       name: form.name.trim(),
       phone: orNull(form.phone),
-      email: orNull(form.email),
       address: orNull(form.address),
       measurementUnit: form.measurementUnit,
     };
@@ -74,16 +72,8 @@ export function BusinessSettings() {
             <Field label="Phone">
               {(p) => <PhoneInput {...p} value={form.phone} onChange={(v) => set("phone", v)} data-cy="biz-phone" />}
             </Field>
-            <Field label="Email">
-              {(p) => (
-                <Input
-                  {...p}
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => set("email", e.target.value)}
-                  data-cy="biz-email"
-                />
-              )}
+            <Field label="Email" hint="The email you signed up with. It can't be changed here.">
+              {(p) => <Input {...p} type="email" value={business.email ?? ""} disabled readOnly data-cy="biz-email" />}
             </Field>
           </div>
           <Field label="Address" hint="Printed on receipts and shown on your booking page.">

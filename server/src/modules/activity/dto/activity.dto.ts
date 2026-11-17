@@ -49,6 +49,7 @@ export const AUDIT_ACTIONS = [
   "business.deleted",
   "admin.business_suspended",
   "admin.business_reactivated",
+  "admin.business_updated",
   "admin.user_disabled",
   "admin.user_enabled",
   "design.created",

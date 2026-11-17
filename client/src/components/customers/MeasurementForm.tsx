@@ -7,6 +7,7 @@ import type { MeasurementUnit } from "../../types/auth.types";
 import { errorMessage } from "../../utils/errors";
 import { todayIn } from "../../utils/timezone";
 import { Button, IconButton } from "../shared/Button";
+import { DatePicker } from "../shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../shared/Field";
 import { Modal } from "../shared/Modal";
 
@@ -31,9 +32,11 @@ interface Props {
   customerId: string;
   /** The latest set, so a re-measure starts from the old numbers. */
   previous?: Measurement;
+  /** Called with the saved set (e.g. so an order can pick it straight away). */
+  onSaved?: (measurement: Measurement) => void;
 }
 
-export function MeasurementForm({ open, onClose, customerId, previous }: Props) {
+export function MeasurementForm({ open, onClose, customerId, previous, onSaved }: Props) {
   const { business, timeZone } = useWorkspace();
   const templates = useMeasurementTemplates();
   const record = useRecordMeasurement(customerId);
@@ -75,7 +78,12 @@ export function MeasurementForm({ open, onClose, customerId, previous }: Props) 
         notes: notes.trim() || null,
         values: filled.map((r) => ({ name: r.name.trim(), value: Number(r.value) })),
       },
-      { onSuccess: close },
+      {
+        onSuccess: (saved) => {
+          onSaved?.(saved);
+          close();
+        },
+      },
     );
   };
 
@@ -134,12 +142,13 @@ export function MeasurementForm({ open, onClose, customerId, previous }: Props) 
           </Field>
           <Field label="Measured on">
             {(p) => (
-              <Input
+              <DatePicker
                 {...p}
-                type="date"
                 value={measuredOn}
+                onChange={setMeasuredOn}
                 max={todayIn(timeZone)}
-                onChange={(e) => setMeasuredOn(e.target.value)}
+                timeZone={timeZone}
+                clearable={false}
                 data-cy="measure-date"
               />
             )}

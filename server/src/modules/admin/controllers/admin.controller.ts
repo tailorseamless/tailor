@@ -8,6 +8,7 @@ import {
   listUsersSchema,
   setBusinessStatusSchema,
   setUserStatusSchema,
+  updateBusinessProfileSchema,
 } from "../validators/admin.schema";
 
 export class AdminController {
@@ -30,6 +31,12 @@ export class AdminController {
     const { params, body } = input(req, setBusinessStatusSchema);
     const business = await AdminService.Instance.setBusinessStatus(authUser(req), params.id, body.status, body.reason);
     res.json(ApiResponse.ok(body.status === "suspended" ? "Business suspended" : "Business reactivated", business));
+  }
+
+  static async updateBusinessProfile(req: Request, res: Response): Promise<void> {
+    const { params, body } = input(req, updateBusinessProfileSchema);
+    const business = await AdminService.Instance.updateBusinessProfile(authUser(req), params.id, body);
+    res.json(ApiResponse.ok("Business updated", business));
   }
 
   static async users(req: Request, res: Response): Promise<void> {

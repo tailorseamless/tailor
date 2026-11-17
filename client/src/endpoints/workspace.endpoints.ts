@@ -2,6 +2,7 @@ import { cleanParams, downloadFile, http, wrapCall, wrapPage, wrapUpload } from 
 import type { OrderImage } from "../types/order.types";
 import type {
   AdminBusiness,
+  AdminBusinessInput,
   AdminUser,
   Branch,
   BranchInput,
@@ -112,6 +113,8 @@ export const adminEndpoints = {
     wrapPage<AdminBusiness>(() => http.get("/admin/businesses", { params: cleanParams({ limit: 20, ...params }) })),
   setBusinessStatus: (id: string, status: AdminBusiness["status"], reason?: string) =>
     wrapCall<unknown>(() => http.post(`/admin/businesses/${id}/status`, { status, reason: reason || undefined })),
+  updateBusiness: (id: string, input: AdminBusinessInput) =>
+    wrapCall<AdminBusiness>(() => http.patch(`/admin/businesses/${id}`, input)),
   users: (params?: { search?: string; status?: string; page?: number }) =>
     wrapPage<AdminUser>(() => http.get("/admin/users", { params: cleanParams({ limit: 20, ...params }) })),
   setUserStatus: (id: string, status: AdminUser["status"], reason?: string) =>

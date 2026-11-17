@@ -9,7 +9,8 @@ import { PicturesCard } from "../../components/orders/PicturesCard";
 import { StatusModal } from "../../components/orders/StatusModal";
 import { Button } from "../../components/shared/Button";
 import { Badge, Card, Detail, PageHeader } from "../../components/shared/Display";
-import { Field, Input, Textarea } from "../../components/shared/Field";
+import { DatePicker } from "../../components/shared/DatePicker";
+import { Field, Textarea } from "../../components/shared/Field";
 import { Modal } from "../../components/shared/Modal";
 import { QueryState } from "../../components/shared/States";
 import { useOrder, useUpdateOrder } from "../../hooks/useOrders";
@@ -68,7 +69,7 @@ export default function OrderDetailPage() {
                 </>
               }
             />
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               <div className="space-y-5 lg:col-span-2">
                 <Card title="Items">
                   <ul className="divide-y divide-line">
@@ -141,6 +142,7 @@ export default function OrderDetailPage() {
 }
 
 function EditOrderModal({ order, onClose }: { order: OrderDetail; onClose: () => void }) {
+  const { timeZone } = useWorkspace();
   const update = useUpdateOrder(order.id);
   const [dueDate, setDueDate] = useState(order.dueDate ?? "");
   const [notes, setNotes] = useState(order.notes ?? "");
@@ -170,13 +172,7 @@ function EditOrderModal({ order, onClose }: { order: OrderDetail; onClose: () =>
       <div className="space-y-4">
         <Field label="Due date">
           {(p) => (
-            <Input
-              {...p}
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              data-cy="order-edit-due"
-            />
+            <DatePicker {...p} value={dueDate} onChange={setDueDate} timeZone={timeZone} data-cy="order-edit-due" />
           )}
         </Field>
         <Field label="Notes">

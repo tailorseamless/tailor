@@ -46,7 +46,9 @@ With both email providers configured and `EMAIL_FALLBACK=true`, a failed send is
 
 Render's **free** web services have no Shell, so run these one-off commands **from your own computer**, pointed at the production database. Use the database's *external* connection URL (Render Postgres → *External Database URL*; Aiven → *Service URI*), and put it only in your shell for that command — never in a committed file.
 
-- **Make yourself platform admin** (after registering your own business in the app):
+- **Make yourself platform admin**: set `PLATFORM_ADMIN_EMAILS` (Render → Environment) to your email, or several separated by commas, and redeploy. Register your own business in the app first and make sure your email is verified (Google sign-in counts). Remove an address and redeploy to take the access away. This is the recommended way; nothing is written to the database. Platform admins get a **Platform** screen where they can suspend businesses, disable people, and edit any business's details, including the email, currency and time zone its owner can't change. They never see a business's customers, orders or payments.
+
+  The older command-line way still works, and also keeps working for anyone granted that way:
 
   ```bash
   DATABASE_URL="<external production URL>" DATABASE_SSL=true FIREBASE_PROJECT_ID=<project> npm --workspace server run admin:grant -- --email you@example.com

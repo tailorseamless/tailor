@@ -245,11 +245,21 @@ export interface PlatformOverview {
   activity: { ordersLast30Days: number; appointmentsLast30Days: number; activeBusinessesLast30Days: number };
 }
 
+/** What a platform admin can change on any business, including what its owner can't (email, currency, time zone). */
+export type AdminBusinessInput = Partial<
+  Pick<AdminBusiness, "name" | "email" | "phone" | "address" | "currency" | "timeZone" | "measurementUnit">
+> & { reason?: string };
+
 export interface AdminBusiness {
   id: string;
   name: string;
   status: "active" | "suspended";
   currency: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  timeZone: string;
+  measurementUnit: "in" | "cm";
   createdAt: ISODate;
   deletionScheduledFor: ISODate | null;
   owner: { id: string; fullName: string; email: string } | null;

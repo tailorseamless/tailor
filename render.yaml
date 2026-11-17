@@ -55,6 +55,9 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      # Who is a platform admin: email addresses, comma-separated. Change it here and redeploy.
+      - key: PLATFORM_ADMIN_EMAILS
+        sync: false
 
       # ── Files
       - key: CLOUDINARY_URL

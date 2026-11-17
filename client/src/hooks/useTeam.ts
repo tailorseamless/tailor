@@ -78,6 +78,27 @@ export function useDesignActions() {
     success: "Design added",
     toastError: false,
   });
+  // Create and add pictures in one go. The server takes 5 pictures per request, so they go in batches.
+  // If a batch fails the design still exists, so the result says how far it got instead of throwing.
+  const createWithPictures = useApiMutation(
+    async (vars: { input: DesignInput; files: File[] }) => {
+      const design = await designEndpoints.create(vars.input);
+      let uploaded = 0;
+      let uploadError: unknown = null;
+      for (let i = 0; i < vars.files.length; i += 5) {
+        const batch = vars.files.slice(i, i + 5);
+        try {
+          await designEndpoints.addImages(design.id, batch);
+          uploaded += batch.length;
+        } catch (err) {
+          uploadError = err;
+          break;
+        }
+      }
+      return { design, uploaded, uploadError };
+    },
+    { invalidate: [designs], toastError: false },
+  );
   const update = useApiMutation(
     (vars: { id: string; input: DesignInput }) => designEndpoints.update(vars.id, vars.input),
     {
@@ -100,7 +121,7 @@ export function useDesignActions() {
     (vars: { id: string; imageId: string }) => designEndpoints.removeImage(vars.id, vars.imageId),
     { invalidate: [designs], success: "Picture removed" },
   );
-  return { create, update, remove, addImages, removeImage };
+  return { create, createWithPictures, update, remove, addImages, removeImage };
 }
 
 /** Scheduling deletion of the person's account or the whole business; both can be cancelled. */

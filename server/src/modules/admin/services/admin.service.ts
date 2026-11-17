@@ -3,10 +3,11 @@ import type { Paginated } from "../../../shared/pagination/paginate";
 import { runInTransaction } from "../../../shared/repositories/transaction";
 import type { Actor } from "../../../shared/services/access.service";
 import { ActivityService } from "../../activity/services/activity.service";
+import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import { UserService } from "../../users/services/user.service";
 import type { AdminBusinessDTO, AdminUserDTO, PlatformOverviewDTO } from "../dto/admin.dto";
 import { AdminRepository } from "../repositories/admin.repository";
-import type { ListBusinessesQuery, ListUsersQuery } from "../validators/admin.schema";
+import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } from "../validators/admin.schema";
 
 /**
  * The platform admin area. Every change is written to the audit log of the
@@ -20,6 +21,7 @@ export class AdminService {
     private readonly admin = AdminRepository.Instance,
     private readonly activity = ActivityService.Instance,
     private readonly userService = UserService.Instance,
+    private readonly businessRows = BusinessRepository.Instance,
   ) {}
 
   overview(): Promise<PlatformOverviewDTO> {
@@ -64,6 +66,37 @@ export class AdminService {
       );
     });
     this.userService.invalidateBusiness(id);
+    return this.business(id);
+  }
+
+  /**
+   * Changes a business's details, including the email, currency and time zone its owner can't
+   * touch. The audit entry (in that business's log) records what each field was and became.
+   */
+  async updateBusinessProfile(actor: Actor, id: string, input: UpdateBusinessProfileInput): Promise<AdminBusinessDTO> {
+    const { reason, ...changes } = input;
+    await runInTransaction(async (tx) => {
+      const before = await this.businessRows.findBusiness(id, tx);
+      if (!before) throw AppError.notFound("Business not found");
+      const updated = await this.businessRows.updateBusiness(id, changes, tx);
+      if (!updated) throw AppError.notFound("Business not found");
+      const fields = Object.keys(changes) as (keyof typeof changes)[];
+      await this.activity.audit(
+        {
+          businessId: id,
+          actorId: actor.id,
+          action: "admin.business_updated",
+          entityType: "business",
+          entityId: id,
+          payload: {
+            reason: reason ?? null,
+            changes: Object.fromEntries(fields.map((field) => [field, { from: before[field], to: updated[field] }])),
+          },
+        },
+        tx,
+      );
+    });
+    this.userService.invalidateBusiness(id); // the time zone is part of what signed-in people have cached
     return this.business(id);
   }
 

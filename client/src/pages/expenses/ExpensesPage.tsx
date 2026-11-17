@@ -2,6 +2,7 @@ import { BranchField, BranchFilter, defaultBranch, useBranchFilter } from "../..
 import { Pencil, Plus, Receipt, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button, IconButton } from "../../components/shared/Button";
+import { DatePicker } from "../../components/shared/DatePicker";
 import { Card, PageHeader, Pagination } from "../../components/shared/Display";
 import { Field, FormError, Input, Select } from "../../components/shared/Field";
 import { ConfirmDialog, Modal } from "../../components/shared/Modal";
@@ -231,12 +232,13 @@ function ExpenseForm({ expense, onClose }: { expense?: Expense; onClose: () => v
           </Field>
           <Field label="Date">
             {(p) => (
-              <Input
+              <DatePicker
                 {...p}
-                type="date"
-                max={todayIn(timeZone)}
                 value={spentOn}
-                onChange={(e) => setSpentOn(e.target.value)}
+                onChange={setSpentOn}
+                max={todayIn(timeZone)}
+                timeZone={timeZone}
+                clearable={false}
                 data-cy="expense-date"
               />
             )}

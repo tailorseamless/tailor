@@ -95,7 +95,6 @@ export type BusinessInput = Partial<
   Pick<
     Business,
     | "name"
-    | "email"
     | "phone"
     | "address"
     | "currency"

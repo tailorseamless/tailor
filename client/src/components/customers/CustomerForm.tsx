@@ -26,11 +26,18 @@ interface Props {
   open: boolean;
   onClose: () => void;
   customer?: Customer;
+  /** Starting values for a new customer (e.g. what was typed into a search that found nobody). */
+  initial?: { fullName?: string; phone?: string };
   onSaved?: (customer: Customer) => void;
+  /**
+   * When this form is opened from inside another task (taking an order), a phone number that
+   * already belongs to someone offers "use them" instead of a link that would leave the page.
+   */
+  onUseExisting?: (customer: { id: string; fullName: string; phone: string }) => void;
 }
 
 /** Add or edit a customer. A phone number someone else has asks before saving a second record. */
-export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
+export function CustomerForm({ open, onClose, customer, initial, onSaved, onUseExisting }: Props) {
   const create = useCreateCustomer();
   const update = useUpdateCustomer(customer?.id ?? "");
   const mutation = customer ? update : create;
@@ -38,8 +45,8 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     values: {
-      fullName: customer?.fullName ?? "",
-      phone: customer?.phone ?? "",
+      fullName: customer?.fullName ?? initial?.fullName ?? "",
+      phone: customer?.phone ?? initial?.phone ?? "",
       email: customer?.email ?? "",
       address: customer?.address ?? "",
       gender: customer?.gender ?? "",
@@ -99,17 +106,46 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
         </>
       }
     >
-      <form id="customer-form" onSubmit={submit} className="space-y-4" noValidate>
+      <form
+        id="customer-form"
+        onSubmit={(e) => {
+          // This form can open from inside another form (taking an order). React passes submit events
+          // through the modal to that form, which must not hear about it.
+          e.stopPropagation();
+          void submit(e);
+        }}
+        className="space-y-4"
+        noValidate
+      >
         <FormError message={showError} />
         {duplicate && (
           <div role="alert" className="rounded-lg bg-warning-bg p-3 text-sm text-warning-fg">
             <p>
               This phone number belongs to <strong>{duplicate.name}</strong>.{" "}
-              <Link to={`/customers/${duplicate.id}`} className="underline" onClick={close}>
-                Open their record
-              </Link>{" "}
-              or save anyway.
+              {onUseExisting ? (
+                "Use them for this, or save a separate customer."
+              ) : (
+                <>
+                  <Link to={`/customers/${duplicate.id}`} className="underline" onClick={close}>
+                    Open their record
+                  </Link>{" "}
+                  or save anyway.
+                </>
+              )}
             </p>
+            {onUseExisting && (
+              <Button
+                size="sm"
+                className="mt-2 mr-2"
+                onClick={() => {
+                  onUseExisting({ id: duplicate.id, fullName: duplicate.name, phone: form.getValues("phone") });
+                  close();
+                }}
+                data-cy="customer-use-existing"
+              >
+                Use {duplicate.name}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"

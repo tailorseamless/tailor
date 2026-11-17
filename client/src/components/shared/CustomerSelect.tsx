@@ -1,8 +1,10 @@
-import { Search, X } from "lucide-react";
+import { Search, UserPlus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { useCustomers } from "../../hooks/useCustomers";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import { cn } from "../../utils/cn";
+import { CustomerForm } from "../customers/CustomerForm";
 
 export interface PickedCustomer {
   id: string;
@@ -17,20 +19,51 @@ interface Props {
   label?: string;
 }
 
-/** Search-as-you-type picker over the business's customers. */
+/** What was typed, as the start of a new customer: digits are a phone number, anything else a name. */
+function startingValues(typed: string): { fullName?: string; phone?: string } {
+  const text = typed.trim();
+  if (!text) return {};
+  const looksLikePhone = /^[+\d][\d\s().-]*$/.test(text) && text.replace(/\D/g, "").length >= 4;
+  return looksLikePhone ? { phone: text } : { fullName: text };
+}
+
+/**
+ * Search-as-you-type picker over the business's customers. When nobody matches (or the right
+ * person isn't there yet), "Add a new customer" creates them on the spot and picks them.
+ */
 export function CustomerSelect({ value, onChange, error, label = "Customer" }: Props) {
   const id = useId();
+  const { can } = useWorkspace();
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState<{ fullName?: string; phone?: string } | null>(null);
   const search = useDebounce(term.trim(), 250);
   const results = useCustomers(
     { search: search || undefined, limit: 8, sort: search ? "name" : "recent" },
     open && !value,
   );
 
+  const pick = (customer: PickedCustomer) => {
+    onChange(customer);
+    setTerm("");
+    setOpen(false);
+  };
+
+  // Rendered in both states, so the form isn't pulled away the moment the new customer is picked.
+  const addForm = adding && (
+    <CustomerForm
+      open
+      initial={adding}
+      onClose={() => setAdding(null)}
+      onSaved={(c) => pick({ id: c.id, fullName: c.fullName, phone: c.phone })}
+      onUseExisting={pick}
+    />
+  );
+
   if (value) {
     return (
       <div className="space-y-1.5">
+        {addForm}
         <span className="block text-sm font-medium text-fg">{label}</span>
         <div className="flex items-center justify-between rounded-lg border border-control bg-subtle px-3 py-2">
           <div>
@@ -54,6 +87,7 @@ export function CustomerSelect({ value, onChange, error, label = "Customer" }: P
   const rows = results.data?.data ?? [];
   return (
     <div className="relative space-y-1.5">
+      {addForm}
       <label htmlFor={id} className="block text-sm font-medium text-fg">
         {label}
       </label>
@@ -110,6 +144,25 @@ export function CustomerSelect({ value, onChange, error, label = "Customer" }: P
               </button>
             </li>
           ))}
+          {!results.isPending && can("customer.create") && (
+            <li role="presentation" className={cn(rows.length > 0 && "border-t border-line")}>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-link hover:bg-subtle"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setAdding(startingValues(term));
+                  setOpen(false);
+                }}
+                data-cy="customer-add-new"
+              >
+                <UserPlus className="size-4 shrink-0" aria-hidden />
+                <span className="truncate">
+                  {term.trim() ? `Add "${term.trim()}" as a new customer` : "Add a new customer"}
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
       )}
       {error && <p className="text-sm text-danger-fg">{error}</p>}

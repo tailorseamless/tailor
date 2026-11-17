@@ -18,6 +18,12 @@ export interface AdminBusinessDTO {
   name: string;
   status: BusinessStatus;
   currency: string;
+  /** The business's own contact details and settings (account-level: never its customers or orders). */
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  timeZone: string;
+  measurementUnit: "in" | "cm";
   createdAt: Date;
   deletionScheduledFor: Date | null;
   owner: { id: string; fullName: string; email: string } | null;

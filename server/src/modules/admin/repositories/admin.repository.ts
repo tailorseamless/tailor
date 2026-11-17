@@ -66,7 +66,8 @@ export class AdminRepository {
   }
 
   private businessSelect = `
-    SELECT b.id, b.name, b.status, b.currency, b.created_at AS "createdAt",
+    SELECT b.id, b.name, b.status, b.currency, b.email, b.phone, b.address,
+           b.time_zone AS "timeZone", b.measurement_unit AS "measurementUnit", b.created_at AS "createdAt",
            b.deletion_scheduled_for AS "deletionScheduledFor",
            o.id AS "ownerId", o.full_name AS "ownerName", o.email AS "ownerEmail",
            (SELECT COUNT(*) FROM business_members m WHERE m.business_id = b.id AND m.deleted_at IS NULL) AS members,
@@ -84,6 +85,11 @@ export class AdminRepository {
       name: row.name as string,
       status: row.status as AdminBusinessDTO["status"],
       currency: row.currency as string,
+      email: (row.email as string | null) ?? null,
+      phone: (row.phone as string | null) ?? null,
+      address: (row.address as string | null) ?? null,
+      timeZone: row.timeZone as string,
+      measurementUnit: row.measurementUnit as AdminBusinessDTO["measurementUnit"],
       createdAt: row.createdAt as Date,
       deletionScheduledFor: (row.deletionScheduledFor as Date | null) ?? null,
       owner: row.ownerId

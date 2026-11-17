@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppointmentForm } from "../../components/appointments/AppointmentForm";
 import { RequestsList } from "../../components/appointments/RequestsList";
 import { Button } from "../../components/shared/Button";
+import { DatePicker } from "../../components/shared/DatePicker";
 import { Badge, Card, FilterChips, PageHeader } from "../../components/shared/Display";
 import { PromptDialog } from "../../components/shared/Modal";
 import { EmptyState, QueryState } from "../../components/shared/States";
@@ -83,11 +84,12 @@ export default function AppointmentsPage() {
             >
               <ChevronLeft className="size-4" aria-hidden />
             </Button>
-            <input
-              type="date"
-              className="control w-auto"
+            <DatePicker
+              className="w-auto min-w-44"
               value={day}
-              onChange={(e) => e.target.value && set({ day: e.target.value })}
+              onChange={(next) => next && set({ day: next })}
+              timeZone={timeZone}
+              clearable={false}
               aria-label="Day"
               data-cy="day-picker"
             />

@@ -20,6 +20,8 @@ const schema = z.object({
   API_PREFIX: z.string().startsWith("/").default("/api/v1"),
   APP_URL: z.string().url().default("http://localhost:5173"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
+  // Who is a platform admin: email addresses, separated by commas. Each person needs an account here and a VERIFIED email.
+  PLATFORM_ADMIN_EMAILS: z.string().optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
 
   DATABASE_URL: z.string({ required_error: "DATABASE_URL is required" }).min(1),
@@ -120,6 +122,18 @@ function emailConfig(raw: z.infer<typeof schema>) {
     fromAddress,
     replyTo: raw.EMAIL_REPLY_TO ?? null,
   };
+}
+
+/** `PLATFORM_ADMIN_EMAILS=a@x.com, b@y.com` becomes a lower-case set. Anything that isn't an address is warned about and dropped. */
+function platformAdminEmails(value: string | undefined): ReadonlySet<string> {
+  const emails = new Set<string>();
+  for (const entry of (value ?? "").split(/[\s,;]+/)) {
+    const email = entry.trim().toLowerCase();
+    if (!email) continue;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) emails.add(email);
+    else console.warn(`PLATFORM_ADMIN_EMAILS: "${entry}" is not an email address and was ignored`);
+  }
+  return emails;
 }
 
 /** Accepts a pasted PEM, a PEM with literal \n escapes, or base64 of the PEM. */
@@ -236,6 +250,7 @@ function load() {
     port: raw.PORT,
     apiPrefix: raw.API_PREFIX.replace(/\/+$/, "") || "/",
     appUrl: raw.APP_URL.replace(/\/+$/, ""),
+    platformAdmins: platformAdminEmails(raw.PLATFORM_ADMIN_EMAILS),
     corsOrigins: raw.CORS_ORIGINS.split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),

@@ -1,4 +1,5 @@
 import type { AppRole, MemberRole } from "../../config/permissions";
+import { env } from "../../config/env";
 
 /**
  * Who is acting (Backend Guide §7, §23). Services take an Actor as their first
@@ -52,4 +53,18 @@ export function rolesFromFlags(flags: {
  */
 export function hasTrustedEmail(identity: FirebaseIdentity): identity is FirebaseIdentity & { email: string } {
   return Boolean(identity.email) && (identity.emailVerified || identity.signInProvider === "google.com");
+}
+
+/**
+ * Platform admins are named in the PLATFORM_ADMIN_EMAILS setting. The email must be VERIFIED
+ * (a password sign-up with someone else's address proves nothing until they click the link),
+ * so nobody can become admin by registering with an admin's address.
+ */
+export function isConfiguredAdmin(identity: FirebaseIdentity): boolean {
+  return hasTrustedEmail(identity) && env.platformAdmins.has(identity.email);
+}
+
+/** What this sign-in may do on the platform: the stored role, raised to admin if the setting names them. */
+export function effectivePlatformRole(identity: FirebaseIdentity, stored: PlatformRole): PlatformRole {
+  return isConfiguredAdmin(identity) ? "super_admin" : stored;
 }

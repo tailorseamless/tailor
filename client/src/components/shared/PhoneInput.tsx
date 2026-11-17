@@ -113,7 +113,7 @@ export function PhoneInput({ value, onChange, onBlur, disabled, ...rest }: Phone
         disabled={disabled}
         aria-invalid={rest["aria-invalid"]}
         aria-describedby={rest["aria-describedby"]}
-        className="min-w-0 flex-1 rounded-r-lg bg-transparent px-3 py-2 text-base text-fg outline-none placeholder:text-fg-subtle disabled:cursor-not-allowed sm:text-sm"
+        className="w-0 min-w-0 flex-1 rounded-r-lg bg-transparent px-3 py-2 text-base text-fg outline-none placeholder:text-fg-subtle disabled:cursor-not-allowed sm:text-sm"
         data-cy={cy}
       />
     </div>
