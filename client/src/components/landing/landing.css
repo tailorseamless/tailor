@@ -1,0 +1,288 @@
+/*
+ * Landing page only. Imported by LandingPage, so it ships in that lazy chunk and costs the app nothing.
+ * Colours come from the design tokens in globals.css; the few extras below are decorative accents
+ * (thread, brass, deep plum) used only here. Every animation stops under prefers-reduced-motion.
+ */
+@import "@fontsource/source-serif-4/400.css";
+@import "@fontsource/source-serif-4/400-italic.css";
+@import "@fontsource/source-serif-4/600-italic.css";
+
+.lp {
+  --lp-ink: #220c18;
+  --lp-plum: #5b2440;
+  --lp-cream: #fbeff5;
+  --lp-blush: #e8b4cd;
+  --lp-brass: #e2b36a;
+  --lp-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+html.lp-smooth {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+/* ---------- Dark "atelier" sections (hero, closing call to action) ---------- */
+.lp-atelier {
+  background:
+    radial-gradient(120% 80% at 85% 10%, rgb(122 47 85 / 0.55), transparent 60%),
+    radial-gradient(90% 70% at 0% 100%, rgb(91 36 64 / 0.7), transparent 60%), var(--lp-ink);
+  color: var(--lp-cream);
+}
+
+/* A faint woven texture: a data: SVG, which the CSP allows. */
+.lp-weave {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='M0 3h12M0 9h12' stroke='%23ffffff' stroke-opacity='.035' stroke-width='2'/%3E%3Cpath d='M3 0v12M9 0v12' stroke='%23ffffff' stroke-opacity='.025' stroke-width='2'/%3E%3C/svg%3E");
+  mask-image: radial-gradient(ellipse at center, #000 40%, transparent 85%);
+}
+
+.lp-glow {
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  animation: lp-drift 18s ease-in-out infinite alternate;
+}
+
+.lp-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--lp-blush) 0%,
+    var(--lp-brass) 35%,
+    var(--lp-cream) 50%,
+    var(--lp-brass) 65%,
+    var(--lp-blush) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-shimmer 7s linear infinite;
+}
+
+/* ---------- Entrances ---------- */
+.lp-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+.lp-line > span {
+  display: block;
+  transform: translateY(105%);
+  animation: lp-rise 1s var(--lp-ease) forwards;
+  animation-delay: var(--lp-delay, 0ms);
+}
+
+.lp-fade-up {
+  opacity: 0;
+  animation: lp-fade-up 0.9s var(--lp-ease) forwards;
+  animation-delay: var(--lp-delay, 0ms);
+}
+
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s var(--lp-ease) var(--lp-delay, 0ms),
+    transform 0.9s var(--lp-ease) var(--lp-delay, 0ms);
+}
+.lp-reveal[data-visible] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Thread & stitches ---------- */
+.lp-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: lp-draw 3.2s cubic-bezier(0.45, 0, 0.25, 1) 0.4s forwards;
+}
+
+.lp-march {
+  animation: lp-march 1.2s linear infinite;
+}
+
+/* Header progress: a stitched line that sews itself as the page scrolls (where supported). */
+.lp-progress {
+  transform-origin: left;
+  transform: scaleX(0);
+}
+@supports (animation-timeline: scroll()) {
+  .lp-progress {
+    animation: lp-grow linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* ---------- Floating pieces ---------- */
+.lp-float {
+  animation: lp-float 6s ease-in-out infinite;
+  animation-delay: var(--lp-delay, 0ms);
+}
+.lp-sway {
+  transform-origin: 50% -14px;
+  animation: lp-sway 5s ease-in-out infinite;
+}
+.lp-pop {
+  animation: lp-pop 0.6s var(--lp-ease) both;
+}
+
+.lp-tilt {
+  transform: perspective(1400px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.4s var(--lp-ease);
+  transform-style: preserve-3d;
+}
+
+/* ---------- Marquee ---------- */
+.lp-marquee {
+  animation: lp-marquee 45s linear infinite;
+}
+.lp-marquee-wrap:hover .lp-marquee {
+  animation-play-state: paused;
+}
+.lp-marquee-wrap {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* ---------- Cards ---------- */
+.lp-spot {
+  position: relative;
+  isolation: isolate;
+}
+.lp-spot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, -20%), var(--brand-soft), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.lp-spot:hover::before {
+  opacity: 1;
+}
+
+/* A cutting mat behind the dress form. */
+.lp-mat {
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+}
+
+.lp-ruler {
+  background-image: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 8px);
+}
+
+.lp-faq summary::-webkit-details-marker {
+  display: none;
+}
+.lp-faq[open] .lp-faq-icon {
+  transform: rotate(45deg);
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes lp-rise {
+  to {
+    transform: none;
+  }
+}
+@keyframes lp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes lp-march {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+@keyframes lp-grow {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes lp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes lp-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes lp-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes lp-drift {
+  to {
+    transform: translate3d(40px, -30px, 0) scale(1.15);
+  }
+}
+@keyframes lp-shimmer {
+  to {
+    background-position: -250% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.lp-smooth {
+    scroll-behavior: auto;
+  }
+  .lp *,
+  .lp *::before,
+  .lp *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lp-line > span,
+  .lp-fade-up,
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .lp-draw {
+    stroke-dashoffset: 0;
+  }
+  .lp-progress {
+    display: none;
+  }
+}

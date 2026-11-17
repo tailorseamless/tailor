@@ -1,0 +1,83 @@
+# Render blueprint for the TailorFlow API (Backend Guide §29.2).
+# Render → New → Blueprint → pick this repository. Values marked `sync: false`
+# are asked for once when the blueprint is created; they never live in git.
+# Full walkthrough: server/docs/deployment.md
+services:
+  - type: web
+    name: tailorflow-api
+    runtime: node
+    plan: free
+    # Put the API next to its database (Aiven / Render Postgres) for low latency.
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    # Only the server workspace is installed and built — the web app deploys separately.
+    buildCommand: npm ci --include=dev --workspace server --include-workspace-root && npm --workspace server run build
+    # Migrations run BEFORE the new version starts; if one fails, the previous version keeps serving.
+    startCommand: npm --workspace server run migration:run:prod && NODE_OPTIONS=--max-old-space-size=384 npm --workspace server run start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: API_PREFIX
+        value: /api/v1
+      - key: LOG_LEVEL
+        value: info
+      # The free instance sleeps when idle; jobs (reminders, email, push) run inside the web process.
+      - key: JOBS_IN_PROCESS
+        value: "true"
+
+      # ── Required
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_CA_CERT
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
+      # The web app's public address: every email and portal link is built from it.
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+      # ── Files
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CLOUDINARY_FOLDER_ROOT
+        value: tailorflow/prod
+
+      # ── Email: smtp or apps_script
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: EMAIL_FALLBACK
+        value: "true"
+      - key: EMAIL_FROM_NAME
+        value: TailorFlow
+      - key: EMAIL_FROM_ADDRESS
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_APPS_SCRIPT_URL
+        sync: false
+      - key: EMAIL_APPS_SCRIPT_TOKEN
+        sync: false
+
+      # ── Monitoring and push
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: PUSH_ENABLED
+        value: "true"

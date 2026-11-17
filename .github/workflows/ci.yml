@@ -1,0 +1,60 @@
+# Runs on every push and pull request (Backend Guide §28.3).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, format, type-check, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --include=dev --workspace server --include-workspace-root
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+
+  migrations:
+    name: Migrations apply, revert and match the entities
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tailorflow_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tailorflow_ci
+      FIREBASE_PROJECT_ID: tailorflow-ci
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --include=dev --workspace server --include-workspace-root
+      - name: Apply every migration
+        run: npm --workspace server run migration:run
+      - name: The schema matches the entities (no migration left to write)
+        run: npm --workspace server run migration:generate -- Drift | tee drift.log && grep -q "No changes" drift.log
+      - name: The latest migration reverts and re-applies
+        run: npm --workspace server run migration:revert && npm --workspace server run migration:run

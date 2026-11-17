@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.DS_Store
+
+.claude/
+/ai_agent_flow_*.md
+/KIROS FAQ Content.*
+/KIROS FarmShop*.md
