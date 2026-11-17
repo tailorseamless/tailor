@@ -63,8 +63,8 @@ const schema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   EMAIL_FROM_NAME: z.string().default("TailorFlow"),
-  EMAIL_FROM_ADDRESS: z.string().email().optional(),
-  EMAIL_REPLY_TO: z.string().email().optional(),
+  EMAIL_FROM_ADDRESS: z.string().email("must be an email address, like you@example.com").optional(),
+  EMAIL_REPLY_TO: z.string().email("must be an email address, like you@example.com").optional(),
 });
 
 /** cloudinary://<api_key>:<api_secret>@<cloud_name>. The separate variables win when both are set. */
@@ -148,7 +148,29 @@ function definedEnv(): Record<string, string> {
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && value.trim() !== "") out[key] = value.trim();
   }
-  return withDatabaseParts(out);
+  return withMailboxParts(withDatabaseParts(out));
+}
+
+/** "Tailor Seamless <me@gmail.com>" → the bare address and the name. null when there is no <address> part. */
+function splitMailbox(value: string): { name: string; address: string } | null {
+  const match = /^(.*?)\s*<([^<>\s]+)>$/.exec(value);
+  if (!match) return null;
+  return { name: match[1].replace(/^["']|["']$/g, "").trim(), address: match[2] };
+}
+
+/**
+ * Sender settings may be written the usual way, `Name <address>`. The address goes where an address is
+ * expected; a name given in EMAIL_FROM_ADDRESS is the one people will see, so it replaces EMAIL_FROM_NAME.
+ */
+function withMailboxParts(vars: Record<string, string>): Record<string, string> {
+  const from = vars.EMAIL_FROM_ADDRESS ? splitMailbox(vars.EMAIL_FROM_ADDRESS) : null;
+  if (from) {
+    vars.EMAIL_FROM_ADDRESS = from.address;
+    if (from.name) vars.EMAIL_FROM_NAME = from.name;
+  }
+  const reply = vars.EMAIL_REPLY_TO ? splitMailbox(vars.EMAIL_REPLY_TO) : null;
+  if (reply) vars.EMAIL_REPLY_TO = reply.address;
+  return vars;
 }
 
 /**
