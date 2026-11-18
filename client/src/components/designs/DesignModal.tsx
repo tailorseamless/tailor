@@ -6,6 +6,7 @@ import { useWorkspace } from "../../hooks/useWorkspace";
 import type { Design, DesignVisibility } from "../../types/workspace.types";
 import { cn } from "../../utils/cn";
 import { errorMessage } from "../../utils/errors";
+import { formatPriceRange } from "../../utils/money";
 import { orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Field, FormError, Input, Textarea, Toggle } from "../shared/Field";
@@ -17,6 +18,14 @@ const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_PICTURES = 12;
 const MAX_PER_UPLOAD = 5;
+const MAX_PRICE = 999_999_999;
+
+/** What was typed in a price box: null when empty, undefined when it isn't a usable amount. */
+function parsePrice(text: string): number | null | undefined {
+  if (text.trim() === "") return null;
+  const value = Number(text);
+  return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE ? Math.round(value * 100) / 100 : undefined;
+}
 
 /** A picture chosen for a design that isn't saved yet. */
 function PendingThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
@@ -68,13 +77,15 @@ function DesignEditor({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
-  const { can } = useWorkspace();
+  const { can, business } = useWorkspace();
   const toast = useToast();
   const actions = useDesignActions();
   const canEdit = can("design.manage");
   const [name, setName] = useState(design?.name ?? "");
   const [category, setCategory] = useState(design?.category ?? "");
   const [description, setDescription] = useState(design?.description ?? "");
+  const [priceMin, setPriceMin] = useState(design?.priceMin?.toString() ?? "");
+  const [priceMax, setPriceMax] = useState(design?.priceMax?.toString() ?? "");
   const [visibility, setVisibility] = useState<DesignVisibility>(design?.visibility ?? "private");
   const [favourite, setFavourite] = useState(design?.isFavourite ?? false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -82,14 +93,28 @@ function DesignEditor({
   const [pending, setPending] = useState<File[]>([]);
   const input = useRef<HTMLInputElement>(null);
   const mutation = design ? actions.update : actions.createWithPictures;
+  const typedMin = parsePrice(priceMin);
+  const typedMax = parsePrice(priceMax);
+  const pricePreview =
+    typedMin === undefined || typedMax === undefined ? null : formatPriceRange(typedMin, typedMax, business.currency);
 
   const save = () => {
     setProblem(null);
     if (name.trim().length < 2) return setProblem("Name the design.");
+    const min = parsePrice(priceMin);
+    const max = parsePrice(priceMax);
+    if (min === undefined || max === undefined) {
+      return setProblem("Enter prices as amounts, like 45000, or leave them empty.");
+    }
+    if (min !== null && max !== null && min > max) {
+      return setProblem("The highest price can't be lower than the lowest price.");
+    }
     const body = {
       name: name.trim(),
       category: orNull(category),
       description: orNull(description),
+      priceMin: min,
+      priceMax: max,
       visibility,
       isFavourite: favourite,
     };
@@ -249,9 +274,46 @@ function DesignEditor({
               />
             )}
           </Field>
+          <div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={`Price from (${business.currency})`}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    value={priceMin}
+                    onChange={(e) => setPriceMin(e.target.value)}
+                    data-cy="design-price-min"
+                  />
+                )}
+              </Field>
+              <Field label={`Up to (${business.currency})`}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    value={priceMax}
+                    onChange={(e) => setPriceMax(e.target.value)}
+                    data-cy="design-price-max"
+                  />
+                )}
+              </Field>
+            </div>
+            <p className="mt-1.5 text-xs text-fg-subtle" data-cy="design-price-preview">
+              {pricePreview
+                ? `Customers will see: ${pricePreview}`
+                : "Optional. Customers see “Ask for price” if you leave both empty. Fill one box for “From …” or “Up to …”."}
+            </p>
+          </div>
           <Toggle
             label="Show to customers"
-            description="Appears on your booking page and customers' private pages."
+            description="Appears on your public page (once it's published) and on customers' private pages. A design needs a picture to be listed."
             checked={visibility === "customers"}
             onChange={(on) => setVisibility(on ? "customers" : "private")}
             disabled={!canEdit}

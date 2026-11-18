@@ -7,7 +7,15 @@ import type { OrderStatus } from "../../orders/dto/order.dto";
 import type { PaymentKind } from "../../payments/dto/payment.dto";
 import type { RequestStatus } from "../../requests/dto/request.dto";
 
-export const PORTAL_LIMITS = { orders: 20, appointments: 20, payments: 20, designs: 24, requests: 10 } as const;
+export const PORTAL_LIMITS = {
+  orders: 20,
+  appointments: 20,
+  payments: 20,
+  designs: 24,
+  requests: 10,
+  /** Designs on a business's public page: a whole catalogue, not a teaser. */
+  shopDesigns: 100,
+} as const;
 
 /** What a business shows about itself on public pages — contact details only. */
 export interface PublicBusinessDTO {
@@ -17,8 +25,8 @@ export interface PublicBusinessDTO {
   address: string | null;
   timeZone: string;
   currency: string;
-  /** Online booking is open: <APP_URL>/book/<slug>. */
-  bookingUrl: string | null;
+  /** The business's public page, when it has one: <APP_URL>/<slug>. */
+  pageUrl: string | null;
 }
 
 /**
@@ -78,9 +86,14 @@ export interface PortalMeasurementsDTO {
   values: MeasurementValue[];
 }
 
-/** The public booking page. */
-export interface BookingPageDTO {
+/**
+ * A business's public page: who they are, how to reach them, and the designs they chose to show with their
+ * price ranges. Anyone with the address can read it; it holds nothing about customers or orders.
+ */
+export interface ShopPageDTO {
   business: PublicBusinessDTO;
+  /** Visitors can ask for an appointment on this page. */
+  bookingOpen: boolean;
   appointmentTypes: { value: AppointmentType; label: string }[];
   designs: PublicDesignDTO[];
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalText, phone, trimmed } from "../../../shared/utils/zod";
+import { isReservedSlug } from "../domain/shopAddress";
 import { MEASUREMENT_UNITS } from "../dto/business.dto";
 
 export const currencyCode = z
@@ -25,13 +26,17 @@ export const updateBusinessSchema = z.object({
       emailCustomerReminders: z.boolean(),
       emailReceipts: z.boolean(),
       emailOrderUpdates: z.boolean(),
-      /** Lower-case letters, digits and dashes: <APP_URL>/book/<slug>. */
+      /** Lower-case letters, digits and dashes: <APP_URL>/<slug>. */
       slug: z
         .string()
         .trim()
         .toLowerCase()
         .regex(/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/, "Use 3–60 lower-case letters, digits and dashes")
+        .refine((slug) => !isReservedSlug(slug), "That address is reserved. Try another")
         .nullable(),
+      /** Publish the page: designs, price ranges and contact details at the slug. */
+      pageEnabled: z.boolean(),
+      /** Take appointment requests on the page. */
       bookingEnabled: z.boolean(),
     })
     .partial()

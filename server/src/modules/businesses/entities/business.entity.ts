@@ -52,12 +52,16 @@ export class Business extends BaseEntity {
   @Column({ name: "email_order_updates", type: "boolean", default: true })
   emailOrderUpdates: boolean;
 
-  /** The public booking page address: <APP_URL>/book/<slug>. */
+  /** The public page address: <APP_URL>/<slug>. */
   @Index("UQ_businesses_slug", { unique: true, where: `"slug" IS NOT NULL` })
   @Column({ type: "varchar", length: 60, nullable: true })
   slug: string | null;
 
-  /** Accept appointment requests from the public booking page. */
+  /** The public page (designs, price ranges, contact details) is published at the slug. */
+  @Column({ name: "page_enabled", type: "boolean", default: false })
+  pageEnabled: boolean;
+
+  /** Accept appointment requests from the public page. Only meaningful while the page is published. */
   @Column({ name: "booking_enabled", type: "boolean", default: false })
   bookingEnabled: boolean;
 

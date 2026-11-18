@@ -25,8 +25,11 @@ export interface BusinessRecord {
   emailCustomerReminders: boolean;
   emailReceipts: boolean;
   emailOrderUpdates: boolean;
-  /** The public booking page: <APP_URL>/book/<slug>. */
+  /** The address of the public page: <APP_URL>/<slug>. */
   slug: string | null;
+  /** The public page is live. */
+  pageEnabled: boolean;
+  /** Customers can request appointments on the public page. */
   bookingEnabled: boolean;
   /** Set while a deletion is pending; cancel before then to keep the business. */
   deletionScheduledFor: Date | null;

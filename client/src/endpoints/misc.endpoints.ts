@@ -7,7 +7,7 @@ import type {
   NotificationPreferences,
   OutboxEmail,
 } from "../types/dashboard.types";
-import type { BookingPage, BookingRequestInput, Portal } from "../types/portal.types";
+import type { BookingRequestInput, Portal, ShopPage } from "../types/portal.types";
 
 export const dashboardEndpoints = {
   get: (params?: { from?: string; to?: string; branchId?: string }) =>
@@ -31,7 +31,7 @@ export const notificationEndpoints = {
     wrapCall<NotificationPreferences>(() => http.put("/notifications/preferences", { preferences })),
 };
 
-/** Public pages: no sign-in, a customer's link or the business's booking slug is the key. */
+/** Public pages: no sign-in, a customer's link or the business's page address is the key. */
 export const publicEndpoints = {
   portal: (token: string) => wrapCall<Portal>(() => http.get(`/portal/${encodeURIComponent(token)}`)),
   portalReceiptUrl: (token: string, paymentId: string) =>
@@ -40,8 +40,7 @@ export const publicEndpoints = {
     wrapCall<unknown>(() => http.post(`/portal/${encodeURIComponent(token)}/appointments/${appointmentId}/confirm`)),
   portalRequest: (token: string, input: Pick<BookingRequestInput, "type" | "preferredStartsAt" | "note">) =>
     wrapCall<unknown>(() => http.post(`/portal/${encodeURIComponent(token)}/appointment-requests`, input)),
-  bookingPage: (slug: string) =>
-    wrapCall<BookingPage>(() => http.get(`/public/businesses/${encodeURIComponent(slug)}`)),
+  shopPage: (slug: string) => wrapCall<ShopPage>(() => http.get(`/public/businesses/${encodeURIComponent(slug)}`)),
   book: (slug: string, input: BookingRequestInput) =>
     wrapCall<unknown>(() => http.post(`/public/businesses/${encodeURIComponent(slug)}/appointment-requests`, input)),
 };

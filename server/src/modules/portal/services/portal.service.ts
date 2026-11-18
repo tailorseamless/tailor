@@ -8,6 +8,7 @@ import { localDay } from "../../../shared/utils/timezone";
 import { ActivityService } from "../../activity/services/activity.service";
 import { APPOINTMENT_TYPES } from "../../appointments/dto/appointment.dto";
 import { AppointmentRepository } from "../../appointments/repositories/appointment.repository";
+import { shopPath } from "../../businesses/domain/shopAddress";
 import type { BusinessRecord } from "../../businesses/dto/business.dto";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import type { CustomerRecord } from "../../customers/dto/customer.dto";
@@ -23,15 +24,15 @@ import { PaymentService } from "../../payments/services/payment.service";
 import type { AppointmentRequestRecord } from "../../requests/dto/request.dto";
 import { RequestRepository } from "../../requests/repositories/request.repository";
 import { RequestService } from "../../requests/services/request.service";
-import { PORTAL_LIMITS, type BookingPageDTO, type PortalDTO, type PublicBusinessDTO } from "../dto/portal.dto";
+import { PORTAL_LIMITS, type PortalDTO, type PublicBusinessDTO, type ShopPageDTO } from "../dto/portal.dto";
 import type { BookingRequestInput, PortalRequestInput } from "../validators/portal.schema";
 
 /** One message for every bad link — never say whether a link once existed. */
 const NOT_FOUND = "This link is not valid any more. Ask the business for a new one.";
 
 /**
- * The public side: the customer portal (secret link) and the booking page
- * (public address). Every read is scoped to the one business — and, in the
+ * The public side: the customer portal (secret link) and a business's public
+ * page (its address). Every read is scoped to the one business — and, in the
  * portal, the one customer — that the link resolves to.
  */
 export class PortalService {
@@ -204,14 +205,15 @@ export class PortalService {
     });
   }
 
-  // ── The public booking page
+  // ── The public page
 
-  async bookingPage(slug: string): Promise<BookingPageDTO> {
-    const business = await this.bookableBusiness(slug);
+  async shopPage(slug: string): Promise<ShopPageDTO> {
+    const business = await this.publishedBusiness(slug);
     return {
       business: this.publicBusiness(business),
+      bookingOpen: business.bookingEnabled,
       appointmentTypes: APPOINTMENT_TYPES.map((value) => ({ value, label: APPOINTMENT_TYPE_LABELS[value] ?? value })),
-      designs: await this.designs.forCustomers(business.id, PORTAL_LIMITS.designs),
+      designs: await this.designs.forCustomers(business.id, PORTAL_LIMITS.shopDesigns),
     };
   }
 
@@ -241,11 +243,18 @@ export class PortalService {
     return { customer, business };
   }
 
-  private async bookableBusiness(slug: string): Promise<BusinessRecord> {
+  /** The business behind a public address — only while its page is published. Anything else is the same 404. */
+  private async publishedBusiness(slug: string): Promise<BusinessRecord> {
     const business = await this.businesses.findBySlug(slug);
-    if (!business || !business.bookingEnabled || business.status !== "active") {
+    if (!business || !business.pageEnabled || business.status !== "active") {
       throw AppError.notFound("Page not found");
     }
+    return business;
+  }
+
+  private async bookableBusiness(slug: string): Promise<BusinessRecord> {
+    const business = await this.publishedBusiness(slug);
+    if (!business.bookingEnabled) throw AppError.notFound("Page not found");
     return business;
   }
 
@@ -257,7 +266,7 @@ export class PortalService {
       address: business.address,
       timeZone: business.timeZone,
       currency: business.currency,
-      bookingUrl: business.bookingEnabled && business.slug ? `${env.appUrl}/book/${business.slug}` : null,
+      pageUrl: business.pageEnabled && business.slug ? `${env.appUrl}${shopPath(business.slug)}` : null,
     };
   }
 }

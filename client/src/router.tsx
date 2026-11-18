@@ -17,7 +17,9 @@ const gated = (permission: Permission, children: RouteObject[]): RouteObject => 
 export const router = createBrowserRouter([
   { path: "/sign-in", lazy: page(() => import("./pages/auth/SignInPage")), errorElement: <RouteError /> },
   { path: "/portal/:token", lazy: page(() => import("./pages/public/PortalPage")), errorElement: <RouteError /> },
-  { path: "/book/:slug", lazy: page(() => import("./pages/public/BookingPage")), errorElement: <RouteError /> },
+  // A business's public page. `/book/<address>` is where these pages used to live; those links keep working.
+  { path: "/book/:slug", lazy: page(() => import("./pages/public/ShopPage")), errorElement: <RouteError /> },
+  { path: "/:slug", lazy: page(() => import("./pages/public/ShopPage")), errorElement: <RouteError /> },
   {
     path: "/",
     element: <RequireAuth />,

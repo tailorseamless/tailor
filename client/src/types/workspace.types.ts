@@ -60,6 +60,9 @@ export interface Design {
   name: string;
   description: string | null;
   category: string | null;
+  /** The usual price range customers see. Either end may be empty ("from …", "up to …"). */
+  priceMin: number | null;
+  priceMax: number | null;
   visibility: DesignVisibility;
   isFavourite: boolean;
   images: OrderImage[];
@@ -71,6 +74,8 @@ export type DesignInput = Partial<{
   name: string;
   description: string | null;
   category: string | null;
+  priceMin: number | null;
+  priceMax: number | null;
   visibility: DesignVisibility;
   isFavourite: boolean;
 }>;

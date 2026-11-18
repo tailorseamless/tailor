@@ -3,7 +3,7 @@ import { input } from "../../../shared/http/request";
 import { ApiResponse } from "../../../shared/response/apiResponse";
 import { PortalService } from "../services/portal.service";
 import {
-  bookingPageSchema,
+  shopPageSchema,
   bookingRequestSchema,
   portalConfirmSchema,
   portalReceiptSchema,
@@ -42,9 +42,9 @@ export class PortalController {
     res.status(201).json(ApiResponse.created("Request sent", { id: request.id, status: request.status }));
   }
 
-  static async bookingPage(req: Request, res: Response): Promise<void> {
-    const { params } = input(req, bookingPageSchema);
-    res.json(ApiResponse.ok("Page fetched", await PortalService.Instance.bookingPage(params.slug)));
+  static async shopPage(req: Request, res: Response): Promise<void> {
+    const { params } = input(req, shopPageSchema);
+    res.json(ApiResponse.ok("Page fetched", await PortalService.Instance.shopPage(params.slug)));
   }
 
   static async bookingRequest(req: Request, res: Response): Promise<void> {

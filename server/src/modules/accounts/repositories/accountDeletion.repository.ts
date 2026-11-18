@@ -145,7 +145,7 @@ export class AccountDeletionRepository {
     await tx.query(
       `UPDATE businesses
           SET name = 'Deleted business', email = NULL, phone = NULL, address = NULL,
-              slug = NULL, booking_enabled = false, status = 'suspended',
+              slug = NULL, page_enabled = false, booking_enabled = false, status = 'suspended',
               deletion_scheduled_for = NULL, deleted_at = now(), updated_at = now()
         WHERE id = $1`,
       id,

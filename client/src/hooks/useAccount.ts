@@ -92,8 +92,8 @@ export function usePortalActions(token: string) {
   return { confirm, request, receiptUrl: (paymentId: string) => publicEndpoints.portalReceiptUrl(token, paymentId) };
 }
 
-export function useBookingPage(slug: string) {
-  return useApiQuery(keys.booking(slug), () => publicEndpoints.bookingPage(slug), { retry: false });
+export function useShopPage(slug: string) {
+  return useApiQuery(keys.shop(slug), () => publicEndpoints.shopPage(slug), { retry: false });
 }
 
 export function useBook(slug: string) {

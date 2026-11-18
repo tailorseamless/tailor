@@ -21,6 +21,7 @@ function toRecord(row: Business): BusinessRecord {
     emailReceipts: row.emailReceipts ?? true,
     emailOrderUpdates: row.emailOrderUpdates ?? true,
     slug: row.slug ?? null,
+    pageEnabled: row.pageEnabled ?? false,
     bookingEnabled: row.bookingEnabled ?? false,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

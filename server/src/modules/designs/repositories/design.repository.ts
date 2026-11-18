@@ -5,7 +5,10 @@ import type { Tx } from "../../../shared/repositories/transaction";
 import type { DesignRecord, ListDesignsParams } from "../dto/design.dto";
 import { Design } from "../entities/design.entity";
 
-type DesignInput = Pick<DesignRecord, "name" | "description" | "category" | "visibility" | "isFavourite">;
+type DesignInput = Pick<
+  DesignRecord,
+  "name" | "description" | "category" | "priceMin" | "priceMax" | "visibility" | "isFavourite"
+>;
 
 function toRecord(row: Design): DesignRecord {
   return {
@@ -14,6 +17,8 @@ function toRecord(row: Design): DesignRecord {
     name: row.name,
     description: row.description ?? null,
     category: row.category ?? null,
+    priceMin: row.priceMin ?? null,
+    priceMax: row.priceMax ?? null,
     visibility: row.visibility,
     isFavourite: row.isFavourite,
     createdBy: row.createdBy ?? null,

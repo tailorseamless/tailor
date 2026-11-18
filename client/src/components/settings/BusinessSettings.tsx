@@ -1,12 +1,13 @@
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useToast } from "../../contexts/ToastContext";
 import { useUpdateBusiness } from "../../hooks/useAccount";
+import { useSharePage } from "../../hooks/useSharePage";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { BusinessInput, MeasurementUnit } from "../../types/auth.types";
 import { errorMessage } from "../../utils/errors";
-import { isPhone, orNull } from "../../utils/validation";
+import { isReservedSlug, shopPath, shopUrl } from "../../utils/shopPath";
+import { isPhone, orNull, whatsappLink } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Card } from "../shared/Display";
 import { Field, FormError, Input, Select, Toggle } from "../shared/Field";
@@ -20,11 +21,11 @@ const suggestSlug = (name: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 
-/** Business profile, booking page and customer emails (owners and managers). */
+/** Business profile, public page and customer emails (owners and managers). */
 export function BusinessSettings() {
   const { business } = useWorkspace();
   const { refresh } = useAuth();
-  const toast = useToast();
+  const { copy } = useSharePage();
   const update = useUpdateBusiness();
   const [form, setForm] = useState({
     name: business.name,
@@ -32,6 +33,7 @@ export function BusinessSettings() {
     address: business.address ?? "",
     measurementUnit: business.measurementUnit,
     slug: business.slug ?? suggestSlug(business.name),
+    pageEnabled: business.pageEnabled,
     bookingEnabled: business.bookingEnabled,
     emailCustomerReminders: business.emailCustomerReminders,
     emailReceipts: business.emailReceipts,
@@ -40,9 +42,10 @@ export function BusinessSettings() {
   const [problem, setProblem] = useState<string | null>(null);
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
-  const bookingUrl = `${window.location.origin}/book/${form.slug}`;
+  const pageLink = shopUrl(form.slug);
 
-  const save = (patch?: BusinessInput) => {
+  /** Saves the business details, or just `patch`. `onFail` puts a toggle back if the API said no. */
+  const save = (patch?: BusinessInput, onFail?: () => void) => {
     setProblem(null);
     const body: BusinessInput = patch ?? {
       name: form.name.trim(),
@@ -54,10 +57,18 @@ export function BusinessSettings() {
       if ((body.name ?? "").length < 2) return setProblem("Enter your business name.");
       if (body.phone && !isPhone(body.phone)) return setProblem("Enter a valid phone number.");
     }
-    if (body.slug !== undefined && body.slug !== null && !SLUG.test(body.slug)) {
-      return setProblem("The booking link can use 3–60 lower-case letters, digits and dashes.");
+    if (body.slug !== undefined && body.slug !== null) {
+      const problemWithSlug = !SLUG.test(body.slug)
+        ? "The page address can use 3–60 lower-case letters, digits and dashes."
+        : isReservedSlug(body.slug)
+          ? "That address is reserved for the app. Try your business name instead."
+          : null;
+      if (problemWithSlug) {
+        onFail?.();
+        return setProblem(problemWithSlug);
+      }
     }
-    update.mutate(body, { onSuccess: () => void refresh() });
+    update.mutate(body, { onSuccess: () => void refresh(), onError: onFail });
   };
 
   return (
@@ -76,7 +87,7 @@ export function BusinessSettings() {
               {(p) => <Input {...p} type="email" value={business.email ?? ""} disabled readOnly data-cy="biz-email" />}
             </Field>
           </div>
-          <Field label="Address" hint="Printed on receipts and shown on your booking page.">
+          <Field label="Address" hint="Printed on receipts and shown on your public page.">
             {(p) => (
               <Input
                 {...p}
@@ -110,19 +121,27 @@ export function BusinessSettings() {
         </div>
       </Card>
 
-      <Card title="Online booking">
+      <Card title="Your public page">
         <div className="space-y-4 p-4">
+          <p className="text-sm text-fg-muted">
+            A page of your own with your designs, their price ranges and how to reach you. Send the link on WhatsApp,
+            put it in your Instagram bio, or print it on your cards.
+          </p>
           <Toggle
-            label="Let customers request appointments online"
-            description="Requests land in your diary for you to accept or decline."
-            checked={form.bookingEnabled}
+            label="Publish my page"
+            description="Anyone with the link can see it: your business name, phone, email and address, and the designs you've marked “Show to customers”."
+            checked={form.pageEnabled}
             onChange={(on) => {
-              set("bookingEnabled", on);
-              save({ bookingEnabled: on, slug: form.slug.trim() || null });
+              set("pageEnabled", on);
+              if (!on) set("bookingEnabled", false); // the booking form goes down with the page
+              save({ pageEnabled: on, slug: form.slug.trim() || null }, () => {
+                set("pageEnabled", !on);
+                if (!on) set("bookingEnabled", business.bookingEnabled);
+              });
             }}
-            data-cy="biz-booking-toggle"
+            data-cy="biz-page-toggle"
           />
-          <Field label="Your booking link" hint={<span className="break-all">{bookingUrl}</span>}>
+          <Field label="Your page address" hint={<span className="break-all">{pageLink}</span>}>
             {(p) => (
               <Input
                 {...p}
@@ -140,35 +159,56 @@ export function BusinessSettings() {
               loading={update.isPending}
               data-cy="biz-slug-save"
             >
-              Save link
+              Save address
             </Button>
-            {business.slug && business.bookingEnabled && (
+            {business.slug && business.pageEnabled && (
               <>
                 <Button
                   size="sm"
                   variant="ghost"
                   icon={<Copy className="size-4" aria-hidden />}
-                  onClick={() =>
-                    navigator.clipboard.writeText(`${window.location.origin}/book/${business.slug}`).then(
-                      () => toast.success("Link copied"),
-                      () => toast.error("Couldn't copy"),
-                    )
-                  }
+                  onClick={() => void copy(shopUrl(business.slug as string))}
                   data-cy="biz-slug-copy"
                 >
-                  Copy
+                  Copy link
                 </Button>
                 <a
-                  href={`/book/${business.slug}`}
+                  href={whatsappLink(`${business.name}: see our designs and prices — ${shopUrl(business.slug)}`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-8 items-center gap-1 px-2 text-sm text-link hover:underline"
+                  data-cy="biz-slug-whatsapp"
+                >
+                  <MessageCircle className="size-4" aria-hidden /> Share on WhatsApp
+                </a>
+                <a
+                  href={shopPath(business.slug)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex h-8 items-center gap-1 px-2 text-sm text-link hover:underline"
                   data-cy="biz-slug-open"
                 >
-                  <ExternalLink className="size-4" aria-hidden /> Open
+                  <ExternalLink className="size-4" aria-hidden /> Open my page
                 </a>
               </>
             )}
+          </div>
+          <div className="border-t border-line pt-2">
+            <Toggle
+              label="Take appointment requests on my page"
+              description={
+                form.pageEnabled
+                  ? "Visitors can ask for a time. Requests land in your diary for you to accept or decline."
+                  : "Publish your page first."
+              }
+              checked={form.bookingEnabled}
+              disabled={!form.pageEnabled}
+              onChange={(on) => {
+                set("bookingEnabled", on);
+                save({ bookingEnabled: on }, () => set("bookingEnabled", !on));
+              }}
+              data-cy="biz-booking-toggle"
+            />
           </div>
         </div>
       </Card>

@@ -22,7 +22,7 @@ export const portalRequestSchema = z.object({
   }),
 });
 
-export const bookingPageSchema = z.object({ params: z.object({ slug }) });
+export const shopPageSchema = z.object({ params: z.object({ slug }) });
 
 export const bookingRequestSchema = z.object({
   params: z.object({ slug }),

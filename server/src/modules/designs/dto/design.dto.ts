@@ -4,6 +4,11 @@ import type { ImageRecord } from "../../media/dto/media.dto";
 export const DESIGN_VISIBILITIES = ["private", "customers"] as const;
 export type DesignVisibility = (typeof DESIGN_VISIBILITIES)[number];
 
+export const DESIGN_LIMITS = {
+  /** The most a price may be, as for an order line. */
+  maxPrice: 999_999_999,
+} as const;
+
 /** A style in the business's catalogue — to show customers and to attach to an order. */
 export interface DesignRecord {
   id: string;
@@ -12,6 +17,9 @@ export interface DesignRecord {
   description: string | null;
   /** Garment category, the business's own words: "Agbada", "Wedding gown"… */
   category: string | null;
+  /** The usual price range, shown to customers. Either end may be left out ("from …", "up to …"). */
+  priceMin: number | null;
+  priceMax: number | null;
   visibility: DesignVisibility;
   /** A popular design, pinned to the top. */
   isFavourite: boolean;
@@ -26,12 +34,14 @@ export interface DesignDTO extends DesignRecord {
   coverUrl: string | null;
 }
 
-/** What the customer portal shows of a design. */
+/** What the customer portal and the public page show of a design. */
 export interface PublicDesignDTO {
   id: string;
   name: string;
   description: string | null;
   category: string | null;
+  priceMin: number | null;
+  priceMax: number | null;
   images: { url: string; width: number | null; height: number | null }[];
 }
 

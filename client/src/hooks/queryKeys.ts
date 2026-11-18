@@ -36,5 +36,5 @@ export const keys = {
     preferences: ["notifications", "preferences"] as const,
   },
   portal: (token: string) => ["portal", token] as const,
-  booking: (slug: string) => ["booking", slug] as const,
+  shop: (slug: string) => ["shop", slug] as const,
 };

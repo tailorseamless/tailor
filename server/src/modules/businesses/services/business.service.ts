@@ -32,11 +32,18 @@ export class BusinessService {
         }
       }
       const slug = input.slug !== undefined ? input.slug : current.slug;
-      const bookingEnabled = input.bookingEnabled ?? current.bookingEnabled;
-      if (bookingEnabled && !slug) {
-        throw AppError.unprocessable("Choose a booking page address first", [{ field: "slug", message: "Required" }]);
+      const pageEnabled = input.pageEnabled ?? current.pageEnabled;
+      // Taking the page down takes its booking form with it, unless the same request says otherwise.
+      const bookingEnabled = input.bookingEnabled ?? (pageEnabled ? current.bookingEnabled : false);
+      if (pageEnabled && !slug) {
+        throw AppError.unprocessable("Choose an address for your page first", [{ field: "slug", message: "Required" }]);
       }
-      const business = await this.businesses.updateBusiness(actor.businessId, input, tx);
+      if (bookingEnabled && !pageEnabled) {
+        throw AppError.unprocessable("Publish your page before taking bookings on it", [
+          { field: "bookingEnabled", message: "Publish the page first" },
+        ]);
+      }
+      const business = await this.businesses.updateBusiness(actor.businessId, { ...input, bookingEnabled }, tx);
       if (!business) throw AppError.notFound("Business not found");
       await this.activity.audit(
         {

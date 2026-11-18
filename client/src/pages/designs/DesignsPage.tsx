@@ -1,15 +1,19 @@
-import { Eye, Palette, Plus, Search, Star } from "lucide-react";
+import { Eye, Globe, Palette, Plus, Search, Share2, Star } from "lucide-react";
 import { useState } from "react";
 import { DesignModal } from "../../components/designs/DesignModal";
-import { Button } from "../../components/shared/Button";
+import { Button, ButtonLink } from "../../components/shared/Button";
 import { FilterChips, PageHeader, Pagination } from "../../components/shared/Display";
 import { EmptyState, QueryState } from "../../components/shared/States";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useSharePage } from "../../hooks/useSharePage";
 import { useDesignCategories, useDesigns } from "../../hooks/useTeam";
 import { useWorkspace } from "../../hooks/useWorkspace";
+import { formatPriceRange } from "../../utils/money";
+import { shopUrl } from "../../utils/shopPath";
 
 export default function DesignsPage() {
-  const { can } = useWorkspace();
+  const { can, business } = useWorkspace();
+  const { share } = useSharePage();
   const [term, setTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -30,11 +34,31 @@ export default function DesignsPage() {
         title="Designs"
         subtitle="Your catalogue of styles, to show customers and attach to orders."
         actions={
-          can("design.manage") && (
-            <Button icon={<Plus className="size-4" aria-hidden />} onClick={() => setOpen("new")} data-cy="design-new">
-              New design
-            </Button>
-          )
+          <>
+            {business.pageEnabled && business.slug ? (
+              <Button
+                variant="secondary"
+                icon={<Share2 className="size-4" aria-hidden />}
+                onClick={() => void share(shopUrl(business.slug as string), business.name)}
+                data-cy="design-share-page"
+              >
+                Share my page
+              </Button>
+            ) : (
+              <ButtonLink variant="secondary" to="/settings" icon={<Globe className="size-4" aria-hidden />}>
+                Publish my page
+              </ButtonLink>
+            )}
+            {can("design.manage") && (
+              <Button
+                icon={<Plus className="size-4" aria-hidden />}
+                onClick={() => setOpen("new")}
+                data-cy="design-new"
+              >
+                New design
+              </Button>
+            )}
+          </>
         }
       />
       <div className="mb-4 space-y-3">
@@ -108,6 +132,11 @@ export default function DesignsPage() {
                       <div className="px-3 py-2">
                         <p className="truncate text-sm font-medium text-fg">{d.name}</p>
                         <p className="truncate text-xs text-fg-subtle">{d.category ?? "No category"}</p>
+                        {formatPriceRange(d.priceMin, d.priceMax, business.currency) && (
+                          <p className="truncate text-xs font-medium text-fg-muted">
+                            {formatPriceRange(d.priceMin, d.priceMax, business.currency)}
+                          </p>
+                        )}
                       </div>
                     </button>
                   </li>
@@ -119,7 +148,7 @@ export default function DesignsPage() {
             <EmptyState
               icon={<Palette className="size-6" aria-hidden />}
               title={search || filter !== "all" ? "No designs match" : "No designs yet"}
-              message="Add photos of styles you make. Mark them for customers to show them on your booking page."
+              message="Add photos of styles you make, with a price range. Mark them to show customers on your public page."
             />
           )
         }

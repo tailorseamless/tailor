@@ -52,6 +52,8 @@ export class DesignService {
           name: input.name,
           description: input.description ?? null,
           category: input.category ?? null,
+          priceMin: input.priceMin ?? null,
+          priceMax: input.priceMax ?? null,
           visibility: input.visibility,
           isFavourite: input.isFavourite,
           createdBy: actor.id,
@@ -65,7 +67,15 @@ export class DesignService {
 
   async update(actor: Actor, id: string, input: UpdateDesignInput): Promise<DesignDTO> {
     await runInTransaction(async (tx) => {
-      await this.find(actor, id, tx);
+      const current = await this.find(actor, id, tx);
+      // The schema only sees what was sent; changing one end of the range must still leave a valid range.
+      const min = input.priceMin !== undefined ? input.priceMin : current.priceMin;
+      const max = input.priceMax !== undefined ? input.priceMax : current.priceMax;
+      if (min !== null && max !== null && min > max) {
+        throw AppError.unprocessable("The highest price can't be lower than the lowest price", [
+          { field: input.priceMin !== undefined ? "priceMin" : "priceMax", message: "Out of range" },
+        ]);
+      }
       await this.designs.updateDesign(id, actor.businessId, input, tx);
       await this.audit(actor, "design.updated", id, { fields: Object.keys(input) }, tx);
     });
@@ -101,6 +111,8 @@ export class DesignService {
       name: design.name,
       description: design.description,
       category: design.category,
+      priceMin: design.priceMin,
+      priceMax: design.priceMax,
       images: (images.get(design.id) ?? []).map(({ url, width, height }) => ({ url, width, height })),
     }));
   }

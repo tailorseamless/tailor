@@ -81,6 +81,13 @@ The web app is the `client` workspace. It deploys from the same repository as th
    - **Firebase console → Authentication → Settings → Authorized domains:** add `<name>.netlify.app`. Google sign-in and the email verification and password reset links stop working on a domain that is not listed.
 4. The security policy in `netlify.toml` lets the app call `https://*.onrender.com`. When the API gets its own domain, put that domain in `connect-src` instead.
 
+### Link previews for a tailor's page
+
+A tailor's public page (`/<address>`) is drawn by JavaScript, which WhatsApp, Facebook, Telegram and similar apps never run when someone pastes the link. An edge function (`netlify/edge-functions/shop-preview.ts`) answers **only those apps** with the same page plus the shop's name, price range and first photo in its `<head>`. People get the normal app, and any failure falls back to it. Nothing to set up: it reads the `VITE_API_URL` you already added.
+
+- It calls the API only when one of those apps asks, so a sleeping API (Render's free plan) never slows a visitor. If the API is asleep when a link is first pasted, that one preview can come out as the plain "Tailor Seamless" card; pasting it again a minute later works.
+- Check it after a deploy: `curl -A "WhatsApp/2" https://<site>/<address> | grep -i "og:"` should show the shop's title and a photo. Facebook's Sharing Debugger shows the same, and "Scrape Again" clears an app's cached copy of an old preview.
+
 ## Migrations, backups, rollbacks
 
 - Migrations run in the start command (`migration:run:prod`), one transaction each. If one fails, the deploy fails and the previous version keeps serving.

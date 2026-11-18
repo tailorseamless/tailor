@@ -2,6 +2,7 @@ import { MapPin, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AppointmentType } from "../../types/appointment.types";
 import type { PublicBusiness, PublicDesign } from "../../types/portal.types";
+import { formatPriceRange } from "../../utils/money";
 import { APPOINTMENT_TYPE } from "../../utils/statusLabels";
 import { toLocalInput } from "../../utils/timezone";
 import { Card } from "../shared/Display";
@@ -38,24 +39,28 @@ export function PublicLayout({ business, children }: { business: PublicBusiness;
   );
 }
 
-export function DesignGallery({ designs }: { designs: PublicDesign[] }) {
+export function DesignGallery({ designs, currency }: { designs: PublicDesign[]; currency: string }) {
   const shown = designs.filter((d) => d.images.length);
   if (!shown.length) return null;
   return (
     <Card title="Styles we make">
       <ul className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3">
-        {shown.map((d) => (
-          <li key={d.id}>
-            <img
-              src={d.images[0].url}
-              alt={d.name}
-              loading="lazy"
-              className="aspect-[3/4] w-full rounded-lg bg-subtle object-cover"
-            />
-            <p className="mt-1 text-sm font-medium text-fg">{d.name}</p>
-            {d.category && <p className="text-xs text-fg-subtle">{d.category}</p>}
-          </li>
-        ))}
+        {shown.map((d) => {
+          const price = formatPriceRange(d.priceMin, d.priceMax, currency);
+          return (
+            <li key={d.id}>
+              <img
+                src={d.images[0].url}
+                alt={d.name}
+                loading="lazy"
+                className="aspect-[3/4] w-full rounded-lg bg-subtle object-cover"
+              />
+              <p className="mt-1 text-sm font-medium text-fg">{d.name}</p>
+              {d.category && <p className="text-xs text-fg-subtle">{d.category}</p>}
+              {price && <p className="text-sm text-fg-muted">{price}</p>}
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );
@@ -129,11 +134,12 @@ export function RequestFieldsForm({
   );
 }
 
-export function PublicMessage({ title, message }: { title: string; message: string }) {
+export function PublicMessage({ title, message, action }: { title: string; message: string; action?: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-6 text-center">
       <h1 className="font-display text-2xl font-semibold text-fg">{title}</h1>
       <p className="mt-2 max-w-sm text-sm text-fg-muted">{message}</p>
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

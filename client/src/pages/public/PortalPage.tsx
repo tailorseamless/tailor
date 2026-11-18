@@ -221,7 +221,7 @@ export default function PortalPage() {
         </Card>
       )}
 
-      <DesignGallery designs={p.designs} />
+      <DesignGallery designs={p.designs} currency={p.business.currency} />
     </PublicLayout>
   );
 }

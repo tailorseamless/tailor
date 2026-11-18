@@ -6,6 +6,8 @@
   # Built from the repository root, like the API: the client is one workspace of the repo.
   command = "npm --workspace client run build"
   publish = "client/dist"
+  # Link previews for a tailor's page (WhatsApp, Facebook…): see netlify/edge-functions/shop-preview.ts.
+  edge_functions = "netlify/edge-functions"
 
   [build.environment]
     NODE_VERSION = "22"
@@ -14,7 +16,7 @@
     # values in the build output and fails the deploy.
     SECRETS_SCAN_OMIT_KEYS = "VITE_API_URL,VITE_FIREBASE_API_KEY,VITE_FIREBASE_AUTH_DOMAIN,VITE_FIREBASE_PROJECT_ID,VITE_FIREBASE_APP_ID,VITE_FIREBASE_MESSAGING_SENDER_ID,VITE_FIREBASE_VAPID_KEY,VITE_ENV"
 
-# The app handles its own routes (/orders, /book/<shop>, …): any address that is not a real file opens the app.
+# The app handles its own routes (/orders, a tailor's page at /<shop>, …): any address that is not a real file opens the app.
 # Real files (assets, icons, sw.js, the manifest) are served as they are, because this rule is not forced.
 [[redirects]]
   from = "/*"

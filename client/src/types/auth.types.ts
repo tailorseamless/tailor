@@ -63,6 +63,8 @@ export interface Business {
   emailReceipts: boolean;
   emailOrderUpdates: boolean;
   slug: string | null;
+  /** The public page (designs, price ranges, contact details) is live at the slug. */
+  pageEnabled: boolean;
   bookingEnabled: boolean;
   deletionScheduledFor: ISODate | null;
   createdAt: ISODate;
@@ -104,6 +106,7 @@ export type BusinessInput = Partial<
     | "emailReceipts"
     | "emailOrderUpdates"
     | "slug"
+    | "pageEnabled"
     | "bookingEnabled"
   >
 >;

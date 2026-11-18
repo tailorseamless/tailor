@@ -22,8 +22,8 @@ router.post(
 );
 router.post("/portal/:token/appointment-requests", bookingRateLimiter, validate(s.portalRequestSchema), P.request);
 
-// The booking page: <APP_URL>/book/<slug>, when the business has switched it on.
-router.get("/public/businesses/:slug", portalRateLimiter, validate(s.bookingPageSchema), P.bookingPage);
+// A business's public page: <APP_URL>/<slug>, once the business has published it.
+router.get("/public/businesses/:slug", portalRateLimiter, validate(s.shopPageSchema), P.shopPage);
 router.post(
   "/public/businesses/:slug/appointment-requests",
   bookingRateLimiter,

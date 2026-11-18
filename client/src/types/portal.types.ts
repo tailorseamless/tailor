@@ -11,7 +11,8 @@ export interface PublicBusiness {
   address: string | null;
   timeZone: string;
   currency: string;
-  bookingUrl: string | null;
+  /** The business's public page, when it has one. */
+  pageUrl: string | null;
 }
 
 export interface PublicDesign {
@@ -19,6 +20,8 @@ export interface PublicDesign {
   name: string;
   description: string | null;
   category: string | null;
+  priceMin: number | null;
+  priceMax: number | null;
   images: { url: string; width: number | null; height: number | null }[];
 }
 
@@ -69,8 +72,11 @@ export interface Portal {
   designs: PublicDesign[];
 }
 
-export interface BookingPage {
+/** A business's public page: contact details, designs with their price ranges, and optionally a booking form. */
+export interface ShopPage {
   business: PublicBusiness;
+  /** Visitors can ask for an appointment here. */
+  bookingOpen: boolean;
   appointmentTypes: { value: AppointmentType; label: string }[];
   designs: PublicDesign[];
 }

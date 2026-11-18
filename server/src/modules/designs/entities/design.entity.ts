@@ -1,5 +1,5 @@
 import { Check, Column, Entity, Index } from "typeorm";
-import { BaseEntity, ForeignKey } from "../../../shared/entities/baseEntity";
+import { BaseEntity, ForeignKey, numericTransformer } from "../../../shared/entities/baseEntity";
 import type { DesignVisibility } from "../dto/design.dto";
 
 @Entity("designs")
@@ -7,6 +7,10 @@ import type { DesignVisibility } from "../dto/design.dto";
 @Index(["businessId", "category"])
 @Index(["businessId", "visibility"]) // what customers may see
 @Check(`"visibility" IN ('private','customers')`)
+@Check(
+  "CHK_designs_price_range",
+  `("price_min" IS NULL OR "price_min" >= 0) AND ("price_max" IS NULL OR "price_max" >= 0) AND ("price_min" IS NULL OR "price_max" IS NULL OR "price_min" <= "price_max")`,
+)
 export class Design extends BaseEntity {
   @Column({ name: "business_id", type: "uuid" })
   businessId: string;
@@ -22,6 +26,28 @@ export class Design extends BaseEntity {
 
   @Column({ type: "varchar", length: 60, nullable: true })
   category: string | null;
+
+  /** The lowest price this style usually costs. With no highest price it reads "from …". */
+  @Column({
+    name: "price_min",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  priceMin: number | null;
+
+  /** The highest price this style usually costs. With no lowest price it reads "up to …". */
+  @Column({
+    name: "price_max",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  priceMax: number | null;
 
   @Column({ type: "varchar", length: 20, default: "private" })
   visibility: DesignVisibility;
