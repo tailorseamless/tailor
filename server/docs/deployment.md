@@ -60,6 +60,27 @@ Render's **free** web services have no Shell, so run these one-off commands **fr
 
 On a paid instance you can run the same commands from Render → Shell instead.
 
+## 6. The web app on Netlify
+
+The web app is the `client` workspace. It deploys from the same repository as the API, from `netlify.toml` at the repository root (build command, publish folder, Node 22, page routing, caching and security headers).
+
+1. Netlify → **Add new site → Import an existing project** → GitHub → this repository. Leave the build settings as `netlify.toml` gives them.
+2. **Before the first deploy**, add the values the app is built with (Site configuration → Environment variables). They are compiled into the page, so none of them is a secret, and changing one needs a new deploy:
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_API_URL` | the API's address ending in `/api/v1`, `https://` only (for example `https://tailorflow-api.onrender.com/api/v1`) |
+   | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | from Firebase console → Project settings → Your apps → Web app |
+   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | same place |
+   | `VITE_FIREBASE_VAPID_KEY` | optional; leave out to turn push off |
+   | `VITE_ENV` | `production` |
+
+   A Netlify build with a required one missing, or an `http://` API address, fails with a message saying which. (Without that, the site would build and then call `localhost` from every visitor's browser.)
+3. After the first deploy Netlify gives the site an address like `https://<name>.netlify.app`. Then:
+   - **Render:** set `APP_URL` and `CORS_ORIGINS` to that address exactly, with no trailing slash.
+   - **Firebase console → Authentication → Settings → Authorized domains:** add `<name>.netlify.app`. Google sign-in and the email verification and password reset links stop working on a domain that is not listed.
+4. The security policy in `netlify.toml` lets the app call `https://*.onrender.com`. When the API gets its own domain, put that domain in `connect-src` instead.
+
 ## Migrations, backups, rollbacks
 
 - Migrations run in the start command (`migration:run:prod`), one transaction each. If one fails, the deploy fails and the previous version keeps serving.
