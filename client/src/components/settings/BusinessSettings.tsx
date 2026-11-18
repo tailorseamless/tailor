@@ -14,6 +14,7 @@ import { Field, FormError, Input, Select, Toggle } from "../shared/Field";
 import { PhoneInput } from "../shared/PhoneInput";
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/;
+const ACCOUNT_NUMBER = /^[A-Za-z0-9]{4,34}$/;
 const suggestSlug = (name: string) =>
   name
     .toLowerCase()
@@ -27,7 +28,13 @@ export function BusinessSettings() {
   const { refresh } = useAuth();
   const { copy } = useSharePage();
   const update = useUpdateBusiness();
+  // Its own mutation, so a problem saving the account shows under the account, not under the business details.
+  const updateAccount = useUpdateBusiness();
+  const [accountProblem, setAccountProblem] = useState<string | null>(null);
   const [form, setForm] = useState({
+    bankName: business.bankName ?? "",
+    accountNumber: business.accountNumber ?? "",
+    accountName: business.accountName ?? "",
     name: business.name,
     phone: business.phone ?? "",
     address: business.address ?? "",
@@ -70,6 +77,28 @@ export function BusinessSettings() {
     }
     update.mutate(body, { onSuccess: () => void refresh(), onError: onFail });
   };
+
+  /** Saves the account details shown on the public page; `clear` removes them. */
+  const saveAccount = (clear = false) => {
+    setAccountProblem(null);
+    const account = clear
+      ? { bankName: null, accountNumber: null, accountName: null }
+      : { bankName: orNull(form.bankName), accountNumber: orNull(form.accountNumber), accountName: orNull(form.accountName) };
+    const filled = Object.values(account).filter(Boolean).length;
+    if (filled > 0 && filled < 3) {
+      return setAccountProblem("Add the bank name, account number and account name together, or leave all three empty.");
+    }
+    if (account.accountNumber && !ACCOUNT_NUMBER.test(account.accountNumber.replace(/[\s-]/g, ""))) {
+      return setAccountProblem("The account number can use letters and digits only, 4 to 34 characters.");
+    }
+    updateAccount.mutate(account, {
+      onSuccess: () => {
+        if (filled === 0) setForm((f) => ({ ...f, bankName: "", accountNumber: "", accountName: "" }));
+        void refresh();
+      },
+    });
+  };
+  const accountShown = Boolean(business.bankName && business.accountNumber && business.accountName);
 
   return (
     <>
@@ -209,6 +238,74 @@ export function BusinessSettings() {
               }}
               data-cy="biz-booking-toggle"
             />
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Account details for customers">
+        <div className="space-y-4 p-4">
+          <p className="text-sm text-fg-muted">
+            Where customers send deposits and balances. These show on your public page with a Copy button, so they
+            don't have to ask. Anyone with your page link can see them. Leave all three empty to show nothing.
+          </p>
+          {!business.pageEnabled && (
+            <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg" data-cy="biz-account-unpublished">
+              Your page isn't published yet, so customers can't see these until you publish it.
+            </p>
+          )}
+          <FormError message={accountProblem ?? (updateAccount.error ? errorMessage(updateAccount.error) : null)} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Bank">
+              {(p) => (
+                <Input
+                  {...p}
+                  value={form.bankName}
+                  onChange={(e) => set("bankName", e.target.value)}
+                  maxLength={100}
+                  placeholder="e.g. GTBank"
+                  data-cy="biz-bank-name"
+                />
+              )}
+            </Field>
+            <Field label="Account number">
+              {(p) => (
+                <Input
+                  {...p}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={form.accountNumber}
+                  onChange={(e) => set("accountNumber", e.target.value)}
+                  maxLength={40}
+                  data-cy="biz-account-number"
+                />
+              )}
+            </Field>
+            <Field label="Account name" hint="As the bank shows it.">
+              {(p) => (
+                <Input
+                  {...p}
+                  value={form.accountName}
+                  onChange={(e) => set("accountName", e.target.value)}
+                  maxLength={150}
+                  data-cy="biz-account-name"
+                />
+              )}
+            </Field>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => saveAccount()} loading={updateAccount.isPending} data-cy="biz-account-save">
+              Save account details
+            </Button>
+            {accountShown && (
+              <Button
+                variant="ghost"
+                onClick={() => saveAccount(true)}
+                disabled={updateAccount.isPending}
+                data-cy="biz-account-clear"
+              >
+                Remove them
+              </Button>
+            )}
           </div>
         </div>
       </Card>

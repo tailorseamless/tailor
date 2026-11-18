@@ -65,6 +65,16 @@ export class Business extends BaseEntity {
   @Column({ name: "booking_enabled", type: "boolean", default: false })
   bookingEnabled: boolean;
 
+  /** Where customers pay: shown on the public page. Set together or not at all. */
+  @Column({ name: "bank_name", type: "varchar", length: 100, nullable: true })
+  bankName: string | null;
+
+  @Column({ name: "account_number", type: "varchar", length: 34, nullable: true })
+  accountNumber: string | null;
+
+  @Column({ name: "account_name", type: "varchar", length: 150, nullable: true })
+  accountName: string | null;
+
   /** The owner asked to delete the business; it is anonymised at this time unless they cancel. */
   @Index("IDX_businesses_deletion_due", { where: `"deletion_scheduled_for" IS NOT NULL AND "deleted_at" IS NULL` })
   @Column({ name: "deletion_scheduled_for", type: "timestamptz", nullable: true })

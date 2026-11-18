@@ -9,6 +9,16 @@ export const currencyCode = z
   .toUpperCase()
   .regex(/^[A-Z]{3}$/, "Use a 3-letter currency code, e.g. NGN");
 
+/**
+ * An account number as people write it: "0123 456 789" is stored as "0123456789". Letters are allowed because not
+ * every country's account numbers are digits only (IBANs).
+ */
+const accountNumber = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/[\s-]/g, ""))
+  .refine((value) => /^[A-Za-z0-9]{4,34}$/.test(value), "Use the digits of the account number, 4 to 34 characters");
+
 export const getBusinessSchema = z.object({});
 
 /**
@@ -38,6 +48,10 @@ export const updateBusinessSchema = z.object({
       pageEnabled: z.boolean(),
       /** Take appointment requests on the page. */
       bookingEnabled: z.boolean(),
+      /** Where customers pay, shown on the public page. All three together, or all null to remove them. */
+      bankName: trimmed(2, 100).nullable(),
+      accountNumber: accountNumber.nullable(),
+      accountName: trimmed(2, 150).nullable(),
     })
     .partial()
     .refine((body) => Object.keys(body).length > 0, "Provide at least one field to update"),

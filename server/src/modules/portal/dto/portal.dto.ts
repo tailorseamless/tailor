@@ -94,6 +94,8 @@ export interface PortalMeasurementsDTO {
  */
 export interface ShopPageDTO {
   business: PublicBusinessDTO;
+  /** Where to pay, when the owner has added it. Only on this public page, not in the customer portal. */
+  bankAccount: { bankName: string; accountNumber: string; accountName: string } | null;
   /** Visitors can ask for an appointment on this page. */
   bookingOpen: boolean;
   appointmentTypes: { value: AppointmentType; label: string }[];

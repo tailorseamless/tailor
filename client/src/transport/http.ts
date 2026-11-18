@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from "axios";
 import { authClient } from "../lib/firebase";
+import { noteSessionEnded } from "../lib/sessionNotice";
 import type { ApiResponse, Page, PaginationMeta, ValidationError } from "../types/api.types";
 
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
@@ -29,8 +30,22 @@ http.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+/** What the API puts in `errors[0].message` when a sign-in is older than a session may be. */
+const SESSION_EXPIRED = "session_expired";
+
+/** Whether this failed call says the sign-in has run out (the server's session limit), as opposed to a bad token. */
+export const isSessionEnded = (err: unknown): boolean =>
+  err instanceof ApiError && err.statusCode === 401 && err.errors[0]?.message === SESSION_EXPIRED;
+
 http.interceptors.response.use(undefined, async (error: AxiosError) => {
   const config = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+  const body = error.response?.data as { errors?: { message?: string }[] } | undefined;
+  if (error.response?.status === 401 && body?.errors?.[0]?.message === SESSION_EXPIRED) {
+    // A fresh token would not help: only signing in again does. Signing out sends them to the sign-in page.
+    noteSessionEnded();
+    await authClient.signOut().catch(() => undefined);
+    throw error;
+  }
   // A token can expire between the request and the server checking it: refresh once and retry.
   if (error.response?.status === 401 && config && !config._retried && authClient.currentUser()) {
     config._retried = true;

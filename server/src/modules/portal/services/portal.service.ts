@@ -213,6 +213,11 @@ export class PortalService {
     const business = await this.publishedBusiness(slug);
     return {
       business: this.publicBusiness(business),
+      // Only a complete set is shown: the three are saved together, this guards the rest.
+      bankAccount:
+        business.bankName && business.accountNumber && business.accountName
+          ? { bankName: business.bankName, accountNumber: business.accountNumber, accountName: business.accountName }
+          : null,
       bookingOpen: business.bookingEnabled,
       appointmentTypes: APPOINTMENT_TYPES.map((value) => ({ value, label: APPOINTMENT_TYPE_LABELS[value] ?? value })),
       designs: await this.designs.forCustomers(business.id, PORTAL_LIMITS.shopDesigns),

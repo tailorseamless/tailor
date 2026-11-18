@@ -1,8 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
+import type { DecodedIdToken } from "firebase-admin/auth";
+import { env } from "../../config/env";
 import { firebaseAuth } from "../../infrastructure/firebase/firebaseAdmin";
 import { UserService } from "../../modules/users/services/user.service";
 import { AppError } from "../errors/AppError";
 import { isConfiguredAdmin, type FirebaseIdentity } from "../services/access.service";
+import { SESSION_EXPIRED, sessionHasEnded } from "../utils/session";
 
 /**
  * Firebase proves WHO someone is; PostgreSQL decides what they may do
@@ -14,21 +17,28 @@ async function verify(req: Request): Promise<FirebaseIdentity> {
   const token = header.slice("Bearer ".length).trim();
   if (!token) throw AppError.unauthorised();
 
+  let decoded: DecodedIdToken;
   try {
     // Revocation is not checked (a network call per request); access is cut by
     // disabling the user, whose status is re-read from a 60 s cache.
-    const decoded = await firebaseAuth().verifyIdToken(token);
-    return {
-      uid: decoded.uid,
-      email: typeof decoded.email === "string" ? decoded.email.toLowerCase() : null,
-      emailVerified: decoded.email_verified === true,
-      name: typeof decoded.name === "string" ? decoded.name : null,
-      picture: typeof decoded.picture === "string" ? decoded.picture : null,
-      signInProvider: decoded.firebase?.sign_in_provider ?? null,
-    };
+    decoded = await firebaseAuth().verifyIdToken(token);
   } catch {
     throw AppError.unauthorised("Token invalid or expired");
   }
+  // Firebase sign-ins never lapse on their own, so the limit is ours. Outside the try above: this is not a bad token.
+  if (sessionHasEnded(decoded.auth_time, env.session.maxMs)) {
+    throw AppError.unauthorised("Your session has ended. Please sign in again.", [
+      { field: "session", message: SESSION_EXPIRED },
+    ]);
+  }
+  return {
+    uid: decoded.uid,
+    email: typeof decoded.email === "string" ? decoded.email.toLowerCase() : null,
+    emailVerified: decoded.email_verified === true,
+    name: typeof decoded.name === "string" ? decoded.name : null,
+    picture: typeof decoded.picture === "string" ? decoded.picture : null,
+    signInProvider: decoded.firebase?.sign_in_provider ?? null,
+  };
 }
 
 /** A valid token AND a linked, active user. Mounted ONCE, in app.ts (§14.1). */

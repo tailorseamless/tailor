@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { FullPageSpinner } from "../../components/shared/States";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { authClient, authErrorMessage } from "../../lib/firebase";
+import { clearSessionEnded, sessionEndedNoted } from "../../lib/sessionNotice";
 
 type Mode = "signIn" | "signUp" | "reset";
 
@@ -45,6 +46,9 @@ export default function SignInPage() {
   const [mode, setMode] = useState<Mode>(params.get("mode") === "signUp" ? "signUp" : "signIn");
   const [formError, setFormError] = useState<string | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
+  // Signed out because the session ran out (not because they chose to): say so. Read once, then forget it.
+  const [sessionEnded] = useState(sessionEndedNoted);
+  useEffect(clearSessionEnded, []);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { email: params.get("email") ?? "", password: "" },
@@ -95,6 +99,11 @@ export default function SignInPage() {
         <FormError message="Sign-in isn't set up yet: add the VITE_FIREBASE_* values to client/.env and restart." />
       )}
       <form onSubmit={submit} className="space-y-4" noValidate>
+        {sessionEnded && mode === "signIn" && (
+          <p className="rounded-lg bg-info-bg px-3 py-2 text-sm text-info-fg" role="status" data-cy="session-ended">
+            Your session ended. Please sign in again to carry on.
+          </p>
+        )}
         <FormError message={formError} />
         <Field label="Email" error={errors.email?.message}>
           {(p) => (

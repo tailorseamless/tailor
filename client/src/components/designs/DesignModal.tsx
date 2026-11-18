@@ -1,5 +1,5 @@
 import { ImagePlus, Star, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useToast } from "../../contexts/ToastContext";
 import { useDesign, useDesignActions } from "../../hooks/useTeam";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -7,17 +7,20 @@ import type { Design, DesignVisibility } from "../../types/workspace.types";
 import { cn } from "../../utils/cn";
 import { errorMessage } from "../../utils/errors";
 import { formatPriceRange } from "../../utils/money";
+import {
+  PICTURE_TYPES as TYPES,
+  PICTURES_PER_ITEM as MAX_PICTURES,
+  PICTURES_PER_REQUEST as MAX_PER_UPLOAD,
+  pictureProblem,
+} from "../../utils/pictures";
 import { orNull } from "../../utils/validation";
 import { Button } from "../shared/Button";
 import { Field, FormError, Input, Textarea, Toggle } from "../shared/Field";
 import { ConfirmDialog, Modal } from "../shared/Modal";
+import { PendingThumb } from "../shared/PendingThumb";
 import { Spinner } from "../shared/States";
 import { CategoryPicker } from "./CategoryPicker";
 
-const TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_BYTES = 5 * 1024 * 1024;
-const MAX_PICTURES = 12;
-const MAX_PER_UPLOAD = 5;
 const MAX_PRICE = 999_999_999;
 
 /** What was typed in a price box: null when empty, undefined when it isn't a usable amount. */
@@ -25,30 +28,6 @@ function parsePrice(text: string): number | null | undefined {
   if (text.trim() === "") return null;
   const value = Number(text);
   return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE ? Math.round(value * 100) / 100 : undefined;
-}
-
-/** A picture chosen for a design that isn't saved yet. */
-function PendingThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
-  const [url, setUrl] = useState<string>();
-  useEffect(() => {
-    const made = URL.createObjectURL(file);
-    setUrl(made);
-    return () => URL.revokeObjectURL(made);
-  }, [file]);
-  return (
-    <div className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-subtle">
-      {url && <img src={url} alt={file.name} className="size-full object-cover" />}
-      <button
-        type="button"
-        className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        onClick={onRemove}
-        aria-label={`Don't add ${file.name}`}
-        data-cy="design-pending-remove"
-      >
-        <Trash2 className="size-4" aria-hidden />
-      </button>
-    </div>
-  );
 }
 
 /** Create a design, or view and edit one with its pictures. */
@@ -147,8 +126,8 @@ function DesignEditor({
     const files = Array.from(list ?? []);
     if (input.current) input.current.value = "";
     if (!files.length) return;
-    const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
-    if (bad) return toast.error(`${bad.name} isn't a JPG, PNG or WebP photo under 5 MB.`);
+    const problem = files.map(pictureProblem).find(Boolean);
+    if (problem) return toast.error(problem);
     const room = MAX_PICTURES - (design ? design.images.length : pending.length);
     if (files.length > room) {
       return toast.error(
@@ -224,6 +203,7 @@ function DesignEditor({
                     key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
                     file={file}
                     onRemove={() => setPending(pending.filter((_, i) => i !== index))}
+                    removeCy="design-pending-remove"
                   />
                 ))}
             {canEdit && (design ? design.images.length : pending.length) < MAX_PICTURES && (

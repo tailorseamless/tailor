@@ -1,6 +1,7 @@
 import path from "node:path";
 import dotenv from "dotenv";
 import { z } from "zod";
+import { DURATION_LIMITS, describeDuration, parseDuration } from "../shared/utils/duration";
 
 /**
  * The ONLY reader of process.env (Backend Guide §1.1, §29.1).
@@ -22,6 +23,23 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
   // Who is a platform admin: email addresses, separated by commas. Each person needs an account here and a VERIFIED email.
   PLATFORM_ADMIN_EMAILS: z.string().optional(),
+  // How long a sign-in lasts, counted from when the person signed in; then they sign in again. Written with its unit:
+  // 60d, 12h, 30m, 45s. Firebase renews its own short-lived token silently and never signs anyone out for that.
+  SESSION_LIFETIME: z
+    .string()
+    .default("60d")
+    .transform((value, ctx) => {
+      const ms = parseDuration(value);
+      if (ms === null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'write it with a unit, like 60d, 12h, 30m or 45s' });
+        return z.NEVER;
+      }
+      if (ms < DURATION_LIMITS.min || ms > DURATION_LIMITS.max) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "must be between 1 second and 3650 days" });
+        return z.NEVER;
+      }
+      return ms;
+    }),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
 
   DATABASE_URL: z.string({ required_error: "DATABASE_URL is required" }).min(1),
@@ -236,6 +254,11 @@ function load() {
     problems.push("FIREBASE_PROJECT_ID: does not match the project of the service account");
   }
   if (problems.length > 0) fail(problems);
+  if (raw.SESSION_LIFETIME < 5 * 60_000) {
+    console.warn(
+      `SESSION_LIFETIME is ${describeDuration(raw.SESSION_LIFETIME)}: people are signed out that soon after signing in. Fine for testing, not for real use`,
+    );
+  }
   if (isProduction && !cloudinaryConfig(raw).configured) console.warn("Cloudinary is not configured: uploads are off");
   const mail = emailConfig(raw);
   if (isProduction && (raw.EMAIL_PROVIDER === "none" || (!mail.smtpConfigured && !mail.appsScript.configured))) {
@@ -251,6 +274,10 @@ function load() {
     apiPrefix: raw.API_PREFIX.replace(/\/+$/, "") || "/",
     appUrl: raw.APP_URL.replace(/\/+$/, ""),
     platformAdmins: platformAdminEmails(raw.PLATFORM_ADMIN_EMAILS),
+    session: {
+      /** Firebase sign-ins never lapse by themselves, so this is the limit the API enforces (SESSION_LIFETIME). */
+      maxMs: raw.SESSION_LIFETIME,
+    },
     // A browser's Origin never ends in "/", so an address pasted with one (https://site.netlify.app/) would never match.
     corsOrigins: raw.CORS_ORIGINS.split(",")
       .map((origin) => origin.trim().replace(/\/+$/, ""))

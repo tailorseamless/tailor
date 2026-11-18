@@ -23,6 +23,9 @@ function toRecord(row: Business): BusinessRecord {
     slug: row.slug ?? null,
     pageEnabled: row.pageEnabled ?? false,
     bookingEnabled: row.bookingEnabled ?? false,
+    bankName: row.bankName ?? null,
+    accountNumber: row.accountNumber ?? null,
+    accountName: row.accountName ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

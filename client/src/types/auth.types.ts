@@ -66,6 +66,10 @@ export interface Business {
   /** The public page (designs, price ranges, contact details) is live at the slug. */
   pageEnabled: boolean;
   bookingEnabled: boolean;
+  /** Where customers pay, shown on the public page. All three are set, or none. */
+  bankName: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
   deletionScheduledFor: ISODate | null;
   createdAt: ISODate;
 }
@@ -108,5 +112,8 @@ export type BusinessInput = Partial<
     | "slug"
     | "pageEnabled"
     | "bookingEnabled"
+    | "bankName"
+    | "accountNumber"
+    | "accountName"
   >
 >;

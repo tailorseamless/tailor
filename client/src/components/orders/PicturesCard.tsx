@@ -4,14 +4,15 @@ import { useToast } from "../../contexts/ToastContext";
 import { useOrderImages } from "../../hooks/useOrders";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { OrderImage } from "../../types/order.types";
+import {
+  PICTURE_TYPES as TYPES,
+  PICTURES_PER_ITEM as MAX_PER_ORDER,
+  PICTURES_PER_REQUEST as MAX_PER_UPLOAD,
+  pictureProblem,
+} from "../../utils/pictures";
 import { Button } from "../shared/Button";
 import { Card } from "../shared/Display";
 import { ConfirmDialog } from "../shared/Modal";
-
-const MAX_PER_ORDER = 12;
-const MAX_PER_UPLOAD = 5;
-const MAX_BYTES = 5 * 1024 * 1024;
-const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /** Reference pictures: styles, fabric, the finished garment. */
 export function PicturesCard({ orderId, images }: { orderId: string; images: OrderImage[] }) {
@@ -27,8 +28,8 @@ export function PicturesCard({ orderId, images }: { orderId: string; images: Ord
     const files = Array.from(list ?? []);
     if (input.current) input.current.value = "";
     if (!files.length) return;
-    const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
-    if (bad) return toast.error(`${bad.name} isn't a JPG, PNG or WebP photo under 5 MB.`);
+    const problem = files.map(pictureProblem).find(Boolean);
+    if (problem) return toast.error(problem);
     if (files.length > Math.min(room, MAX_PER_UPLOAD)) {
       return toast.error(
         room < MAX_PER_UPLOAD

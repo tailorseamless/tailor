@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Calculator, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useMeasurementTemplates, useRecordMeasurement } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -14,6 +14,7 @@ import { DatePicker } from "../shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../shared/Field";
 import { Modal } from "../shared/Modal";
 import { BodyDiagram } from "./BodyDiagram";
+import { MeasureCalculator } from "./MeasureCalculator";
 
 interface Row {
   name: string;
@@ -55,6 +56,9 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
   const [problem, setProblem] = useState<string | null>(null);
   /** The row being typed in, so its spot on the figure lights up. */
   const [focused, setFocused] = useState<number | null>(null);
+  /** The calculator, and the box it fills: the one tapped last, which unlike `focused` stays after the tap moves on. */
+  const [calculating, setCalculating] = useState(false);
+  const [target, setTarget] = useState<number | null>(null);
 
   const template = list.find((t) => t.id === templateId);
   const current = rows ?? rowsFor(template, previous);
@@ -69,7 +73,16 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
   );
   const focusedRow = focused === null ? undefined : current[focused];
   const active = focusedRow ? landmarkFor(focusedRow.name, template?.name) : null;
-  const focusing = (index: number) => ({ onFocus: () => setFocused(index), onBlur: () => setFocused(null) });
+  const focusing = (index: number) => ({
+    onFocus: () => {
+      setFocused(index);
+      setTarget(index);
+    },
+    onBlur: () => setFocused(null),
+  });
+  /** Rings the box the calculator will fill, so it is clear where "Use" goes. */
+  const targeted = (index: number) => calculating && target === index && "ring-2 ring-focus/60";
+  const targetRow = target === null ? undefined : current[target];
 
   const setRow = (index: number, patch: Partial<Row>) =>
     setRows(current.map((r, i) => (i === index ? { ...r, ...patch } : r)));
@@ -78,6 +91,8 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
     setRows(null);
     setProblem(null);
     setNotes("");
+    setCalculating(false);
+    setTarget(null);
     record.reset();
     onClose();
   };
@@ -114,8 +129,28 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
       onClose={close}
       title="Record measurements"
       size="lg"
+      dock={
+        calculating && (
+          <MeasureCalculator
+            unit={unit}
+            target={targetRow ? targetRow.name.trim() : null}
+            onUse={(value) => target !== null && setRow(target, { value })}
+            onClose={() => setCalculating(false)}
+          />
+        )
+      }
       footer={
         <>
+          <Button
+            variant="ghost"
+            className="aria-pressed:bg-subtle aria-pressed:text-fg sm:mr-auto"
+            icon={<Calculator className="size-4" aria-hidden />}
+            aria-pressed={calculating}
+            onClick={() => setCalculating(!calculating)}
+            data-cy="measure-calculator"
+          >
+            Calculator
+          </Button>
           <Button variant="secondary" onClick={close} data-cy="measure-cancel">
             Cancel
           </Button>
@@ -136,6 +171,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                 onChange={(e) => {
                   setTemplateId(e.target.value);
                   setRows(null);
+                  setTarget(null); // the boxes are different ones now
                 }}
                 data-cy="measure-template"
               >
@@ -192,6 +228,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                             autoComplete="off"
                             value={row.value}
                             onChange={(e) => setRow(index, { value: e.target.value })}
+                            className={targeted(index) || undefined}
                             {...focusing(index)}
                             data-cy="measure-value"
                           />
@@ -215,7 +252,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                           placeholder="0"
                           value={row.value}
                           onChange={(e) => setRow(index, { value: e.target.value })}
-                          className="w-24"
+                          className={cn("w-24", targeted(index))}
                           {...focusing(index)}
                           data-cy="measure-custom-value"
                         />
@@ -223,6 +260,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                           label="Remove"
                           onClick={() => {
                             setFocused(null);
+                            setTarget(null); // the rows below move up
                             setRows(current.filter((_, i) => i !== index));
                           }}
                           data-cy="measure-remove"

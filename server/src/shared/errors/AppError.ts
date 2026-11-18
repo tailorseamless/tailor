@@ -15,8 +15,8 @@ export class AppError extends Error {
   static badRequest(message: string, errors: unknown[] = []) {
     return new AppError(message, 400, errors);
   }
-  static unauthorised(message = "Unauthorised") {
-    return new AppError(message, 401);
+  static unauthorised(message = "Unauthorised", errors: unknown[] = []) {
+    return new AppError(message, 401, errors);
   }
   static forbidden(message = "Forbidden") {
     return new AppError(message, 403);

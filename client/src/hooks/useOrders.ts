@@ -3,6 +3,7 @@ import type { ListParams } from "../types/api.types";
 import type { OrderFilters, OrderInput, OrderStatus, PriceChange } from "../types/order.types";
 import type { PaymentInput } from "../types/payment.types";
 import { newIdempotencyKey } from "../transport/http";
+import { uploadInBatches } from "../utils/pictures";
 import { saveFile } from "../utils/saveFile";
 import { keys } from "./queryKeys";
 import { useApiMutation, useApiQuery, usePaginatedQuery } from "./useApi";
@@ -18,12 +19,26 @@ export function useOrder(id: string | undefined) {
   return useApiQuery(keys.orders.detail(id ?? ""), () => orderEndpoints.get(id as string), { enabled: Boolean(id) });
 }
 
+/**
+ * Creates the order, then sends the pictures chosen for it. The order is saved first, so a picture that fails to
+ * upload can't lose it: the result says how many went up and the caller tells the person.
+ */
 export function useCreateOrder() {
-  return useApiMutation((vars: { input: OrderInput; key: string }) => orderEndpoints.create(vars.input, vars.key), {
-    invalidate: [keys.orders.all, ["dashboard"]],
-    success: (order) => `Order ${order.orderNumber} created`,
-    toastError: false,
-  });
+  return useApiMutation(
+    async (vars: { input: OrderInput; key: string; files?: File[] }) => {
+      const order = await orderEndpoints.create(vars.input, vars.key);
+      const { uploaded, uploadError } = await uploadInBatches(vars.files ?? [], (batch) =>
+        orderEndpoints.uploadImages(order.id, batch),
+      );
+      return { order, uploaded, uploadError };
+    },
+    {
+      invalidate: [keys.orders.all, ["dashboard"]],
+      success: ({ order, uploaded }) =>
+        `Order ${order.orderNumber} created${uploaded ? ` with ${uploaded} picture${uploaded === 1 ? "" : "s"}` : ""}`,
+      toastError: false,
+    },
+  );
 }
 
 export function useUpdateOrder(id: string) {

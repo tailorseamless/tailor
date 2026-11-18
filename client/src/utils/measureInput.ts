@@ -1,4 +1,4 @@
-const VULGAR: Record<string, number> = {
+export const VULGAR: Record<string, number> = {
   "½": 1 / 2,
   "¼": 1 / 4,
   "¾": 3 / 4,

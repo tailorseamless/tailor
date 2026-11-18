@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Palette, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Controller, FormProvider, useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -19,6 +19,9 @@ import {
   type PriceFormItem,
   type PriceFormShape,
 } from "../../components/orders/ItemPricing";
+import { PendingPictures } from "../../components/orders/PendingPictures";
+import { Photo } from "../../components/public/ShopParts";
+import { useToast } from "../../contexts/ToastContext";
 import { useCustomer, useMeasurements } from "../../hooks/useCustomers";
 import { useBranches, useDesigns } from "../../hooks/useTeam";
 import { newOrderKey, useCreateOrder } from "../../hooks/useOrders";
@@ -26,9 +29,10 @@ import { useWorkspace } from "../../hooks/useWorkspace";
 import { buildFor } from "../../utils/bodyMap";
 import { errorMessage } from "../../utils/errors";
 import { formatDay } from "../../utils/formatDate";
-import { formatMoney } from "../../utils/money";
+import { formatMoney, formatPriceRange } from "../../utils/money";
 import { orderFigures } from "../../utils/orderMoney";
 import { todayIn } from "../../utils/timezone";
+import type { Design } from "../../types/workspace.types";
 
 const item = z
   .object({
@@ -59,6 +63,28 @@ const blankItem: Values["items"][number] = {
   designId: "",
 };
 
+/** The catalogue design picked for an item, with its photo, so it is clear which one it is. */
+function PickedDesign({ design, currency }: { design: Design; currency: string }) {
+  const detail = [design.category, formatPriceRange(design.priceMin, design.priceMax, currency)]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-subtle p-2 sm:col-span-2" data-cy="order-item-design-preview">
+      {design.coverUrl ? (
+        <Photo url={design.coverUrl} alt="" width={160} className="size-14 shrink-0 rounded-md object-cover" />
+      ) : (
+        <span className="grid size-14 shrink-0 place-items-center rounded-md bg-surface text-fg-subtle">
+          <Palette className="size-5" aria-hidden />
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-fg">{design.name}</span>
+        {detail && <span className="block truncate text-xs text-fg-muted">{detail}</span>}
+      </span>
+    </div>
+  );
+}
+
 export default function NewOrderPage() {
   const { timeZone, currency, can } = useWorkspace();
   const navigate = useNavigate();
@@ -70,6 +96,9 @@ export default function NewOrderPage() {
   // The picked customer carries only a name and phone; their gender picks the figure in the measuring form.
   const pickedDetail = useCustomer(customer?.id);
   const create = useCreateOrder();
+  const toast = useToast();
+  /** Pictures of what the customer wants; they go up once the order exists. */
+  const [pictures, setPictures] = useState<File[]>([]);
   const designs = useDesigns({ limit: 100 });
   const branches = (useBranches().data?.data ?? []).filter((b) => b.status === "active");
   const [branchId, setBranchId] = useState("");
@@ -119,6 +148,7 @@ export default function NewOrderPage() {
     create.mutate(
       {
         key: key.current,
+        files: pictures,
         input: {
           customerId: customer.id,
           branchId: branchId || null,
@@ -143,8 +173,14 @@ export default function NewOrderPage() {
         },
       },
       {
-        onSuccess: (order) => {
+        onSuccess: ({ order, uploaded, uploadError }) => {
           key.current = newOrderKey();
+          // The order is saved either way. Say what is missing, and the order page is where to add it.
+          if (uploadError) {
+            toast.error(
+              `${order.orderNumber} was created, but ${uploaded ? `only ${uploaded} of ${pictures.length}` : "none of the"} pictures uploaded: ${errorMessage(uploadError)}. You can add them from the order.`,
+            );
+          }
           navigate(`/orders/${order.id}`, { replace: true });
         },
       },
@@ -215,6 +251,7 @@ export default function NewOrderPage() {
 
             {items.fields.map((field, index) => {
               const e = errors.items?.[index];
+              const picked = designs.data?.data.find((d) => d.id === watched[index]?.designId);
               return (
                 <Card
                   key={field.id}
@@ -311,6 +348,7 @@ export default function NewOrderPage() {
                         )}
                       </Field>
                     )}
+                    {picked && <PickedDesign design={picked} currency={currency} />}
                     <Field label="Style notes (optional)" className="sm:col-span-2">
                       {(p) => (
                         <Textarea
@@ -336,6 +374,7 @@ export default function NewOrderPage() {
                 Add another item
               </Button>
             )}
+            {can("order.update") && <PendingPictures files={pictures} onChange={setPictures} disabled={create.isPending} />}
           </div>
 
           <div className="lg:sticky lg:top-20 lg:self-start">

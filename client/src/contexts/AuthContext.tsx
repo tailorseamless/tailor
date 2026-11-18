@@ -5,7 +5,7 @@ import { authEndpoints } from "../endpoints/auth.endpoints";
 import { notificationEndpoints } from "../endpoints/misc.endpoints";
 import { authClient } from "../lib/firebase";
 import { pushClient } from "../lib/push";
-import { ApiError } from "../transport/http";
+import { ApiError, isSessionEnded } from "../transport/http";
 import type { Me, Permission } from "../types/auth.types";
 import { errorMessage } from "../utils/errors";
 
@@ -59,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus("ready");
     } catch (err) {
       setMe(null);
+      // The request that said so has already signed them out; the sign-in page takes it from here.
+      if (isSessionEnded(err)) {
+        setUser(null);
+        setStatus(authClient.configured ? "signedOut" : "unconfigured");
+        return;
+      }
       if (isNotLinked(err)) setStatus(needsVerification(current) ? "unverified" : "notLinked");
       else {
         setError(errorMessage(err));

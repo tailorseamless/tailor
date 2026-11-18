@@ -7,6 +7,7 @@ import type {
   TeamMemberInput,
   TeamMemberUpdate,
 } from "../types/workspace.types";
+import { uploadInBatches } from "../utils/pictures";
 import { keys } from "./queryKeys";
 import { useApiMutation, useApiQuery, usePaginatedQuery } from "./useApi";
 
@@ -83,18 +84,9 @@ export function useDesignActions() {
   const createWithPictures = useApiMutation(
     async (vars: { input: DesignInput; files: File[] }) => {
       const design = await designEndpoints.create(vars.input);
-      let uploaded = 0;
-      let uploadError: unknown = null;
-      for (let i = 0; i < vars.files.length; i += 5) {
-        const batch = vars.files.slice(i, i + 5);
-        try {
-          await designEndpoints.addImages(design.id, batch);
-          uploaded += batch.length;
-        } catch (err) {
-          uploadError = err;
-          break;
-        }
-      }
+      const { uploaded, uploadError } = await uploadInBatches(vars.files, (batch) =>
+        designEndpoints.addImages(design.id, batch),
+      );
       return { design, uploaded, uploadError };
     },
     { invalidate: [designs], toastError: false },

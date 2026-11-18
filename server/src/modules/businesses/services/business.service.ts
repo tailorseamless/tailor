@@ -43,6 +43,19 @@ export class BusinessService {
           { field: "bookingEnabled", message: "Publish the page first" },
         ]);
       }
+      // A bank without an account number, or a number without the name on it, is no use to a customer paying in.
+      const account = {
+        bankName: input.bankName !== undefined ? input.bankName : current.bankName,
+        accountNumber: input.accountNumber !== undefined ? input.accountNumber : current.accountNumber,
+        accountName: input.accountName !== undefined ? input.accountName : current.accountName,
+      };
+      const missing = (Object.keys(account) as (keyof typeof account)[]).filter((field) => !account[field]);
+      if (missing.length > 0 && missing.length < 3) {
+        throw AppError.unprocessable(
+          "Add the bank name, account number and account name together, or clear all three",
+          missing.map((field) => ({ field, message: "Required" })),
+        );
+      }
       const business = await this.businesses.updateBusiness(actor.businessId, { ...input, bookingEnabled }, tx);
       if (!business) throw AppError.notFound("Business not found");
       await this.activity.audit(

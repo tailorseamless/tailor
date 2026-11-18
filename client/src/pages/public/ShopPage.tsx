@@ -13,6 +13,7 @@ import {
   RequestFieldsForm,
   type RequestFields,
 } from "../../components/public/PublicParts";
+import { ShopPayment } from "../../components/public/ShopPayment";
 import { Photo, ShopDesigns, ShopLayout } from "../../components/public/ShopParts";
 import { Button, buttonClass, IconButton } from "../../components/shared/Button";
 import { Card } from "../../components/shared/Display";
@@ -147,6 +148,7 @@ export default function ShopPage() {
   return (
     <ShopLayout business={page.business} onShare={() => void share(window.location.href, page.business.name)}>
       <ShopDesigns designs={page.designs} business={page.business} bookingOpen={page.bookingOpen} onBook={bookStyle} />
+      {page.bankAccount && <ShopPayment account={page.bankAccount} businessName={page.business.name} />}
       {page.bookingOpen && (
         <section id="book" className="mx-auto max-w-3xl scroll-mt-4">
           {sentFor ? (

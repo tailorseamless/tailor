@@ -77,6 +77,8 @@ export interface Portal {
 /** A business's public page: contact details, designs with their price ranges, and optionally a booking form. */
 export interface ShopPage {
   business: PublicBusiness;
+  /** Where to pay, when the business has added it. */
+  bankAccount: { bankName: string; accountNumber: string; accountName: string } | null;
   /** Visitors can ask for an appointment here. */
   bookingOpen: boolean;
   appointmentTypes: { value: AppointmentType; label: string }[];

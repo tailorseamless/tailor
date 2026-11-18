@@ -12,13 +12,15 @@ interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** A tool that stays put above the footer while the body scrolls, e.g. a calculator. */
+  dock?: ReactNode;
   size?: "sm" | "md" | "lg";
 }
 
 const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" } as const;
 
 /** Bottom sheet on phones, centred dialog on larger screens. */
-export function Modal({ open, onClose, title, description, children, footer, size = "md" }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, dock, size = "md" }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
       <Dialog.Portal>
@@ -48,6 +50,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             </Dialog.Close>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          {dock && <div className="shrink-0 border-t border-line bg-subtle px-5 py-3">{dock}</div>}
           {footer && (
             <div className="flex flex-col-reverse gap-2 border-t border-line px-5 py-3 sm:flex-row sm:justify-end">
               {footer}

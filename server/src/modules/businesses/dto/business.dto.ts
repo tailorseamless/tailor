@@ -31,6 +31,10 @@ export interface BusinessRecord {
   pageEnabled: boolean;
   /** Customers can request appointments on the public page. */
   bookingEnabled: boolean;
+  /** Where customers pay, shown on the public page. Either all three are set or none. */
+  bankName: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
   /** Set while a deletion is pending; cancel before then to keep the business. */
   deletionScheduledFor: Date | null;
   createdAt: Date;
