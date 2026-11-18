@@ -15,6 +15,24 @@ const flag = (fallback: boolean) =>
     .default(fallback ? "true" : "false")
     .transform((value) => value === "true");
 
+/** A setting written as a length of time with its unit ("60d", "30m", "45s"), kept in milliseconds. */
+const duration = (fallback: string, min: number, max: number, minWords: string, maxWords: string) =>
+  z
+    .string()
+    .default(fallback)
+    .transform((value, ctx) => {
+      const ms = parseDuration(value);
+      if (ms === null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "write it with a unit, like 60d, 12h, 30m or 45s" });
+        return z.NEVER;
+      }
+      if (ms < min || ms > max) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `must be between ${minWords} and ${maxWords}` });
+        return z.NEVER;
+      }
+      return ms;
+    });
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
@@ -24,22 +42,11 @@ const schema = z.object({
   // Who is a platform admin: email addresses, separated by commas. Each person needs an account here and a VERIFIED email.
   PLATFORM_ADMIN_EMAILS: z.string().optional(),
   // How long a sign-in lasts, counted from when the person signed in; then they sign in again. Written with its unit:
-  // 60d, 12h, 30m, 45s. Firebase renews its own short-lived token silently and never signs anyone out for that.
-  SESSION_LIFETIME: z
-    .string()
-    .default("60d")
-    .transform((value, ctx) => {
-      const ms = parseDuration(value);
-      if (ms === null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'write it with a unit, like 60d, 12h, 30m or 45s' });
-        return z.NEVER;
-      }
-      if (ms < DURATION_LIMITS.min || ms > DURATION_LIMITS.max) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "must be between 1 second and 3650 days" });
-        return z.NEVER;
-      }
-      return ms;
-    }),
+  // 60d, 12h, 30m, 45s.
+  SESSION_LIFETIME: duration("60d", DURATION_LIMITS.min, DURATION_LIMITS.max, "1 second", "3650 days"),
+  // How old the API lets the token an app presents be before it tells the app to fetch a new one. The app does that
+  // straight away, behind the scenes, and stays signed in. Firebase's own tokens last an hour, so that is the most.
+  ACCESS_TOKEN_LIFETIME: duration("1h", DURATION_LIMITS.min, 3_600_000, "1 second", "1 hour"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
 
   DATABASE_URL: z.string({ required_error: "DATABASE_URL is required" }).min(1),
@@ -259,6 +266,11 @@ function load() {
       `SESSION_LIFETIME is ${describeDuration(raw.SESSION_LIFETIME)}: people are signed out that soon after signing in. Fine for testing, not for real use`,
     );
   }
+  if (raw.ACCESS_TOKEN_LIFETIME < 60_000) {
+    console.warn(
+      `ACCESS_TOKEN_LIFETIME is ${describeDuration(raw.ACCESS_TOKEN_LIFETIME)}: the app fetches a new token that often while it is in use. Fine for testing, not for real use`,
+    );
+  }
   if (isProduction && !cloudinaryConfig(raw).configured) console.warn("Cloudinary is not configured: uploads are off");
   const mail = emailConfig(raw);
   if (isProduction && (raw.EMAIL_PROVIDER === "none" || (!mail.smtpConfigured && !mail.appsScript.configured))) {
@@ -276,7 +288,9 @@ function load() {
     platformAdmins: platformAdminEmails(raw.PLATFORM_ADMIN_EMAILS),
     session: {
       /** Firebase sign-ins never lapse by themselves, so this is the limit the API enforces (SESSION_LIFETIME). */
-      maxMs: raw.SESSION_LIFETIME,
+      lifetimeMs: raw.SESSION_LIFETIME,
+      /** How old a token may be before the app is told to fetch a new one (ACCESS_TOKEN_LIFETIME). */
+      accessTokenMs: raw.ACCESS_TOKEN_LIFETIME,
     },
     // A browser's Origin never ends in "/", so an address pasted with one (https://site.netlify.app/) would never match.
     corsOrigins: raw.CORS_ORIGINS.split(",")

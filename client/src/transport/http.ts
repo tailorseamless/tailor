@@ -46,10 +46,14 @@ http.interceptors.response.use(undefined, async (error: AxiosError) => {
     await authClient.signOut().catch(() => undefined);
     throw error;
   }
-  // A token can expire between the request and the server checking it: refresh once and retry.
+  // The token was too old (the API's ACCESS_TOKEN_LIFETIME) or ran out in flight: get a new one straight away and send
+  // the request again, once. The person stays signed in and never sees it. A request fired together with this one may
+  // already have fetched the new token, so use the current one if it differs before asking for another.
   if (error.response?.status === 401 && config && !config._retried && authClient.currentUser()) {
     config._retried = true;
-    const token = await authClient.token(true);
+    const sent = String(config.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
+    let token = await authClient.token();
+    if (!token || token === sent) token = await authClient.token(true);
     if (token) config.headers.set("Authorization", `Bearer ${token}`);
     return http.request(config);
   }

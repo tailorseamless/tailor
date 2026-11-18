@@ -61,6 +61,9 @@ services:
       # How long a sign-in lasts before the person must sign in again, with a unit: 60d, 12h, 30m, 45s. Change it here and redeploy.
       - key: SESSION_LIFETIME
         value: 60d
+      # How old a token may be before the app quietly fetches a new one (max 1h). The person stays signed in.
+      - key: ACCESS_TOKEN_LIFETIME
+        value: 1h
 
       # ── Files
       - key: CLOUDINARY_URL

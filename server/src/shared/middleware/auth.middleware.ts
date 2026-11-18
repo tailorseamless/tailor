@@ -5,7 +5,7 @@ import { firebaseAuth } from "../../infrastructure/firebase/firebaseAdmin";
 import { UserService } from "../../modules/users/services/user.service";
 import { AppError } from "../errors/AppError";
 import { isConfiguredAdmin, type FirebaseIdentity } from "../services/access.service";
-import { SESSION_EXPIRED, sessionHasEnded } from "../utils/session";
+import { SESSION_EXPIRED, TOKEN_EXPIRED, sessionHasEnded, tokenHasAged } from "../utils/session";
 
 /**
  * Firebase proves WHO someone is; PostgreSQL decides what they may do
@@ -26,9 +26,15 @@ async function verify(req: Request): Promise<FirebaseIdentity> {
     throw AppError.unauthorised("Token invalid or expired");
   }
   // Firebase sign-ins never lapse on their own, so the limit is ours. Outside the try above: this is not a bad token.
-  if (sessionHasEnded(decoded.auth_time, env.session.maxMs)) {
+  if (sessionHasEnded(decoded.auth_time, env.session.lifetimeMs)) {
     throw AppError.unauthorised("Your session has ended. Please sign in again.", [
       { field: "session", message: SESSION_EXPIRED },
+    ]);
+  }
+  // A token past ACCESS_TOKEN_LIFETIME is not an error the person should see: the app fetches a new one and retries.
+  if (tokenHasAged(decoded.iat, env.session.accessTokenMs)) {
+    throw AppError.unauthorised("Token expired. Fetch a new one and try again.", [
+      { field: "token", message: TOKEN_EXPIRED },
     ]);
   }
   return {

@@ -25,6 +25,8 @@ const configured = Boolean(config.apiKey && config.authDomain && config.projectI
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
+/** The forced token fetch in progress, if any. */
+let refreshing: Promise<string> | null = null;
 
 /** The initialised Firebase app (push messaging needs it too). */
 export function firebaseApp(): FirebaseApp {
@@ -62,9 +64,18 @@ export const authClient = {
     return onIdTokenChanged(getAuthOrThrow(), listener);
   },
 
+  /**
+   * The current token. Firebase renews it by itself shortly before it expires; `forceRefresh` fetches a new one now
+   * (the API said ours is too old). Calls that ask at the same moment share one fetch instead of one each.
+   */
   async token(forceRefresh = false): Promise<string | null> {
     const user = this.currentUser();
-    return user ? user.getIdToken(forceRefresh) : null;
+    if (!user) return null;
+    if (!forceRefresh) return user.getIdToken(false);
+    refreshing ??= user.getIdToken(true).finally(() => {
+      refreshing = null;
+    });
+    return refreshing;
   },
 
   async signIn(email: string, password: string): Promise<User> {
