@@ -158,7 +158,7 @@ export default function SignInPage() {
       )}
 
       <p className="mt-6 text-center text-sm text-fg-muted">
-        {mode === "signIn" ? "New to TailorFlow? " : "Already have an account? "}
+        {mode === "signIn" ? "New to Tailor Seamless? " : "Already have an account? "}
         <button
           type="button"
           className="font-medium text-link hover:underline"

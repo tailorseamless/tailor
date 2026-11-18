@@ -33,7 +33,7 @@ export function PublicLayout({ business, children }: { business: PublicBusiness;
         </div>
       </header>
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">{children}</main>
-      <footer className="pb-8 text-center text-xs text-fg-subtle">Powered by TailorFlow</footer>
+      <footer className="pb-8 text-center text-xs text-fg-subtle">Powered by Tailor Seamless</footer>
     </div>
   );
 }

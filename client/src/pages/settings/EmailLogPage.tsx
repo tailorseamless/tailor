@@ -25,7 +25,7 @@ const STATUS: Record<OutboxEmail["status"], { label: string; tone: Tone }> = {
   cancelled: { label: "Not sent", tone: "neutral" },
 };
 
-/** Every email TailorFlow sent (or tried to send) for this business. */
+/** Every email Tailor Seamless sent (or tried to send) for this business. */
 export default function EmailLogPage() {
   const { timeZone } = useWorkspace();
   const [status, setStatus] = useState<"all" | OutboxEmail["status"]>("all");
@@ -37,7 +37,7 @@ export default function EmailLogPage() {
       <PageHeader
         back={{ to: "/settings", label: "Settings" }}
         title="Email log"
-        subtitle="Invitations, reminders and receipts sent from TailorFlow."
+        subtitle="Invitations, reminders and receipts sent from Tailor Seamless."
       />
       {query.data && !query.data.emailEnabled && (
         <p role="status" className="mb-4 rounded-lg bg-warning-bg px-4 py-3 text-sm text-warning-fg">

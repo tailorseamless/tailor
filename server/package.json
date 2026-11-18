@@ -2,7 +2,7 @@
   "name": "server",
   "version": "0.1.0",
   "private": true,
-  "description": "TailorFlow API",
+  "description": "Tailor Seamless API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

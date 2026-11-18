@@ -1,5 +1,5 @@
 /**
- * TailorFlow mail relay — a Google Apps Script web app (EMAIL_PROVIDER=apps_script).
+ * Tailor Seamless mail relay — a Google Apps Script web app (EMAIL_PROVIDER=apps_script).
  *
  * Setup (once, in the Google account that should send the mail):
  *   1. script.google.com → New project → paste this file.
@@ -27,7 +27,7 @@ function doPost(e) {
 
     var options = {
       htmlBody: request.htmlBody || "",
-      name: request.name || "TailorFlow",
+      name: request.name || "Tailor Seamless",
     };
     if (request.replyTo) options.replyTo = request.replyTo;
     if (request.attachments && request.attachments.length) {

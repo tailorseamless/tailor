@@ -1,4 +1,4 @@
-# Render blueprint for the TailorFlow API (Backend Guide §29.2).
+# Render blueprint for the Tailor Seamless API (Backend Guide §29.2).
 # Render → New → Blueprint → pick this repository. Values marked `sync: false`
 # are asked for once when the blueprint is created; they never live in git.
 # Full walkthrough: server/docs/deployment.md
@@ -71,7 +71,7 @@ services:
       - key: EMAIL_FALLBACK
         value: "true"
       - key: EMAIL_FROM_NAME
-        value: TailorFlow
+        value: Tailor Seamless
       - key: EMAIL_FROM_ADDRESS
         sync: false
       - key: EMAIL_REPLY_TO

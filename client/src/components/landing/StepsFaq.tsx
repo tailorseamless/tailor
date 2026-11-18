@@ -35,7 +35,7 @@ export function Steps() {
             aria-hidden
             className="pointer-events-none absolute top-12 right-[16%] left-[16%] hidden border-t-2 border-dashed border-line-strong md:block"
           />
-          <ol className="grid gap-6 md:grid-cols-3 md:gap-8">
+          <ol className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
             {STEPS.map((s, i) => (
               <li key={s.title} className="relative">
                 <Reveal delay={i * 140} className="h-full">
@@ -63,7 +63,7 @@ export function Steps() {
 const FAQS = [
   {
     q: "Does it work on my phone?",
-    a: "Yes. TailorFlow works in any modern browser on phones, tablets and computers, and you can install it on your home screen so it opens like an app, with notifications.",
+    a: "Yes. Tailor Seamless works in any modern browser on phones, tablets and computers, and you can install it on your home screen so it opens like an app, with notifications.",
   },
   {
     q: "Do my customers need to download anything?",
@@ -79,7 +79,7 @@ const FAQS = [
   },
   {
     q: "How do WhatsApp updates work?",
-    a: "From any order, TailorFlow writes the message for you: the garment, the stage it's at, the balance. Tap once to open it in WhatsApp with your customer's chat ready, then press send.",
+    a: "From any order, Tailor Seamless writes the message for you: the garment, the stage it's at, the balance. Tap once to open it in WhatsApp with your customer's chat ready, then press send.",
   },
   {
     q: "Is my business data private?",
@@ -90,7 +90,7 @@ const FAQS = [
 export function Faq() {
   return (
     <section id="faq" aria-labelledby="faq-title" className="py-24 sm:py-32">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
         <SectionHeading
           id="faq-title"
           eyebrow="Questions"

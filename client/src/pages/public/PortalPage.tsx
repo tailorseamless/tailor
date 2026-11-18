@@ -1,6 +1,8 @@
 import { CheckCircle2, Download } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { BodyDiagram } from "../../components/customers/BodyDiagram";
+import { FigureColumn, MeasurementSetView } from "../../components/customers/MeasurementSetView";
 import {
   blankRequest,
   DesignGallery,
@@ -15,6 +17,8 @@ import { FormError } from "../../components/shared/Field";
 import { FullPageSpinner } from "../../components/shared/States";
 import { usePortal, usePortalActions } from "../../hooks/useAccount";
 import type { AppointmentType } from "../../types/appointment.types";
+import type { Portal } from "../../types/portal.types";
+import { buildFor, placeMeasurements } from "../../utils/bodyMap";
 import { errorMessage, statusCode } from "../../utils/errors";
 import { formatDateTime, formatDay } from "../../utils/formatDate";
 import { formatMoney } from "../../utils/money";
@@ -22,6 +26,37 @@ import { APPOINTMENT_TYPE, ORDER_STATUS } from "../../utils/statusLabels";
 import { localInputToIso } from "../../utils/timezone";
 
 const TYPES: AppointmentType[] = ["measurement", "consultation", "fitting", "alteration", "collection"];
+
+/** The customer's own latest measurements, drawn on a body when there is something to place on one. */
+function PortalMeasurements({ portal }: { portal: Portal }) {
+  const m = portal.measurements;
+  if (!m || m.values.length === 0) return null;
+  const placed = placeMeasurements(m.values, m.unit, m.templateName);
+  return (
+    <Card title="Your measurements">
+      <div className="px-4 py-3" data-cy="portal-measurements">
+        <p className="mb-2 text-sm text-fg-muted">
+          Taken on {formatDay(m.measuredOn)}
+          {m.templateName && ` · ${m.templateName}`}
+        </p>
+        <MeasurementSetView
+          values={m.values}
+          unit={m.unit}
+          figure={
+            placed.length > 0 && (
+              <FigureColumn>
+                <BodyDiagram placed={placed} unit={m.unit} build={buildFor(portal.customer.gender)} />
+                <p className="mt-2 text-xs text-fg-subtle">
+                  A guide only: the shape follows your numbers, not an exact fit.
+                </p>
+              </FigureColumn>
+            )
+          }
+        />
+      </div>
+    </Card>
+  );
+}
 
 /** A customer's private page, opened from the link their tailor sent. */
 export default function PortalPage() {
@@ -103,6 +138,8 @@ export default function PortalPage() {
           <p className="px-4 py-6 text-center text-sm text-fg-subtle">No orders yet.</p>
         )}
       </Card>
+
+      <PortalMeasurements portal={p} />
 
       {p.appointments.length > 0 && (
         <Card title="Your appointments">

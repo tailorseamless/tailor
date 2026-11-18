@@ -1,5 +1,8 @@
 import type { AppointmentType } from "../../appointments/dto/appointment.dto";
+import type { MeasurementUnit } from "../../businesses/dto/business.dto";
+import type { CustomerGender } from "../../customers/dto/customer.dto";
 import type { PublicDesignDTO } from "../../designs/dto/design.dto";
+import type { MeasurementValue } from "../../measurements/dto/measurement.dto";
 import type { OrderStatus } from "../../orders/dto/order.dto";
 import type { PaymentKind } from "../../payments/dto/payment.dto";
 import type { RequestStatus } from "../../requests/dto/request.dto";
@@ -25,7 +28,10 @@ export interface PublicBusinessDTO {
  */
 export interface PortalDTO {
   business: PublicBusinessDTO;
-  customer: { fullName: string };
+  /** The gender only picks which body figure the measurements are drawn on. */
+  customer: { fullName: string; gender: CustomerGender | null };
+  /** The latest set of this customer's own measurements, without the staff's notes; null if none were taken. */
+  measurements: PortalMeasurementsDTO | null;
   orders: {
     id: string;
     orderNumber: string;
@@ -62,6 +68,14 @@ export interface PortalDTO {
   }[];
   requests: { id: string; type: AppointmentType; preferredStartsAt: Date; status: RequestStatus; createdAt: Date }[];
   designs: PublicDesignDTO[];
+}
+
+export interface PortalMeasurementsDTO {
+  /** `YYYY-MM-DD` */
+  measuredOn: string;
+  unit: MeasurementUnit;
+  templateName: string | null;
+  values: MeasurementValue[];
 }
 
 /** The public booking page. */

@@ -2,7 +2,7 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  "description": "TailorFlow web app (installs as a PWA)",
+  "description": "Tailor Seamless web app (installs as a PWA)",
   "type": "module",
   "scripts": {
     "dev": "vite",

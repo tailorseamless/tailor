@@ -14,7 +14,7 @@ import "../../components/landing/landing.css";
 export default function LandingPage() {
   useEffect(() => {
     const previous = document.title;
-    document.title = "TailorFlow · Orders, measurements and payments for tailors";
+    document.title = "Tailor Seamless · Orders, measurements and payments for tailors";
     document.documentElement.classList.add("lp-smooth");
     return () => {
       document.title = previous;

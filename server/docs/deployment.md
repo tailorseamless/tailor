@@ -1,4 +1,4 @@
-# Deploying the TailorFlow API
+# Deploying the Tailor Seamless API
 
 The API runs on **Render** from `render.yaml`, against a hosted **PostgreSQL** (Aiven, or Render's own). It is a compiled Node app: `npm run build` emits `server/dist`, and production runs `node dist/server.js`. Migrations run before each new version starts.
 

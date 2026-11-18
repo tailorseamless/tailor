@@ -103,7 +103,7 @@ export function FeatureBento() {
           lead="Built around how tailoring businesses actually work: from the front desk to the cutting table."
         />
 
-        <ul className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <ul className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           {FEATURES.map((f, i) => (
             <li key={f.title} className={f.span}>
               <Reveal delay={(i % 3) * 90} className="h-full">

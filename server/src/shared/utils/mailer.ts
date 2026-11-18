@@ -24,7 +24,7 @@ export function escapeHtml(value: string): string {
 /** `{purpose} — {business}`; line breaks stripped so a name can never add a header. */
 export function emailSubject(purpose: string, businessName?: string): string {
   const clean = (text: string) => text.replace(/[\r\n]+/g, " ").trim();
-  return businessName ? `${clean(purpose)} — ${clean(businessName)}` : `${clean(purpose)} — TailorFlow`;
+  return businessName ? `${clean(purpose)} — ${clean(businessName)}` : `${clean(purpose)} — Tailor Seamless`;
 }
 
 export function heading(text: string): string {
@@ -76,7 +76,7 @@ ${preheader}
 <table role="presentation" width="560" style="max-width:560px;width:100%;">
 <tr><td style="background:${BRAND.dark};padding:18px 24px;border-radius:8px 8px 0 0;color:#ffffff;font-size:18px;font-weight:700;">${escapeHtml(options.businessName)}</td></tr>
 <tr><td style="background:#ffffff;padding:28px 24px;border:1px solid ${BRAND.border};border-top:0;border-radius:0 0 8px 8px;">${body}</td></tr>
-<tr><td style="padding:16px 24px;color:${BRAND.muted};font-size:12px;text-align:center;">Sent with TailorFlow</td></tr>
+<tr><td style="padding:16px 24px;color:${BRAND.muted};font-size:12px;text-align:center;">Sent with Tailor Seamless</td></tr>
 </table></td></tr></table>
 </body></html>`;
 }

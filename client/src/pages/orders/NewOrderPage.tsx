@@ -23,6 +23,7 @@ import { useCustomer, useMeasurements } from "../../hooks/useCustomers";
 import { useBranches, useDesigns } from "../../hooks/useTeam";
 import { newOrderKey, useCreateOrder } from "../../hooks/useOrders";
 import { useWorkspace } from "../../hooks/useWorkspace";
+import { buildFor } from "../../utils/bodyMap";
 import { errorMessage } from "../../utils/errors";
 import { formatDay } from "../../utils/formatDate";
 import { formatMoney } from "../../utils/money";
@@ -66,6 +67,8 @@ export default function NewOrderPage() {
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const [customerError, setCustomerError] = useState<string>();
   const measurements = useMeasurements(customer?.id ?? "");
+  // The picked customer carries only a name and phone; their gender picks the figure in the measuring form.
+  const pickedDetail = useCustomer(customer?.id);
   const create = useCreateOrder();
   const designs = useDesigns({ limit: 100 });
   const branches = (useBranches().data?.data ?? []).filter((b) => b.status === "active");
@@ -380,6 +383,7 @@ export default function NewOrderPage() {
           onClose={() => setMeasuringFor(null)}
           customerId={customer.id}
           previous={latestMeasurement}
+          build={buildFor(pickedDetail.data?.gender)}
           // Pick what was just recorded for the item that asked.
           onSaved={(saved) => form.setValue(`items.${measuringFor}.measurementId`, saved.id, { shouldDirty: true })}
         />

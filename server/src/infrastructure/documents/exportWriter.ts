@@ -25,7 +25,7 @@ const WIDTH: Record<ExportColumn["type"], number> = { text: 24, money: 16, numbe
 /** xlsx: one worksheet per sheet, plus an "About" sheet with the title and notes. */
 export async function toXlsx(table: ExportTable): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "TailorFlow";
+  workbook.creator = "Tailor Seamless";
   workbook.created = new Date();
 
   for (const sheet of table.sheets) {

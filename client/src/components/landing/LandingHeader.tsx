@@ -29,17 +29,17 @@ export function LandingHeader() {
           : "border-b border-transparent",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
         <a
           href="#top"
           className={cn(
-            "flex items-center gap-2 rounded-lg font-display text-lg font-semibold",
+            "flex shrink-0 items-center gap-2 rounded-lg font-display text-base font-semibold whitespace-nowrap sm:text-lg",
             scrolled ? "text-fg" : "text-(--lp-cream)",
           )}
           data-cy="landing-logo"
         >
-          <img src="/favicon.svg" alt="" className="size-8" />
-          TailorFlow
+          <img src="/favicon.svg" alt="" className="size-7 sm:size-8" />
+          Tailor Seamless
         </a>
 
         <nav aria-label="Page sections" className="hidden lg:block">
@@ -63,7 +63,7 @@ export function LandingHeader() {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {app.available && (
             <button
               type="button"
@@ -83,7 +83,7 @@ export function LandingHeader() {
           <Link
             to={SIGN_IN}
             className={cn(
-              "inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium transition-colors",
+              "hidden h-10 items-center rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors min-[380px]:inline-flex",
               scrolled ? "text-fg-muted hover:bg-subtle hover:text-fg" : "text-[#f3e3eb] hover:bg-white/10",
             )}
             data-cy="landing-sign-in"
@@ -93,7 +93,7 @@ export function LandingHeader() {
           <Link
             to={SIGN_UP}
             className={cn(
-              "group inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-all",
+              "group inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-all",
               scrolled
                 ? "bg-brand text-on-brand hover:bg-brand-hover"
                 : "bg-(--lp-cream) text-(--lp-plum) hover:bg-white",
@@ -101,7 +101,10 @@ export function LandingHeader() {
             data-cy="landing-get-started"
           >
             Get started
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            <ArrowRight
+              className="hidden size-4 transition-transform group-hover:translate-x-0.5 sm:block"
+              aria-hidden
+            />
           </Link>
         </div>
       </div>

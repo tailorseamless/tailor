@@ -26,7 +26,7 @@ export function MeasureSection() {
 
   return (
     <section id="measurements" aria-labelledby="measure-title" className="relative overflow-hidden py-24 sm:py-32">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:gap-20">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:gap-20">
         <div>
           <SectionHeading
             id="measure-title"

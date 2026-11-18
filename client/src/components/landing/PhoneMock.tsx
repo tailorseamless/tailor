@@ -41,7 +41,7 @@ export function PhoneMock({ reduced }: { reduced: boolean }) {
       onPointerMove={onMove}
       onPointerLeave={onLeave}
       role="img"
-      aria-label="TailorFlow on a phone: a bridal gown order moving from cutting to ready for collection."
+      aria-label="Tailor Seamless on a phone: a bridal gown order moving from cutting to ready for collection."
     >
       <div ref={tilt} className="lp-tilt relative">
         <div className="rounded-[2.8rem] bg-[#0e060a] p-[9px] shadow-[0_60px_120px_-30px_rgb(0_0_0/0.75),inset_0_0_0_1px_rgb(255_255_255/0.1)]">

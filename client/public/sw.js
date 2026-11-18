@@ -1,5 +1,5 @@
 /*
- * TailorFlow app service worker (Frontend Guide §13.4, §27.1).
+ * Tailor Seamless app service worker (Frontend Guide §13.4, §27.1).
  * Makes the app installable and shows an offline page when a page can't load.
  * It deliberately caches NOTHING else — no scripts, no API responses — so a
  * new deploy is live on the next page load and nobody sees stale data.
@@ -34,11 +34,11 @@ self.addEventListener("push", (event) => {
     const payload = event.data ? event.data.json() : {};
     message = payload.data || payload;
   } catch {
-    message = { title: "TailorFlow", body: event.data ? event.data.text() : "" };
+    message = { title: "Tailor Seamless", body: event.data ? event.data.text() : "" };
   }
   const link = typeof message.link === "string" && message.link.startsWith("/") ? message.link : "/notifications";
   event.waitUntil(
-    self.registration.showNotification(message.title || "TailorFlow", {
+    self.registration.showNotification(message.title || "Tailor Seamless", {
       body: message.body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
@@ -48,7 +48,7 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Tapping a notification opens its page, reusing an open TailorFlow tab when there is one.
+// Tapping a notification opens its page, reusing an open Tailor Seamless tab when there is one.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const link = (event.notification.data && event.notification.data.link) || "/notifications";

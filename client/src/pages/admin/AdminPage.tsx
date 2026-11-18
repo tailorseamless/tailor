@@ -16,7 +16,7 @@ type Pending =
   | { kind: "business"; item: AdminBusiness; status: AdminBusiness["status"] }
   | { kind: "user"; item: AdminUser; status: AdminUser["status"] };
 
-/** Platform admin: every business and person on TailorFlow. */
+/** Platform admin: every business and person on Tailor Seamless. */
 export default function AdminPage() {
   const { timeZone, me } = useWorkspace();
   const overview = useAdminOverview();
@@ -41,7 +41,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Platform" subtitle="Every business and person on TailorFlow." />
+      <PageHeader title="Platform" subtitle="Every business and person on Tailor Seamless." />
       <QueryState query={overview}>
         {(o) => (
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

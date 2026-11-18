@@ -163,7 +163,7 @@ export function DeviceSettings() {
                   ? "On. Choose which ones above."
                   : push.blocked
                     ? "Blocked in your browser settings for this site."
-                    : "Get reminders and new requests even when TailorFlow is closed."}
+                    : "Get reminders and new requests even when Tailor Seamless is closed."}
               </p>
             </div>
             {push.enabled ? (
@@ -199,7 +199,7 @@ export function DeviceSettings() {
             onClick={() => void app.install()}
             data-cy="install-app"
           >
-            Install TailorFlow on this device
+            Install Tailor Seamless on this device
           </Button>
         )}
         <Button

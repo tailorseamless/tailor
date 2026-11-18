@@ -19,7 +19,7 @@ export function Hero() {
       <div aria-hidden className="lp-glow bottom-[-30%] left-[-15%] size-[30rem] bg-[#6d2a4c] [animation-delay:-9s]" />
       <HeroThread reduced={reduced} />
 
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 pt-28 pb-20 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-36 lg:pb-32">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pt-28 pb-20 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pt-36 lg:pb-32">
         <div className="relative">
           <p
             className="lp-fade-up inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#f3e3eb] backdrop-blur"
@@ -31,7 +31,7 @@ export function Hero() {
 
           <h1
             id="hero-title"
-            className="mt-6 font-display text-[clamp(2.6rem,6.6vw,4.6rem)] leading-[0.98] font-semibold tracking-[-0.025em] text-(--lp-cream)"
+            className="mt-6 font-display text-[clamp(2.6rem,6.6vw,4.6rem)] leading-[0.98] max-[359px]:text-[2.3rem] font-semibold tracking-[-0.025em] text-(--lp-cream)"
           >
             <span className="lp-line">
               <span style={delay(150)}>From the first</span>
@@ -50,7 +50,7 @@ export function Hero() {
             className="lp-fade-up mt-7 max-w-xl text-base leading-relaxed text-[#e9d3de] sm:text-lg"
             style={delay(650)}
           >
-            TailorFlow keeps your customers, measurements, orders, fittings and payments in one place, and keeps your
+            Tailor Seamless keeps your customers, measurements, orders, fittings and payments in one place, and keeps your
             customers in the loop. No more lost notebooks. No more <q>Is my outfit ready?</q> calls.
           </p>
 

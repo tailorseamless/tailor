@@ -11,7 +11,7 @@ export function RouteError() {
       <h1 className="font-display text-2xl font-semibold text-fg">{title}</h1>
       <p className="mt-2 max-w-sm text-sm text-fg-muted">
         {chunkFailed
-          ? "TailorFlow was updated, or you went offline. Reload to get the latest version."
+          ? "Tailor Seamless was updated, or you went offline. Reload to get the latest version."
           : "This screen hit a problem. Reloading usually fixes it."}
       </p>
       <div className="mt-6 flex gap-2">

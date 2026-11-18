@@ -42,7 +42,7 @@ export function InstallSection() {
 
   return (
     <section id="install" aria-labelledby="install-title" className="overflow-hidden py-24 sm:py-32">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
         <div>
           <SectionHeading
             id="install-title"
@@ -52,7 +52,7 @@ export function InstallSection() {
                 Right there on the <Accent>cutting table.</Accent>
               </>
             }
-            lead="TailorFlow installs on your phone, tablet or computer straight from the browser. Keep it beside the sewing machine and update an order with tape still around your neck."
+            lead="Tailor Seamless installs on your phone, tablet or computer straight from the browser. Keep it beside the sewing machine and update an order with tape still around your neck."
           />
 
           <Reveal delay={100}>
@@ -70,7 +70,7 @@ export function InstallSection() {
             <div className="mt-10" aria-live="polite">
               {installed ? (
                 <p className="inline-flex items-center gap-2 rounded-full bg-success-bg px-4 py-2.5 text-sm font-medium text-success-fg">
-                  <Check className="size-4" aria-hidden /> TailorFlow is installed. Open it from your home screen.
+                  <Check className="size-4" aria-hidden /> Tailor Seamless is installed. Open it from your home screen.
                 </p>
               ) : app.available ? (
                 <button
@@ -97,7 +97,7 @@ export function InstallSection() {
                 </ol>
               ) : (
                 <p className="max-w-md text-sm text-fg-subtle" data-cy="landing-install-hint">
-                  Open TailorFlow in Chrome, Edge or Safari and use <strong className="text-fg">Install app</strong> or{" "}
+                  Open Tailor Seamless in Chrome, Edge or Safari and use <strong className="text-fg">Install app</strong> or{" "}
                   <strong className="text-fg">Add to Home Screen</strong> from the browser menu.
                 </p>
               )}
@@ -113,7 +113,7 @@ export function InstallSection() {
   );
 }
 
-/** A phone home screen with TailorFlow landing on it. Decorative. */
+/** A phone home screen with Tailor Seamless landing on it. Decorative. */
 function HomeScreen() {
   return (
     <div aria-hidden className="relative mx-auto w-full max-w-[17rem]">
@@ -137,7 +137,7 @@ function HomeScreen() {
                 className="lp-pop aspect-square w-full rounded-[22%] shadow-[0_0_0_3px_rgb(255_255_255/0.5),0_10px_30px_-5px_#000]"
                 style={{ animationDelay: "0.6s" }}
               />
-              <span className="text-[8px] font-medium text-white">TailorFlow</span>
+              <span className="text-center text-[8px] leading-tight font-medium text-white">Tailor Seamless</span>
             </span>
           </div>
           <div className="absolute inset-x-4 bottom-4 grid grid-cols-4 gap-3 rounded-3xl bg-white/15 p-3 backdrop-blur">
@@ -149,7 +149,7 @@ function HomeScreen() {
       </div>
       <div className="lp-float absolute top-24 -right-6 w-48 rounded-2xl border border-line bg-surface/95 p-3 shadow-2xl backdrop-blur sm:-right-14">
         <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-fg-subtle uppercase">
-          <img src="/favicon.svg" alt="" className="size-3.5 rounded" /> TailorFlow · now
+          <img src="/favicon.svg" alt="" className="size-3.5 rounded" /> Tailor Seamless · now
         </p>
         <p className="mt-1 text-xs font-semibold text-fg">New booking request</p>
         <p className="text-[11px] text-fg-muted">Ngozi wants a fitting on Saturday at 11:00.</p>

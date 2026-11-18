@@ -1,5 +1,5 @@
 /*
- * TailorFlow design tokens — the single source of truth for colour and type (Frontend Guide §24).
+ * Tailor Seamless design tokens — the single source of truth for colour and type (Frontend Guide §24).
  * Components use the semantic names (bg-surface, text-fg-muted, border-line…), never raw palette
  * classes. Every colour has a light value in :root and a dark value in .dark.
  * Brand is plum: primary buttons, links, active nav, focus. Not for decoration.

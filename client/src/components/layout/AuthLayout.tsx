@@ -7,7 +7,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <span className={className}>
       <img src="/favicon.svg" alt="" className="inline size-7 align-middle" />
-      <span className="ml-2 align-middle font-display text-lg font-semibold text-fg">TailorFlow</span>
+      <span className="ml-2 align-middle font-display text-lg font-semibold text-fg">Tailor Seamless</span>
     </span>
   );
 }
@@ -27,7 +27,7 @@ export function AuthLayout({ title, subtitle, children, homeLink }: AuthLayoutPr
   return (
     <div className="flex min-h-dvh flex-col items-center bg-canvas px-4 py-10 sm:justify-center">
       {showHome ? (
-        <Link to="/" aria-label="TailorFlow home" className="mb-6 rounded-lg" data-cy="auth-logo-home">
+        <Link to="/" aria-label="Tailor Seamless home" className="mb-6 rounded-lg" data-cy="auth-logo-home">
           <Logo />
         </Link>
       ) : (

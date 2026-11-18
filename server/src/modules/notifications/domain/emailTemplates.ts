@@ -31,7 +31,7 @@ const typeLabel = (type: string) => APPOINTMENT_TYPE_LABELS[type] ?? type;
 /** Tone: transactional. */
 export function invitationEmail(p: EmailPayloads["team.invitation"]): RenderedEmail {
   const link = `${env.appUrl}/sign-in?mode=signUp&email=${encodeURIComponent(p.email)}`;
-  const intro = `${p.inviterName} has added you to ${p.businessName} on TailorFlow as ${p.role}.`;
+  const intro = `${p.inviterName} has added you to ${p.businessName} on Tailor Seamless as ${p.role}.`;
   const how = `Create your login with this email address (${p.email}) and you will go straight to the team's workspace.`;
   return {
     subject: emailSubject(`You've been added to ${p.businessName}`),
@@ -152,10 +152,10 @@ export function notificationEmail(p: {
   return {
     subject: emailSubject(p.title, p.businessName),
     html: emailLayout(
-      heading(p.title) + (p.body ? paragraph(p.body) : "") + button("Open TailorFlow", link) + footnote(settings),
+      heading(p.title) + (p.body ? paragraph(p.body) : "") + button("Open Tailor Seamless", link) + footnote(settings),
       { businessName: p.businessName, preheader: p.body ?? p.title },
     ),
-    text: textBody([p.title, p.body, `Open TailorFlow: ${link}`, settings]),
+    text: textBody([p.title, p.body, `Open Tailor Seamless: ${link}`, settings]),
   };
 }
 

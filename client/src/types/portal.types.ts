@@ -1,4 +1,6 @@
 import type { AppointmentType } from "./appointment.types";
+import type { MeasurementUnit } from "./auth.types";
+import type { CustomerGender, MeasurementValue } from "./customer.types";
 import type { OrderStatus } from "./order.types";
 import type { PaymentKind } from "./payment.types";
 
@@ -20,9 +22,18 @@ export interface PublicDesign {
   images: { url: string; width: number | null; height: number | null }[];
 }
 
+/** The customer's latest measurements, without the staff's notes. */
+export interface PortalMeasurements {
+  measuredOn: string;
+  unit: MeasurementUnit;
+  templateName: string | null;
+  values: MeasurementValue[];
+}
+
 export interface Portal {
   business: PublicBusiness;
-  customer: { fullName: string };
+  customer: { fullName: string; gender: CustomerGender | null };
+  measurements: PortalMeasurements | null;
   orders: {
     id: string;
     orderNumber: string;

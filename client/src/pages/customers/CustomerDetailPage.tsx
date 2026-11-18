@@ -65,7 +65,7 @@ export default function CustomerDetailPage() {
           />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="space-y-5 lg:col-span-2">
-              <MeasurementsCard customerId={c.id} />
+              <MeasurementsCard customerId={c.id} gender={c.gender} />
               {can("order.read") && (
                 <Card title="Orders">
                   <QueryState query={orders}>

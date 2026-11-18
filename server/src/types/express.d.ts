@@ -7,7 +7,7 @@ declare global {
       requestId: string;
       /** The verified Firebase login (authMiddleware, firebaseOnly). */
       firebase?: FirebaseIdentity;
-      /** The linked TailorFlow user (authMiddleware). */
+      /** The linked Tailor Seamless user (authMiddleware). */
       user?: AuthUser;
       /** The business every query is scoped to (tenantMiddleware). */
       tenant?: { businessId: string };

@@ -49,7 +49,7 @@ async function toApiError(err: unknown): Promise<ApiError> {
       return new ApiError(
         offline
           ? "You're offline. Check your connection and try again."
-          : "Can't reach TailorFlow right now. Try again shortly.",
+          : "Can't reach Tailor Seamless right now. Try again shortly.",
         0,
       );
     }

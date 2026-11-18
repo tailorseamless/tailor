@@ -64,7 +64,7 @@ const schema = z.object({
   SMTP_SECURE: flag(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  EMAIL_FROM_NAME: z.string().default("TailorFlow"),
+  EMAIL_FROM_NAME: z.string().default("Tailor Seamless"),
   EMAIL_FROM_ADDRESS: z.string().email("must be an email address, like you@example.com").optional(),
   EMAIL_REPLY_TO: z.string().email("must be an email address, like you@example.com").optional(),
 });

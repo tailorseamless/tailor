@@ -11,6 +11,7 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { OrderStatus } from "../../types/order.types";
 import { cn } from "../../utils/cn";
 import { ORDER_FLOW, ORDER_STATUS } from "../../utils/statusLabels";
@@ -47,6 +48,19 @@ export function JourneySection() {
   const pct = Math.round((index / (STEPS.length - 1)) * 100);
   const paid = index >= 7;
 
+  // On phones the stages are a swipeable row: keep the active one centred by scrolling the row itself
+  // (never the page). Does nothing on wide screens, where the column doesn't scroll. The jump is instant on
+  // purpose: repeated smooth scrollTo calls on this row get dropped by Chromium after a few steps.
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const row = list.current;
+    const item = row?.children[index];
+    if (!row || !item || row.scrollWidth <= row.clientWidth) return;
+    const rowBox = row.getBoundingClientRect();
+    const itemBox = item.getBoundingClientRect();
+    row.scrollTo({ left: row.scrollLeft + (itemBox.left - rowBox.left) - (rowBox.width - itemBox.width) / 2 });
+  }, [index]);
+
   return (
     <section id="journey" aria-labelledby="journey-title" className="overflow-hidden py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -61,8 +75,8 @@ export function JourneySection() {
           lead="When you move an order along, your customer's private page moves with it. They see where their outfit is, what's left to pay and when to come in, without calling you."
         />
 
-        <div ref={ref} className="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
-          {/* The stages. A swipeable row on phones, a sewn column on wider screens. */}
+        <div ref={ref} className="mt-14 grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+          {/* The stages. A swipeable row on phones (it follows the active stage), a sewn column on wider screens. */}
           <Reveal className="lg:relative">
             <span
               aria-hidden
@@ -74,15 +88,16 @@ export function JourneySection() {
               style={{ height: `calc((100% - 2.5rem) * ${pct / 100})` }}
             />
             <ol
+              ref={list}
               aria-label="Order stages"
-              className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-0"
+              className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-0"
             >
               {STEPS.map((s, i) => {
                 const StepIcon = STAGE[s].icon;
                 const on = i === index;
                 const done = i < index;
                 return (
-                  <li key={s} className="snap-start lg:relative">
+                  <li key={s} className="lg:relative">
                     <button
                       type="button"
                       aria-current={on ? "step" : undefined}
@@ -159,7 +174,7 @@ export function JourneySection() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl bg-subtle px-4 py-3">
                       <p className="text-xs text-fg-subtle">Balance</p>
                       <p className={cn("font-semibold", paid ? "text-success-fg" : "text-warning-fg")}>

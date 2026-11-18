@@ -1,4 +1,4 @@
-# Netlify settings for the TailorFlow web app (the `client` workspace). The API deploys separately (render.yaml).
+# Netlify settings for the Tailor Seamless web app (the `client` workspace). The API deploys separately (render.yaml).
 # Netlify → Add new site → Import from Git → pick this repository: nothing else to configure here.
 # The VITE_* values are set in Netlify → Site configuration → Environment variables (see server/docs/deployment.md).
 

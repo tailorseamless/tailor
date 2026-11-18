@@ -16,7 +16,7 @@ const GARMENTS = [
   "Alterations",
 ];
 
-/** An endless ribbon of the garments TailorFlow is made for. The copy is doubled so the loop is seamless. */
+/** An endless ribbon of the garments Tailor Seamless is made for. The copy is doubled so the loop is seamless. */
 export function Marquee() {
   const reduced = useReducedMotion();
   const row = (hidden: boolean) => (

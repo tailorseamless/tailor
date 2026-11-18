@@ -131,7 +131,7 @@ export class EmailDeliveryService {
         return {
           ...to,
           ...notificationEmail({
-            businessName: business?.name ?? "TailorFlow",
+            businessName: business?.name ?? "Tailor Seamless",
             title: notification.title,
             body: notification.body,
             linkPath: notification.linkPath,

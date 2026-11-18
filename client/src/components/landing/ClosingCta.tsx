@@ -71,7 +71,7 @@ export function LandingFooter() {
         <div>
           <p className="flex items-center gap-2 font-display text-lg font-semibold text-fg">
             <img src="/favicon.svg" alt="" className="size-7" />
-            TailorFlow
+            Tailor Seamless
           </p>
           <p className="mt-2 max-w-xs text-sm text-fg-subtle">
             Customers, measurements, orders and payments for tailors and fashion designers.
@@ -106,7 +106,7 @@ export function LandingFooter() {
       </div>
       <div className="border-t border-line">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-fg-subtle sm:px-6">
-          © {year} TailorFlow. Made with care for the people who make our clothes.
+          © {year} Tailor Seamless. Made with care for the people who make our clothes.
         </p>
       </div>
     </footer>

@@ -11,7 +11,7 @@ import type { RegisterInput } from "../validators/user.schema";
 import { UserService } from "./user.service";
 
 /**
- * Turns a verified Firebase login into a TailorFlow account
+ * Turns a verified Firebase login into a Tailor Seamless account
  * (Firebase Guide §4.6). The API issues no tokens and stores no passwords.
  */
 export class AuthService {

@@ -13,6 +13,7 @@ import { BusinessRepository } from "../../businesses/repositories/business.repos
 import type { CustomerRecord } from "../../customers/dto/customer.dto";
 import { CustomerRepository } from "../../customers/repositories/customer.repository";
 import { DesignService } from "../../designs/services/design.service";
+import { CustomerMeasurementRepository } from "../../measurements/repositories/customerMeasurement.repository";
 import { NotificationService } from "../../notifications/services/notification.service";
 import { estimatedMaxTotal, estimatedMinTotal, orderDiscount } from "../../orders/domain/orderMoney";
 import { OrderRepository } from "../../orders/repositories/order.repository";
@@ -48,6 +49,7 @@ export class PortalService {
     private readonly designs = DesignService.Instance,
     private readonly notifications = NotificationService.Instance,
     private readonly activity = ActivityService.Instance,
+    private readonly measurements = CustomerMeasurementRepository.Instance,
   ) {}
 
   // ── The customer portal
@@ -56,7 +58,7 @@ export class PortalService {
     const { customer, business } = await this.resolve(token);
     const scope = { businessId: business.id, customerId: customer.id };
 
-    const [orders, appointments, payments, requests, designs] = await Promise.all([
+    const [orders, appointments, payments, requests, designs, latestMeasurements] = await Promise.all([
       this.orders.listForBusiness({
         ...scope,
         page: 1,
@@ -76,12 +78,18 @@ export class PortalService {
       this.payments.listForBusiness({ ...scope, page: 1, limit: PORTAL_LIMITS.payments }),
       this.requests.listForBusiness({ ...scope, page: 1, limit: PORTAL_LIMITS.requests }),
       this.designs.forCustomers(business.id, PORTAL_LIMITS.designs),
+      this.measurements.listForCustomer({ ...scope, page: 1, limit: 1 }),
     ]);
     const items = await this.orders.findItemsForOrders(orders.data.map((order) => order.id));
+    const latest = latestMeasurements.data[0];
 
     return {
       business: this.publicBusiness(business),
-      customer: { fullName: customer.fullName },
+      customer: { fullName: customer.fullName, gender: customer.gender },
+      // Only what the customer needs to see: no notes, no staff member.
+      measurements: latest
+        ? { measuredOn: latest.measuredOn, unit: latest.unit, templateName: latest.templateName, values: latest.values }
+        : null,
       orders: orders.data.map((order) => {
         const lines = items.get(order.id) ?? [];
         return {

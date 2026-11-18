@@ -24,13 +24,13 @@ async function main(): Promise<void> {
   if (!to) throw new Error("Add --to <address> to send a test email, or --status to only show the setup");
   const provider = arg("provider") as EmailProviderName | undefined;
 
-  const intro = "If you can read this, TailorFlow can send email.";
+  const intro = "If you can read this, Tailor Seamless can send email.";
   const result = await mailer.send(
     {
       to,
       subject: emailSubject("Test email"),
-      html: emailLayout(heading("It works") + paragraph(intro) + button("Open TailorFlow", "https://tailorflow.app"), {
-        businessName: "TailorFlow",
+      html: emailLayout(heading("It works") + paragraph(intro) + button("Open Tailor Seamless", "https://tailorflow.app"), {
+        businessName: "Tailor Seamless",
         preheader: intro,
       }),
       text: textBody(["It works", intro]),

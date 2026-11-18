@@ -1,5 +1,5 @@
 import type { MeasurementUnit } from "../types/auth.types";
-import type { MeasurementValue } from "../types/customer.types";
+import type { CustomerGender, MeasurementValue } from "../types/customer.types";
 
 /**
  * Where on the body a measurement is taken. `length` runs from the shoulder
@@ -9,13 +9,31 @@ export type Landmark =
   | "neck"
   | "shoulder"
   | "bust"
+  | "underbust"
   | "waist"
   | "hip"
   | "thigh"
   | "knee"
+  | "calf"
+  | "ankle"
+  | "bicep"
+  | "wrist"
   | "sleeve"
   | "length"
   | "trouserLength";
+
+/** Which silhouette to draw. */
+export type Build = "female" | "male" | "neutral";
+
+export const BUILDS: { value: Build; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "neutral", label: "Neutral" },
+];
+
+/** The figure for a customer's recorded gender; neutral when none is set. */
+export const buildFor = (gender: CustomerGender | null | undefined): Build =>
+  gender === "female" || gender === "male" ? gender : "neutral";
 
 const normalise = (name: string) =>
   name
@@ -32,9 +50,17 @@ const normalise = (name: string) =>
  */
 export function landmarkFor(name: string, templateName?: string | null): Landmark | null {
   const n = normalise(name);
-  if (!n || /\b(to|from|under)\b|underbust/.test(n)) return null;
+  // "Shoulder to waist" and the like span two points, so they have no single spot.
+  if (!n || /\b(to|from)\b/.test(n)) return null;
 
-  if (/sleeve|arm length/.test(n)) return /round|girth|width|cuff|bicep/.test(n) ? null : "sleeve";
+  if (/under ?bust|below bust/.test(n)) return "underbust";
+
+  // Arms: "Round sleeve" is the upper arm; "Cuff" and "Wrist" the wrist; plain "Sleeve" the length.
+  if (/sleeve|\barm\b|bicep|wrist|cuff/.test(n)) {
+    if (/round|girth|bicep|upper arm/.test(n)) return "bicep";
+    if (/wrist|cuff/.test(n)) return "wrist";
+    return /width/.test(n) ? null : "sleeve";
+  }
   if (/outseam/.test(n)) return "trouserLength";
   if (/inseam/.test(n)) return null;
 
@@ -52,6 +78,8 @@ export function landmarkFor(name: string, templateName?: string | null): Landmar
   if (/hip|seat|\bbum\b/.test(n)) return "hip";
   if (/thigh|\blap\b/.test(n)) return "thigh";
   if (/knee/.test(n)) return "knee";
+  if (/calf/.test(n)) return "calf";
+  if (/ankle/.test(n)) return "ankle";
   return null;
 }
 
