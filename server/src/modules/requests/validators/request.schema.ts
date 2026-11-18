@@ -3,7 +3,10 @@ import { PUBLIC } from "../../../config/constants";
 import { paginationQuery } from "../../../shared/pagination/paginate";
 import { email, idParams, isoDateTime, optionalText, phone, trimmed, uuid } from "../../../shared/utils/zod";
 import { APPOINTMENT_LIMITS, APPOINTMENT_TYPES } from "../../appointments/dto/appointment.dto";
-import { REQUEST_STATUSES } from "../dto/request.dto";
+import { MEASUREMENT_UNITS } from "../../businesses/dto/business.dto";
+import { hasDuplicateNames } from "../../measurements/domain/measurementValues";
+import { MEASUREMENT_LIMITS } from "../../measurements/dto/measurement.dto";
+import { REQUEST_LIMITS, REQUEST_STATUSES } from "../dto/request.dto";
 
 /** A time in the future, and not absurdly far ahead. */
 export const preferredStartsAt = isoDateTime
@@ -22,6 +25,29 @@ export const requestFields = {
   type: z.enum(APPOINTMENT_TYPES),
   preferredStartsAt,
   note: optionalText(1000),
+};
+
+/**
+ * Measurements a customer already has from another tailor. Optional, and only ever kept on the request: staff
+ * look at them before accepting, so nothing sent from a public page goes straight into a customer's record.
+ */
+export const sharedMeasurements = {
+  /** Defaults to the business's unit. */
+  measurementUnit: z.enum(MEASUREMENT_UNITS).optional(),
+  measurements: z
+    .array(
+      z.object({
+        name: trimmed(1, REQUEST_LIMITS.maxMeasurementName),
+        value: z
+          .number()
+          .positive()
+          .max(MEASUREMENT_LIMITS.maxValue)
+          .transform((value) => Math.round(value * 100) / 100),
+      }),
+    )
+    .max(REQUEST_LIMITS.maxMeasurements)
+    .refine((items) => !hasDuplicateNames(items), "Each measurement can only appear once")
+    .optional(),
 };
 
 export const listRequestsSchema = z.object({

@@ -2,7 +2,7 @@ import { BranchFilter, useBranchFilter } from "../../components/shared/BranchFil
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { CalendarDays, ChevronLeft, ChevronRight, MoreVertical, Plus } from "lucide-react";
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AppointmentForm } from "../../components/appointments/AppointmentForm";
 import { RequestsList } from "../../components/appointments/RequestsList";
 import { Button } from "../../components/shared/Button";
@@ -29,6 +29,7 @@ const itemClass =
 export default function AppointmentsPage() {
   const { can, timeZone } = useWorkspace();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const today = todayIn(timeZone);
   const day = params.get("day") ?? today;
   const tab = params.get("tab") === "requests" ? "requests" : "diary";
@@ -123,7 +124,7 @@ export default function AppointmentsPage() {
                           <div className="min-w-0 flex-1">
                             <Link
                               to={`/customers/${a.customerId}`}
-                              className="truncate text-sm font-medium text-fg hover:underline"
+                              className="truncate text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg"
                             >
                               {a.customerName}
                             </Link>
@@ -149,6 +150,13 @@ export default function AppointmentsPage() {
                                   align="end"
                                   className="z-50 min-w-40 rounded-lg border border-line bg-surface p-1 shadow-pop"
                                 >
+                                  <Menu.Item
+                                    className={itemClass}
+                                    onSelect={() => navigate(`/customers/${a.customerId}`)}
+                                    data-cy="appt-customer"
+                                  >
+                                    Open customer
+                                  </Menu.Item>
                                   <Menu.Item
                                     className={itemClass}
                                     onSelect={() => outcome.mutate({ id: a.id, status: "completed" })}

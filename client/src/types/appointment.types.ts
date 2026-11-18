@@ -1,4 +1,6 @@
 import type { ISODate } from "./api.types";
+import type { MeasurementUnit } from "./auth.types";
+import type { MeasurementValue } from "./customer.types";
 
 export type AppointmentType = "measurement" | "consultation" | "fitting" | "alteration" | "collection";
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
@@ -43,6 +45,18 @@ export interface AppointmentRequest {
   type: AppointmentType;
   preferredStartsAt: ISODate;
   note: string | null;
+  /** The style the request was made from; null for other requests, or once that design is deleted. */
+  design: {
+    id: string;
+    name: string;
+    category: string | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    coverUrl: string | null;
+  } | null;
+  /** What another tailor measured, sent by the customer; null when they sent none. */
+  measurements: MeasurementValue[] | null;
+  measurementUnit: MeasurementUnit | null;
   status: RequestStatus;
   createdAt: ISODate;
 }

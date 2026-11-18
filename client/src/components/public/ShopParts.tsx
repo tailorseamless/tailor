@@ -10,7 +10,7 @@ import { FilterChips } from "../shared/Display";
 import { Modal } from "../shared/Modal";
 
 /** A picture at a size that suits where it's shown; falls back to the original if the smaller copy won't load. */
-function Photo({ url, alt, width, className }: { url: string; alt: string; width: number; className?: string }) {
+export function Photo({ url, alt, width, className }: { url: string; alt: string; width: number; className?: string }) {
   const [failed, setFailed] = useState(false);
   return (
     <img

@@ -45,6 +45,16 @@ export interface PublicDesignDTO {
   images: { url: string; width: number | null; height: number | null }[];
 }
 
+/** A design in brief, for showing beside something that refers to it (a request, say). */
+export interface DesignSummaryDTO {
+  id: string;
+  name: string;
+  category: string | null;
+  priceMin: number | null;
+  priceMax: number | null;
+  coverUrl: string | null;
+}
+
 export interface ListDesignsParams {
   businessId: string;
   page: number;

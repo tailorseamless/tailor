@@ -44,7 +44,7 @@ export const requestEndpoints = {
       http.get("/appointment-requests", { params: cleanParams({ status, limit: 50 }) }),
     ),
   accept: (id: string, input: AcceptRequestInput) =>
-    wrapCall<{ request: AppointmentRequest; appointment: Appointment }>(() =>
+    wrapCall<{ request: AppointmentRequest; appointment: Appointment; customerCreated: boolean }>(() =>
       http.post(`/appointment-requests/${id}/accept`, input),
     ),
   decline: (id: string, note?: string) =>

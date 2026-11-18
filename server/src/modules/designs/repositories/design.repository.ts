@@ -40,6 +40,12 @@ export class DesignRepository extends BaseRepository<Design> {
     return row ? toRecord(row) : null;
   }
 
+  /** The live designs of this business among these ids. */
+  async findManyInBusiness(ids: string[], businessId: string): Promise<DesignRecord[]> {
+    if (ids.length === 0) return [];
+    return (await this.repo().find({ where: { id: In(ids), businessId } })).map(toRecord);
+  }
+
   /** How many of these ids are live designs of this business. */
   countInBusiness(ids: string[], businessId: string, tx?: Tx): Promise<number> {
     if (ids.length === 0) return Promise.resolve(0);

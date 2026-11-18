@@ -72,6 +72,7 @@ export class MeasurementService {
           measuredOn: input.measuredOn ?? localDay(new Date(), actor.timeZone),
           notes: input.notes ?? null,
           values,
+          source: "staff",
           recordedBy: actor.id,
         },
         tx,

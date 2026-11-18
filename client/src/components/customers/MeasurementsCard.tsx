@@ -7,7 +7,7 @@ import { BUILDS, buildFor, placeMeasurements, type Build } from "../../utils/bod
 import { cn } from "../../utils/cn";
 import { formatDay } from "../../utils/formatDate";
 import { Button, IconButton } from "../shared/Button";
-import { Card } from "../shared/Display";
+import { Badge, Card } from "../shared/Display";
 import { Select } from "../shared/Field";
 import { ConfirmDialog } from "../shared/Modal";
 import { EmptyState, QueryState } from "../shared/States";
@@ -85,6 +85,7 @@ function BodyView({
               <option key={o.id} value={o.id}>
                 {formatDay(o.measuredOn)}
                 {o.templateName ? ` · ${o.templateName}` : ""}
+                {o.source === "customer" ? " · from customer" : ""}
               </option>
             ))}
           </Select>
@@ -162,10 +163,15 @@ export function MeasurementsCard({
                 return (
                   <div key={m.id} className="px-4 py-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-fg">
-                        {i === 0 ? "Latest · " : ""}
-                        {formatDay(m.measuredOn)}
-                        {m.templateName && <span className="font-normal text-fg-subtle"> · {m.templateName}</span>}
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-fg">
+                        <span>
+                          {i === 0 ? "Latest · " : ""}
+                          {formatDay(m.measuredOn)}
+                          {m.templateName && <span className="font-normal text-fg-subtle"> · {m.templateName}</span>}
+                        </span>
+                        {m.source === "customer" && (
+                          <Badge tone="info">Sent by customer</Badge>
+                        )}
                       </p>
                       {can("measurement.delete") && (
                         <IconButton

@@ -21,7 +21,7 @@ import { OrderRepository } from "../../orders/repositories/order.repository";
 import { balanceDue } from "../../payments/domain/paymentRules";
 import { PaymentRepository } from "../../payments/repositories/payment.repository";
 import { PaymentService } from "../../payments/services/payment.service";
-import type { AppointmentRequestRecord } from "../../requests/dto/request.dto";
+import type { AppointmentRequestRecord, NewRequestInput } from "../../requests/dto/request.dto";
 import { RequestRepository } from "../../requests/repositories/request.repository";
 import { RequestService } from "../../requests/services/request.service";
 import { PORTAL_LIMITS, type PortalDTO, type PublicBusinessDTO, type ShopPageDTO } from "../dto/portal.dto";
@@ -202,6 +202,8 @@ export class PortalService {
       type: input.type,
       preferredStartsAt: input.preferredStartsAt,
       note: input.note ?? null,
+      designId: null,
+      ...this.sharedMeasurements(business, input),
     });
   }
 
@@ -228,6 +230,8 @@ export class PortalService {
       type: input.type,
       preferredStartsAt: input.preferredStartsAt,
       note: input.note ?? null,
+      designId: await this.designs.shownDesignId(business.id, input.designId),
+      ...this.sharedMeasurements(business, input),
     });
     // Nothing about the business's other records goes back to an anonymous caller.
     return { id: request.id, status: request.status };
@@ -258,6 +262,15 @@ export class PortalService {
     return business;
   }
 
+  /** Measurements sent with a request, or none: an empty list is the same as leaving them out. */
+  private sharedMeasurements(
+    business: BusinessRecord,
+    input: Pick<PortalRequestInput, "measurements" | "measurementUnit">,
+  ): Pick<NewRequestInput, "measurements" | "measurementUnit"> {
+    if (!input.measurements?.length) return { measurements: null, measurementUnit: null };
+    return { measurements: input.measurements, measurementUnit: input.measurementUnit ?? business.measurementUnit };
+  }
+
   private publicBusiness(business: BusinessRecord): PublicBusinessDTO {
     return {
       name: business.name,
@@ -266,6 +279,7 @@ export class PortalService {
       address: business.address,
       timeZone: business.timeZone,
       currency: business.currency,
+      measurementUnit: business.measurementUnit,
       pageUrl: business.pageEnabled && business.slug ? `${env.appUrl}${shopPath(business.slug)}` : null,
     };
   }

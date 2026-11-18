@@ -4,6 +4,12 @@ import { useParams } from "react-router-dom";
 import { BodyDiagram } from "../../components/customers/BodyDiagram";
 import { FigureColumn, MeasurementSetView } from "../../components/customers/MeasurementSetView";
 import {
+  blankMeasurements,
+  measurementsToSend,
+  OwnMeasurementsForm,
+  type OwnMeasurements,
+} from "../../components/public/OwnMeasurementsForm";
+import {
   blankRequest,
   DesignGallery,
   PublicLayout,
@@ -64,6 +70,7 @@ export default function PortalPage() {
   const query = usePortal(token);
   const actions = usePortalActions(token);
   const [request, setRequest] = useState<RequestFields | null>(null);
+  const [own, setOwn] = useState<OwnMeasurements | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   if (query.isPending) return <FullPageSpinner />;
@@ -79,14 +86,32 @@ export default function PortalPage() {
   const tz = p.business.timeZone;
   const money = (n: number) => formatMoney(n, p.business.currency);
   const form = request ?? blankRequest(tz);
+  const mine = own ?? blankMeasurements(p.business.measurementUnit);
 
   const send = () => {
     setProblem(null);
     const iso = localInputToIso(form.when, tz);
     if (new Date(iso).getTime() < Date.now()) return setProblem("Choose a time in the future.");
+    const measured = measurementsToSend(mine);
+    if ("problem" in measured) {
+      setOwn({ ...mine, open: true }); // so the row in question is on screen
+      return setProblem(measured.problem);
+    }
+    const withMeasurements = measured.values.length > 0;
     actions.request.mutate(
-      { type: form.type, preferredStartsAt: iso, note: form.note.trim() || null },
-      { onSuccess: () => setRequest(null) },
+      {
+        type: form.type,
+        preferredStartsAt: iso,
+        note: form.note.trim() || null,
+        measurements: withMeasurements ? measured.values : undefined,
+        measurementUnit: withMeasurements ? mine.unit : undefined,
+      },
+      {
+        onSuccess: () => {
+          setRequest(null);
+          setOwn(null);
+        },
+      },
     );
   };
 
@@ -176,6 +201,7 @@ export default function PortalPage() {
         <div className="space-y-4 p-4">
           <FormError message={problem ?? (actions.request.error ? errorMessage(actions.request.error) : null)} />
           <RequestFieldsForm value={form} onChange={setRequest} types={TYPES} />
+          <OwnMeasurementsForm value={mine} onChange={setOwn} />
           <Button onClick={send} loading={actions.request.isPending} data-cy="portal-request">
             Send request
           </Button>

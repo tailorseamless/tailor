@@ -1,7 +1,7 @@
 import { Check, Column, Entity, Index } from "typeorm";
 import { BaseEntity, ForeignKey } from "../../../shared/entities/baseEntity";
 import type { MeasurementUnit } from "../../businesses/dto/business.dto";
-import type { MeasurementValue } from "../dto/measurement.dto";
+import type { MeasurementSource, MeasurementValue } from "../dto/measurement.dto";
 
 /**
  * One measuring session. Rows are never edited: a re-measure is a new row
@@ -10,6 +10,7 @@ import type { MeasurementValue } from "../dto/measurement.dto";
 @Entity("customer_measurements")
 @Index(["businessId", "customerId", "measuredOn"]) // a customer's history, newest first
 @Check(`"unit" IN ('in','cm')`)
+@Check("CHK_customer_measurements_source", `"source" IN ('staff','customer')`)
 export class CustomerMeasurement extends BaseEntity {
   @Column({ name: "business_id", type: "uuid" })
   businessId: string;
@@ -45,6 +46,10 @@ export class CustomerMeasurement extends BaseEntity {
   /** `[{ name, value }]` in display order. */
   @Column({ type: "jsonb", default: () => "'[]'" })
   entries: MeasurementValue[];
+
+  /** `customer` when the numbers were sent in by the customer, taken by someone else. */
+  @Column({ type: "varchar", length: 10, default: "staff" })
+  source: MeasurementSource;
 
   @Column({ name: "recorded_by", type: "uuid", nullable: true })
   recordedBy: string | null;

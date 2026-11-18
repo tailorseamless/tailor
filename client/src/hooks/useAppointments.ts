@@ -53,7 +53,10 @@ export function useAcceptRequest() {
     },
     {
       invalidate: [keys.requests.all, ...changed, keys.customers.all],
-      success: "Booked, and the customer is told",
+      success: ({ appointment, customerCreated }) =>
+        customerCreated
+          ? `Booked, and ${appointment.customerName} is saved as a new customer`
+          : "Booked, and the customer is told",
       toastError: false,
     },
   );

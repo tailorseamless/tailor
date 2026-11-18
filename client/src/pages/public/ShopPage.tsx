@@ -1,14 +1,20 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  blankMeasurements,
+  measurementsToSend,
+  OwnMeasurementsForm,
+  type OwnMeasurements,
+} from "../../components/public/OwnMeasurementsForm";
 import {
   blankRequest,
   PublicMessage,
   RequestFieldsForm,
   type RequestFields,
 } from "../../components/public/PublicParts";
-import { ShopDesigns, ShopLayout } from "../../components/public/ShopParts";
-import { Button, buttonClass } from "../../components/shared/Button";
+import { Photo, ShopDesigns, ShopLayout } from "../../components/public/ShopParts";
+import { Button, buttonClass, IconButton } from "../../components/shared/Button";
 import { Card } from "../../components/shared/Display";
 import { Field, FormError, Input } from "../../components/shared/Field";
 import { PhoneInput } from "../../components/shared/PhoneInput";
@@ -34,8 +40,13 @@ export default function ShopPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [request, setRequest] = useState<RequestFields | null>(null);
+  const [own, setOwn] = useState<OwnMeasurements | null>(null);
+  /** The style they tapped "Book a fitting" on. It goes with the request so the tailor sees which one. */
+  const [style, setStyle] = useState<PublicDesign | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [sentFor, setSentFor] = useState<string | null>(null);
+  /** How many measurements went with the request that was just sent. */
+  const [sentMeasurements, setSentMeasurements] = useState(0);
 
   const shopName = query.data?.business.name;
   useEffect(() => {
@@ -70,8 +81,10 @@ export default function ShopPage() {
   const tz = page.business.timeZone;
   const types = page.appointmentTypes.map((t) => t.value);
   const form = request ?? { ...blankRequest(tz), type: types[0] ?? "measurement" };
+  const mine = own ?? blankMeasurements(page.business.measurementUnit);
 
   const bookStyle = (design: PublicDesign) => {
+    setStyle(design);
     setRequest({ ...form, note: `I'd like this style: ${design.name}`.slice(0, 500) });
     // Let the viewer close first, so the page isn't still locked from scrolling.
     window.setTimeout(() => {
@@ -88,6 +101,12 @@ export default function ShopPage() {
       return setProblem("That email address doesn't look right.");
     const iso = localInputToIso(form.when, tz);
     if (new Date(iso).getTime() < Date.now()) return setProblem("Choose a time in the future.");
+    const measured = measurementsToSend(mine);
+    if ("problem" in measured) {
+      setOwn({ ...mine, open: true }); // so the row in question is on screen
+      return setProblem(measured.problem);
+    }
+    const withMeasurements = measured.values.length > 0;
     book.mutate(
       {
         fullName: fullName.trim(),
@@ -96,9 +115,33 @@ export default function ShopPage() {
         type: form.type,
         preferredStartsAt: iso,
         note: form.note.trim() || null,
+        designId: style?.id ?? null,
+        measurements: withMeasurements ? measured.values : undefined,
+        measurementUnit: withMeasurements ? mine.unit : undefined,
       },
-      { onSuccess: () => setSentFor(formatDateTime(iso, tz)) },
+      {
+        onSuccess: () => {
+          setSentFor(formatDateTime(iso, tz));
+          setSentMeasurements(measured.values.length);
+        },
+      },
     );
+  };
+
+  const removeStyle = () => {
+    if (style && form.note === `I'd like this style: ${style.name}`.slice(0, 500)) setRequest({ ...form, note: "" });
+    setStyle(null);
+  };
+
+  /** Back to an empty form for a second request: who they are stays filled in, what they ask for starts fresh. */
+  const another = () => {
+    book.reset();
+    setSentFor(null);
+    setSentMeasurements(0);
+    setRequest(null);
+    setOwn(null);
+    setStyle(null);
+    setProblem(null);
   };
 
   return (
@@ -115,12 +158,38 @@ export default function ShopPage() {
                   {page.business.name} will confirm your appointment for around {sentFor}
                   {email ? " by email" : ""}, or call you if that time doesn't work.
                 </p>
+                {sentMeasurements > 0 && (
+                  <p className="mt-2 max-w-sm text-sm text-fg-muted" data-cy="booking-sent-measurements">
+                    Your {sentMeasurements} measurement{sentMeasurements === 1 ? "" : "s"} went with it. They'll check
+                    them with you.
+                  </p>
+                )}
+                <Button variant="secondary" className="mt-5" onClick={another} data-cy="booking-another">
+                  Make another request
+                </Button>
               </div>
             </Card>
           ) : (
             <Card title="Book an appointment">
               <div className="space-y-4 p-4">
                 <FormError message={problem ?? (book.error ? errorMessage(book.error) : null)} />
+                {style && (
+                  <div
+                    className="flex items-center gap-3 rounded-lg border border-line bg-subtle p-2"
+                    data-cy="booking-style"
+                  >
+                    {style.images[0] && (
+                      <Photo url={style.images[0].url} alt="" width={160} className="size-14 rounded-md object-cover" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-fg-subtle">About this style</p>
+                      <p className="truncate text-sm font-medium text-fg">{style.name}</p>
+                    </div>
+                    <IconButton label="Remove this style" onClick={removeStyle} data-cy="booking-style-remove">
+                      <X className="size-4" aria-hidden />
+                    </IconButton>
+                  </div>
+                )}
                 <Field label="Your name">
                   {(p) => (
                     <Input
@@ -150,6 +219,7 @@ export default function ShopPage() {
                   </Field>
                 </div>
                 <RequestFieldsForm value={form} onChange={setRequest} types={types} />
+                <OwnMeasurementsForm value={mine} onChange={setOwn} />
                 <Button className="w-full sm:w-auto" onClick={send} loading={book.isPending} data-cy="booking-submit">
                   Request appointment
                 </Button>

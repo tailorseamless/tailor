@@ -41,6 +41,10 @@ export interface MeasurementValue {
   value: number;
 }
 
+/** Who took the numbers: the business's own staff, or the customer (sent in, taken by another tailor). */
+export const MEASUREMENT_SOURCES = ["staff", "customer"] as const;
+export type MeasurementSource = (typeof MEASUREMENT_SOURCES)[number];
+
 /**
  * One measuring session for a customer. Immutable: measuring again creates a
  * NEW record, so orders keep the version they were made from (PRD BR-006, BR-007).
@@ -57,6 +61,7 @@ export interface CustomerMeasurementRecord {
   measuredOn: string;
   notes: string | null;
   values: MeasurementValue[];
+  source: MeasurementSource;
   recordedBy: string | null;
   createdAt: Date;
 }

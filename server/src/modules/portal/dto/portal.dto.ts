@@ -25,6 +25,8 @@ export interface PublicBusinessDTO {
   address: string | null;
   timeZone: string;
   currency: string;
+  /** What its customers' measurements are in, so a form can start on the right unit. */
+  measurementUnit: MeasurementUnit;
   /** The business's public page, when it has one: <APP_URL>/<slug>. */
   pageUrl: string | null;
 }

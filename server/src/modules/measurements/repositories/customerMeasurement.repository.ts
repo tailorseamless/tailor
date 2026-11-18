@@ -16,6 +16,7 @@ function toRecord(row: CustomerMeasurement): CustomerMeasurementRecord {
     measuredOn: row.measuredOn,
     notes: row.notes ?? null,
     values: row.entries ?? [],
+    source: row.source ?? "staff",
     recordedBy: row.recordedBy ?? null,
     createdAt: row.createdAt,
   };

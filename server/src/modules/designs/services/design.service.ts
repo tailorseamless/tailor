@@ -7,7 +7,7 @@ import { ActivityService } from "../../activity/services/activity.service";
 import type { ImageRecord, IncomingFile } from "../../media/dto/media.dto";
 import { ImageRepository } from "../../media/repositories/image.repository";
 import { ImageService } from "../../media/services/image.service";
-import type { DesignDTO, DesignRecord, PublicDesignDTO } from "../dto/design.dto";
+import type { DesignDTO, DesignRecord, DesignSummaryDTO, PublicDesignDTO } from "../dto/design.dto";
 import { DesignRepository } from "../repositories/design.repository";
 import type { CreateDesignInput, ListDesignsQuery, UpdateDesignInput } from "../validators/design.schema";
 
@@ -115,6 +115,35 @@ export class DesignService {
       priceMax: design.priceMax,
       images: (images.get(design.id) ?? []).map(({ url, width, height }) => ({ url, width, height })),
     }));
+  }
+
+  /**
+   * The id back when this is a design the business shows customers; otherwise null. For links that arrive from a
+   * public page, so a guessed or stale id is dropped quietly and never reveals what exists.
+   */
+  async shownDesignId(businessId: string, id: string | null | undefined): Promise<string | null> {
+    if (!id) return null;
+    const design = await this.designs.findInBusiness(id, businessId);
+    return design?.visibility === "customers" ? design.id : null;
+  }
+
+  /** Name, price range and first picture of each design, by id. Designs that are gone are simply missing. */
+  async summaries(businessId: string, ids: string[]): Promise<Map<string, DesignSummaryDTO>> {
+    const rows = await this.designs.findManyInBusiness([...new Set(ids)], businessId);
+    const images = await this.imageRows.listForDesigns(rows.map((design) => design.id));
+    return new Map(
+      rows.map((design) => [
+        design.id,
+        {
+          id: design.id,
+          name: design.name,
+          category: design.category,
+          priceMin: design.priceMin,
+          priceMax: design.priceMax,
+          coverUrl: images.get(design.id)?.[0]?.url ?? null,
+        },
+      ]),
+    );
   }
 
   private async find(actor: Actor, id: string, tx?: Tx): Promise<DesignRecord> {

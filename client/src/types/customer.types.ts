@@ -60,6 +60,8 @@ export interface Measurement {
   measuredOn: string;
   notes: string | null;
   values: MeasurementValue[];
+  /** `customer` when the numbers were sent in by the customer, taken by another tailor. */
+  source: "staff" | "customer";
   createdAt: ISODate;
 }
 

@@ -7,7 +7,7 @@ import type {
   NotificationPreferences,
   OutboxEmail,
 } from "../types/dashboard.types";
-import type { BookingRequestInput, Portal, ShopPage } from "../types/portal.types";
+import type { BookingRequestInput, Portal, PortalRequestInput, ShopPage } from "../types/portal.types";
 
 export const dashboardEndpoints = {
   get: (params?: { from?: string; to?: string; branchId?: string }) =>
@@ -38,7 +38,7 @@ export const publicEndpoints = {
     `${API_URL}/portal/${encodeURIComponent(token)}/receipts/${paymentId}/pdf`,
   confirmAppointment: (token: string, appointmentId: string) =>
     wrapCall<unknown>(() => http.post(`/portal/${encodeURIComponent(token)}/appointments/${appointmentId}/confirm`)),
-  portalRequest: (token: string, input: Pick<BookingRequestInput, "type" | "preferredStartsAt" | "note">) =>
+  portalRequest: (token: string, input: PortalRequestInput) =>
     wrapCall<unknown>(() => http.post(`/portal/${encodeURIComponent(token)}/appointment-requests`, input)),
   shopPage: (slug: string) => wrapCall<ShopPage>(() => http.get(`/public/businesses/${encodeURIComponent(slug)}`)),
   book: (slug: string, input: BookingRequestInput) =>

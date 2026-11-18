@@ -11,6 +11,8 @@ export interface PublicBusiness {
   address: string | null;
   timeZone: string;
   currency: string;
+  /** The unit a measurement form should start on. */
+  measurementUnit: MeasurementUnit;
   /** The business's public page, when it has one. */
   pageUrl: string | null;
 }
@@ -88,4 +90,15 @@ export interface BookingRequestInput {
   type: AppointmentType;
   preferredStartsAt: string;
   note?: string | null;
+  /** The design they asked about, when they came from "Book a fitting" on one. */
+  designId?: string | null;
+  /** Measurements the customer already has from another tailor; staff check them before they are kept. */
+  measurements?: MeasurementValue[];
+  measurementUnit?: MeasurementUnit;
 }
+
+/** What the portal sends: the customer is known, so no name or contact details. */
+export type PortalRequestInput = Pick<
+  BookingRequestInput,
+  "type" | "preferredStartsAt" | "note" | "measurements" | "measurementUnit"
+>;

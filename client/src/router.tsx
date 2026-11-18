@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { createBrowserRouter, type RouteObject } from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
 import { AppShell, HomeRedirect } from "./components/layout/AppShell";
 import { Gate, RequireAuth } from "./components/layout/Guards";
 import { RouteError } from "./pages/RouteError";
@@ -38,6 +38,8 @@ export const router = createBrowserRouter([
           { path: "orders/:id", lazy: page(() => import("./pages/orders/OrderDetailPage")) },
           { path: "appointments", lazy: page(() => import("./pages/appointments/AppointmentsPage")) },
           { path: "appointments/:id", lazy: page(() => import("./pages/appointments/AppointmentsPage")) },
+          // Notifications about new requests used to link here; they now open the diary's Requests tab.
+          { path: "appointment-requests/:id", element: <Navigate to="/appointments?tab=requests" replace /> },
           { path: "tasks", lazy: page(() => import("./pages/tasks/TasksPage")) },
           { path: "tasks/:id", lazy: page(() => import("./pages/tasks/TasksPage")) },
           { path: "designs", lazy: page(() => import("./pages/designs/DesignsPage")) },

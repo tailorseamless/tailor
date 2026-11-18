@@ -2,7 +2,7 @@ import { authEndpoints, businessEndpoints } from "../endpoints/auth.endpoints";
 import { dashboardEndpoints, notificationEndpoints, publicEndpoints } from "../endpoints/misc.endpoints";
 import type { BusinessInput, RegisterInput } from "../types/auth.types";
 import type { NotificationPreference } from "../types/dashboard.types";
-import type { BookingRequestInput } from "../types/portal.types";
+import type { BookingRequestInput, PortalRequestInput } from "../types/portal.types";
 import { keys } from "./queryKeys";
 import { useApiMutation, useApiQuery } from "./useApi";
 
@@ -85,7 +85,7 @@ export function usePortalActions(token: string) {
     success: "Thanks — we've let them know you're coming",
   });
   const request = useApiMutation(
-    (input: Pick<BookingRequestInput, "type" | "preferredStartsAt" | "note">) =>
+    (input: PortalRequestInput) =>
       publicEndpoints.portalRequest(token, input),
     { invalidate: [keys.portal(token)], success: "Request sent", toastError: false },
   );

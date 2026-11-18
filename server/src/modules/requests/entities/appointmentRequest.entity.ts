@@ -1,6 +1,8 @@
 import { Check, Column, Entity, Index } from "typeorm";
 import { BaseEntity, ForeignKey } from "../../../shared/entities/baseEntity";
 import type { AppointmentType } from "../../appointments/dto/appointment.dto";
+import type { MeasurementUnit } from "../../businesses/dto/business.dto";
+import type { MeasurementValue } from "../../measurements/dto/measurement.dto";
 import type { RequestSource, RequestStatus } from "../dto/request.dto";
 
 @Entity("appointment_requests")
@@ -9,6 +11,7 @@ import type { RequestSource, RequestStatus } from "../dto/request.dto";
 @Index(["customerId"])
 @Check(`"source" IN ('portal','booking_page')`)
 @Check(`"status" IN ('pending','accepted','declined')`)
+@Check("CHK_appointment_requests_measurement_unit", `"measurement_unit" IS NULL OR "measurement_unit" IN ('in','cm')`)
 export class AppointmentRequest extends BaseEntity {
   @Column({ name: "business_id", type: "uuid" })
   businessId: string;
@@ -42,6 +45,20 @@ export class AppointmentRequest extends BaseEntity {
 
   @Column({ type: "text", nullable: true })
   note: string | null;
+
+  /** The design the request was made from, when it came from "Book a fitting" on one. */
+  @Column({ name: "design_id", type: "uuid", nullable: true })
+  designId: string | null;
+
+  @ForeignKey("Design", "design_id", "SET NULL")
+  design?: unknown;
+
+  /** Measurements the customer already has, taken by another tailor: `[{ name, value }]`. Staff check them before they are kept. */
+  @Column({ type: "jsonb", nullable: true })
+  measurements: MeasurementValue[] | null;
+
+  @Column({ name: "measurement_unit", type: "varchar", length: 2, nullable: true })
+  measurementUnit: MeasurementUnit | null;
 
   @Column({ type: "varchar", length: 20, default: "pending" })
   status: RequestStatus;
