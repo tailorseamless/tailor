@@ -79,7 +79,8 @@ export function landmarkFor(name: string, templateName?: string | null): Landmar
   if (/thigh|\blap\b/.test(n)) return "thigh";
   if (/knee/.test(n)) return "knee";
   if (/calf/.test(n)) return "calf";
-  if (/ankle/.test(n)) return "ankle";
+  // A trouser's "base" is its bottom opening, which sits at the ankle.
+  if (/ankle|\bbase\b|leg opening|trouser (bottom|hem)/.test(n)) return "ankle";
   return null;
 }
 

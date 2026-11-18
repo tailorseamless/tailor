@@ -7,6 +7,7 @@ import type { MeasurementUnit } from "../../types/auth.types";
 import { landmarkFor, placeMeasurements, type Build } from "../../utils/bodyMap";
 import { cn } from "../../utils/cn";
 import { errorMessage } from "../../utils/errors";
+import { parseMeasure } from "../../utils/measureInput";
 import { todayIn } from "../../utils/timezone";
 import { Button, IconButton } from "../shared/Button";
 import { DatePicker } from "../shared/DatePicker";
@@ -59,9 +60,10 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
   const current = rows ?? rowsFor(template, previous);
 
   const preview = placeMeasurements(
-    current
-      .filter((r) => r.name.trim() && Number(r.value) > 0)
-      .map((r) => ({ name: r.name.trim(), value: Number(r.value) })),
+    current.flatMap((r) => {
+      const value = parseMeasure(r.value);
+      return r.name.trim() && value && value > 0 ? [{ name: r.name.trim(), value }] : [];
+    }),
     unit,
     template?.name,
   );
@@ -85,8 +87,9 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
     const filled = current.filter((r) => r.name.trim() && r.value.trim());
     const missing = current.find((r) => r.required && !r.value.trim());
     if (missing) return setProblem(`Enter ${missing.name}.`);
-    const bad = filled.find((r) => !(Number(r.value) > 0 && Number(r.value) <= 1000));
-    if (bad) return setProblem(`${bad.name} must be a number above 0.`);
+    const parsed = filled.map((r) => ({ name: r.name.trim(), value: parseMeasure(r.value) }));
+    const bad = parsed.find((r) => !(r.value !== null && r.value > 0 && r.value <= 1000));
+    if (bad) return setProblem(`${bad.name} must be one number above 0, like 24.5 or 24 1/2.`);
     if (!filled.length) return setProblem("Enter at least one measurement.");
     record.mutate(
       {
@@ -94,7 +97,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
         unit,
         measuredOn,
         notes: notes.trim() || null,
-        values: filled.map((r) => ({ name: r.name.trim(), value: Number(r.value) })),
+        values: parsed.map((r) => ({ name: r.name, value: r.value ?? 0 })),
       },
       {
         onSuccess: (saved) => {
@@ -185,10 +188,8 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                         {(p) => (
                           <Input
                             {...p}
-                            type="number"
                             inputMode="decimal"
-                            step="0.1"
-                            min="0"
+                            autoComplete="off"
                             value={row.value}
                             onChange={(e) => setRow(index, { value: e.target.value })}
                             {...focusing(index)}
@@ -209,10 +210,8 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
                         />
                         <Input
                           aria-label={`${row.name || "Measurement"} value`}
-                          type="number"
                           inputMode="decimal"
-                          step="0.1"
-                          min="0"
+                          autoComplete="off"
                           placeholder="0"
                           value={row.value}
                           onChange={(e) => setRow(index, { value: e.target.value })}
