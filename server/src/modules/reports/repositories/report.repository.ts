@@ -59,7 +59,7 @@ export class ReportRepository {
       `SELECT MIN(i.garment_name) AS "garmentName",
               SUM(i.quantity)::int AS quantity,
               COUNT(DISTINCT o.id)::int AS orders,
-              SUM(i.quantity * i.unit_price) AS value
+              SUM(i.quantity * i.unit_price - i.discount_amount) AS value
          FROM orders o
          JOIN order_items i ON i.order_id = o.id AND i.deleted_at IS NULL
         WHERE o.business_id = $1
@@ -68,7 +68,7 @@ export class ReportRepository {
           AND ${inPeriod("o.created_at")}
           AND ($5::uuid IS NULL OR o.branch_id = $5)
         GROUP BY LOWER(i.garment_name)
-        ORDER BY SUM(i.quantity * i.unit_price) DESC, MIN(i.garment_name)
+        ORDER BY SUM(i.quantity * i.unit_price - i.discount_amount) DESC, MIN(i.garment_name)
         LIMIT ${REPORTS.topGarments}`,
       [...args(params), params.branchId],
     );

@@ -30,5 +30,8 @@ export interface PaymentSummary {
   totalAmount: number;
   amountPaid: number;
   balance: number;
+  /** An item still has only an estimate: the total is not final and deposits may go up to the estimate. */
+  pricePending: boolean;
+  estimatedMaxTotal: number | null;
   currency: string;
 }

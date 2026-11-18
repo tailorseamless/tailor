@@ -18,9 +18,11 @@ interface Props {
   /** Suggested amount: the balance for a payment, what's been paid for a refund. */
   suggested: number;
   max: number;
+  /** What `max` is called in the "too much" hint: the balance, or what is left under an estimate. */
+  limitLabel?: string;
 }
 
-export function PaymentModal({ open, onClose, orderId, kind, suggested, max }: Props) {
+export function PaymentModal({ open, onClose, orderId, kind, suggested, max, limitLabel = "balance" }: Props) {
   const { currency, timeZone } = useWorkspace();
   const pay = useRecordPayment(orderId);
   const refund = useRefund(orderId);
@@ -92,7 +94,7 @@ export function PaymentModal({ open, onClose, orderId, kind, suggested, max }: P
         <FormError message={problem ?? (mutation.error ? errorMessage(mutation.error) : null)} />
         <Field
           label={`Amount (${currency})`}
-          hint={overpaying ? `That's more than the ${formatMoney(max, currency)} balance.` : undefined}
+          hint={overpaying ? `That's more than the ${formatMoney(max, currency)} ${limitLabel}.` : undefined}
         >
           {(p) => (
             <Input

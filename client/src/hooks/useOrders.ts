@@ -1,6 +1,6 @@
 import { orderEndpoints, paymentEndpoints } from "../endpoints/order.endpoints";
 import type { ListParams } from "../types/api.types";
-import type { OrderFilters, OrderInput, OrderStatus } from "../types/order.types";
+import type { OrderFilters, OrderInput, OrderStatus, PriceChange } from "../types/order.types";
 import type { PaymentInput } from "../types/payment.types";
 import { newIdempotencyKey } from "../transport/http";
 import { saveFile } from "../utils/saveFile";
@@ -30,6 +30,15 @@ export function useUpdateOrder(id: string) {
   return useApiMutation((input: Parameters<typeof orderEndpoints.update>[1]) => orderEndpoints.update(id, input), {
     invalidate: [keys.orders.all, ["dashboard"]],
     success: "Order saved",
+  });
+}
+
+/** Agree or adjust the price and discount of items on an order. Totals, balances and the payments list all change. */
+export function useSetPrices(id: string) {
+  return useApiMutation((items: PriceChange[]) => orderEndpoints.setPrices(id, items), {
+    invalidate: [keys.orders.all, keys.payments.all, ["dashboard"]],
+    success: "Prices saved",
+    toastError: false,
   });
 }
 

@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = [
   "measurement.deleted",
   "order.created",
   "order.updated",
+  "order.prices_set",
   "order.status_changed",
   "payment.recorded",
   "payment.refunded",

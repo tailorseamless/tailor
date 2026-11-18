@@ -1,4 +1,7 @@
 import type { ISODate } from "./api.types";
+import type { DiscountType } from "../utils/orderMoney";
+
+export type { DiscountType };
 
 export type OrderStatus =
   | "confirmed"
@@ -22,6 +25,8 @@ export interface OrderListItem {
   status: OrderStatus;
   dueDate: string | null;
   totalAmount: number;
+  /** The most the order could come to while a price is still an estimate; null once final. */
+  estimatedMaxTotal: number | null;
   amountPaid: number;
   balance: number;
   currency: string;
@@ -36,8 +41,19 @@ export interface OrderItem {
   garmentName: string;
   description: string | null;
   quantity: number;
+  /** The agreed price of one piece. 0 while there is only an estimate. */
   unitPrice: number;
+  /** A quote for one piece, given before the price was agreed. */
+  estimateMin: number | null;
+  estimateMax: number | null;
+  discountType: DiscountType | null;
+  discountValue: number | null;
+  /** What the discount comes to in money. */
+  discountAmount: number;
+  /** After the discount. */
   lineTotal: number;
+  /** Has an estimate and no agreed price yet. */
+  pricePending: boolean;
   fabricSource: FabricSource;
   measurementId: string | null;
   designId: string | null;
@@ -67,6 +83,12 @@ export interface OrderDetail {
   totalAmount: number;
   amountPaid: number;
   balance: number;
+  /** At least one item has only an estimate, so the total is not final. */
+  pricePending: boolean;
+  /** The range the order could come to while a price is pending; null once final. */
+  estimateMinTotal: number | null;
+  estimateMaxTotal: number | null;
+  discountTotal: number;
   currency: string;
   notes: string | null;
   isOverdue: boolean;
@@ -83,9 +105,21 @@ export interface OrderItemInput {
   description?: string | null;
   quantity: number;
   unitPrice: number;
+  estimateMin?: number | null;
+  estimateMax?: number | null;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
   fabricSource: FabricSource;
   measurementId?: string | null;
   designId?: string | null;
+}
+
+/** The agreed price and discount of one item already on an order. */
+export interface PriceChange {
+  id: string;
+  unitPrice: number;
+  discountType: DiscountType | null;
+  discountValue: number | null;
 }
 
 export interface OrderInput {

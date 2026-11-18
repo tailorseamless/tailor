@@ -27,6 +27,9 @@ export function PaymentsCard({ order }: { order: OrderDetail }) {
   const [voiding, setVoiding] = useState<Payment | null>(null);
   const money = (n: number) => formatMoney(n, order.currency);
   const closed = order.status === "cancelled";
+  // While an item has only an estimate the total is not final: a deposit may go up to the top of the estimate.
+  const pending = order.pricePending && order.estimateMaxTotal !== null;
+  const room = pending ? Math.max(Math.round(((order.estimateMaxTotal ?? 0) - order.amountPaid) * 100) / 100, 0) : 0;
 
   return (
     <Card
@@ -60,7 +63,13 @@ export function PaymentsCard({ order }: { order: OrderDetail }) {
       <dl className="grid grid-cols-3 gap-2 border-b border-line px-4 py-3 text-center">
         <div>
           <dt className="text-xs text-fg-subtle">Total</dt>
-          <dd className="font-semibold text-fg tabular-nums">{money(order.totalAmount)}</dd>
+          {pending ? (
+            <dd className="text-sm font-semibold text-warning-fg" data-cy="order-total-pending">
+              To be agreed
+            </dd>
+          ) : (
+            <dd className="font-semibold text-fg tabular-nums">{money(order.totalAmount)}</dd>
+          )}
         </div>
         <div>
           <dt className="text-xs text-fg-subtle">Paid</dt>
@@ -69,10 +78,13 @@ export function PaymentsCard({ order }: { order: OrderDetail }) {
         <div>
           <dt className="text-xs text-fg-subtle">Balance</dt>
           <dd
-            className={cn("font-semibold tabular-nums", order.balance > 0 ? "text-warning-fg" : "text-fg")}
+            className={cn(
+              "font-semibold tabular-nums",
+              pending ? "text-sm text-fg-muted" : order.balance > 0 ? "text-warning-fg" : "text-fg",
+            )}
             data-cy="order-balance"
           >
-            {money(order.balance)}
+            {pending ? "To be agreed" : money(order.balance)}
           </dd>
         </div>
       </dl>
@@ -154,7 +166,13 @@ export function PaymentsCard({ order }: { order: OrderDetail }) {
           ) : (
             <EmptyState
               title="No payments yet"
-              message={order.balance > 0 ? "Record a deposit when the customer pays." : undefined}
+              message={
+                pending
+                  ? `Record a deposit when the customer pays (up to ${money(room)} until the final price is agreed).`
+                  : order.balance > 0
+                    ? "Record a deposit when the customer pays."
+                    : undefined
+              }
             />
           )
         }
@@ -165,8 +183,9 @@ export function PaymentsCard({ order }: { order: OrderDetail }) {
           onClose={() => setModal(null)}
           orderId={order.id}
           kind={modal}
-          suggested={modal === "payment" ? Math.max(order.balance, 0) : 0}
-          max={modal === "payment" ? order.balance : order.amountPaid}
+          suggested={modal === "payment" && !pending ? Math.max(order.balance, 0) : 0}
+          max={modal === "payment" ? (pending ? room : order.balance) : order.amountPaid}
+          limitLabel={pending ? "left under the estimate" : "balance"}
         />
       )}
       <PromptDialog

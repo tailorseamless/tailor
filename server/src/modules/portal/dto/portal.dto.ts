@@ -34,6 +34,13 @@ export interface PortalDTO {
     totalAmount: number;
     amountPaid: number;
     balance: number;
+    /** An item still has only an estimate, so the total is not final. */
+    pricePending: boolean;
+    /** The range the order could come to while the price is pending; null once final. */
+    estimateMin: number | null;
+    estimateMax: number | null;
+    /** All the discounts on the order added up. */
+    discountTotal: number;
     items: { garmentName: string; quantity: number }[];
     createdAt: Date;
   }[];

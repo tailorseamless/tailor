@@ -90,7 +90,7 @@ export default function SignInPage() {
   const text = copy[mode];
   const errors = form.formState.errors;
   return (
-    <AuthLayout title={text.title} subtitle={text.subtitle}>
+    <AuthLayout title={text.title} subtitle={text.subtitle} homeLink>
       {!authClient.configured && (
         <FormError message="Sign-in isn't set up yet: add the VITE_FIREBASE_* values to client/.env and restart." />
       )}

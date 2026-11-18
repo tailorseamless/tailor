@@ -8,6 +8,7 @@ import {
   listOrdersSchema,
   orderIdSchema,
   orderImageSchema,
+  setPricesSchema,
   updateOrderSchema,
 } from "../validators/order.schema";
 
@@ -34,6 +35,12 @@ export class OrderController {
     const { params, body } = input(req, updateOrderSchema);
     const order = await OrderService.Instance.update(authUser(req), params.id, body);
     res.json(ApiResponse.ok("Order updated", order));
+  }
+
+  static async setPrices(req: Request, res: Response): Promise<void> {
+    const { params, body } = input(req, setPricesSchema);
+    const order = await OrderService.Instance.setPrices(authUser(req), params.id, body);
+    res.json(ApiResponse.ok("Prices updated", order));
   }
 
   static async changeStatus(req: Request, res: Response): Promise<void> {

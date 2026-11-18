@@ -251,8 +251,9 @@ function load() {
     apiPrefix: raw.API_PREFIX.replace(/\/+$/, "") || "/",
     appUrl: raw.APP_URL.replace(/\/+$/, ""),
     platformAdmins: platformAdminEmails(raw.PLATFORM_ADMIN_EMAILS),
+    // A browser's Origin never ends in "/", so an address pasted with one (https://site.netlify.app/) would never match.
     corsOrigins: raw.CORS_ORIGINS.split(",")
-      .map((origin) => origin.trim())
+      .map((origin) => origin.trim().replace(/\/+$/, ""))
       .filter(Boolean),
     logLevel: raw.LOG_LEVEL ?? (raw.NODE_ENV === "test" ? "silent" : isProduction ? "info" : "debug"),
     database: {

@@ -7,6 +7,7 @@ import type {
   OrderInput,
   OrderListItem,
   OrderStatus,
+  PriceChange,
 } from "../types/order.types";
 import type { Payment, PaymentInput, PaymentSummary } from "../types/payment.types";
 
@@ -18,6 +19,8 @@ export const orderEndpoints = {
     wrapCall<OrderDetail>(() => http.post("/orders", input, { headers: { "Idempotency-Key": idempotencyKey } })),
   update: (id: string, input: Partial<Pick<OrderInput, "dueDate" | "notes" | "items">>) =>
     wrapCall<OrderDetail>(() => http.patch(`/orders/${id}`, input)),
+  setPrices: (id: string, items: PriceChange[]) =>
+    wrapCall<OrderDetail>(() => http.patch(`/orders/${id}/prices`, { items })),
   changeStatus: (id: string, status: OrderStatus, note?: string) =>
     wrapCall<OrderDetail>(() => http.post(`/orders/${id}/status`, { status, note: note || undefined })),
   uploadImages: (id: string, files: File[]) => wrapUpload<OrderImage[]>(`/orders/${id}/images`, "images", files),

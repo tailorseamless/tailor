@@ -14,6 +14,7 @@ import type { CustomerRecord } from "../../customers/dto/customer.dto";
 import { CustomerRepository } from "../../customers/repositories/customer.repository";
 import { DesignService } from "../../designs/services/design.service";
 import { NotificationService } from "../../notifications/services/notification.service";
+import { estimatedMaxTotal, estimatedMinTotal, orderDiscount } from "../../orders/domain/orderMoney";
 import { OrderRepository } from "../../orders/repositories/order.repository";
 import { balanceDue } from "../../payments/domain/paymentRules";
 import { PaymentRepository } from "../../payments/repositories/payment.repository";
@@ -81,17 +82,24 @@ export class PortalService {
     return {
       business: this.publicBusiness(business),
       customer: { fullName: customer.fullName },
-      orders: orders.data.map((order) => ({
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        dueDate: order.dueDate,
-        totalAmount: order.totalAmount,
-        amountPaid: order.amountPaid,
-        balance: balanceDue(order.status === "cancelled", order.totalAmount, order.amountPaid),
-        items: (items.get(order.id) ?? []).map(({ garmentName, quantity }) => ({ garmentName, quantity })),
-        createdAt: order.createdAt,
-      })),
+      orders: orders.data.map((order) => {
+        const lines = items.get(order.id) ?? [];
+        return {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          dueDate: order.dueDate,
+          totalAmount: order.totalAmount,
+          amountPaid: order.amountPaid,
+          balance: balanceDue(order.status === "cancelled", order.totalAmount, order.amountPaid),
+          pricePending: lines.some((line) => line.pricePending),
+          estimateMin: estimatedMinTotal(lines),
+          estimateMax: estimatedMaxTotal(lines),
+          discountTotal: orderDiscount(lines),
+          items: lines.map(({ garmentName, quantity }) => ({ garmentName, quantity })),
+          createdAt: order.createdAt,
+        };
+      }),
       appointments: appointments.data.map((a) => ({
         id: a.id,
         type: a.type,

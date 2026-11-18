@@ -98,8 +98,14 @@ export function receiptEmail(receipt: ReceiptDTO): RenderedEmail {
     [isRefund ? "Refunded" : "Paid", money(receipt.amount)],
     ["Method", PAYMENT_METHOD_LABELS[receipt.method] ?? receipt.method],
     ["Date", formatDateTime(receipt.paidAt, receipt.business.timeZone)],
-    ["Order total", money(receipt.order.totalAmount)],
-    ["Balance", money(receipt.order.balance)],
+    // While an item has only an estimate the total is not final, so say that instead of a misleading 0.00.
+    [
+      "Order total",
+      receipt.order.pricePending
+        ? `To be confirmed${receipt.order.estimatedMaxTotal !== null ? ` (up to ${money(receipt.order.estimatedMaxTotal)})` : ""}`
+        : money(receipt.order.totalAmount),
+    ],
+    ["Balance", receipt.order.pricePending ? "To be confirmed" : money(receipt.order.balance)],
   ];
   const intro = isRefund
     ? `Hello ${name}, we have refunded ${money(receipt.amount)} on order ${receipt.order.orderNumber}.`

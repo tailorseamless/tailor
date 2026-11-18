@@ -45,7 +45,7 @@ export interface GarmentSales {
   /** Pieces ordered. */
   quantity: number;
   orders: number;
-  /** quantity × unit price, summed. */
+  /** quantity × unit price, less discounts, summed. */
   value: number;
 }
 

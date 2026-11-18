@@ -31,6 +31,11 @@ export interface Portal {
     totalAmount: number;
     amountPaid: number;
     balance: number;
+    /** An item still has only an estimate, so the total is not final. */
+    pricePending: boolean;
+    estimateMin: number | null;
+    estimateMax: number | null;
+    discountTotal: number;
     items: { garmentName: string; quantity: number }[];
     createdAt: string;
   }[];

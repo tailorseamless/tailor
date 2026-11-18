@@ -11,6 +11,7 @@ import { ORDER_STATUSES, type OrderStatus } from "../dto/order.dto";
 @Index(["businessId", "branchId"]) // one branch's orders
 @Check(`"status" IN (${ORDER_STATUSES.map((status) => `'${status}'`).join(",")})`)
 @Check(`"total_amount" >= 0`)
+@Check(`"estimated_max_total" IS NULL OR "estimated_max_total" >= 0`)
 export class Order extends BaseEntity {
   @Column({ name: "business_id", type: "uuid" })
   businessId: string;
@@ -43,6 +44,20 @@ export class Order extends BaseEntity {
 
   @Column({ name: "total_amount", type: "numeric", precision: 14, scale: 2, transformer: numericTransformer })
   totalAmount: number;
+
+  /**
+   * The most the order could come to while an item still has only an estimate (its price not agreed yet).
+   * Deposits are allowed up to this. null once every price is agreed.
+   */
+  @Column({
+    name: "estimated_max_total",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
+  estimatedMaxTotal: number | null;
 
   @Column({ type: "varchar", length: 3 })
   currency: string;

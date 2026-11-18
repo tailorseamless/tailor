@@ -72,7 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const uid = next?.uid ?? null;
       // A different person on this device must never see the previous person's cached data.
       if (uid !== lastUid.current) {
-        queryClient.clear();
+        // Not on the first answer: no one was here before, and clearing cancels requests that public pages
+        // (the customer portal, the booking page) have already started, leaving them loading forever.
+        if (lastUid.current !== undefined) queryClient.clear();
         lastUid.current = uid;
         void load(next);
       }

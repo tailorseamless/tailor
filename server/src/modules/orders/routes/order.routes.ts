@@ -16,6 +16,8 @@ router.get("/orders", authorise("order.read"), validate(s.listOrdersSchema), O.l
 router.post("/orders", authorise("order.create"), idempotent, validate(s.createOrderSchema), O.create);
 router.get("/orders/:id", authorise("order.read"), validate(s.orderIdSchema), O.detail);
 router.patch("/orders/:id", authorise("order.update"), validate(s.updateOrderSchema), O.update);
+// Agreeing the price and discount of the items: allowed until the order is closed, production included.
+router.patch("/orders/:id/prices", authorise("order.update"), validate(s.setPricesSchema), O.setPrices);
 // A verb, because it is an action with rules of its own (§14).
 router.post("/orders/:id/status", authorise("order.status"), validate(s.changeOrderStatusSchema), O.changeStatus);
 

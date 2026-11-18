@@ -32,6 +32,11 @@ export function OrderRow({ order }: { order: OrderListItem }) {
         </div>
         <div className="flex flex-col items-end gap-1">
           <Badge tone={status.tone}>{status.label}</Badge>
+          {order.estimatedMaxTotal !== null && order.status !== "cancelled" && (
+            <span className="text-xs text-fg-muted" data-cy="order-row-price-pending">
+              Price to be agreed
+            </span>
+          )}
           {order.balance > 0 && order.status !== "cancelled" && (
             <span className="text-xs text-warning-fg tabular-nums">
               {formatMoney(order.balance, order.currency)} owed

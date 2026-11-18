@@ -16,7 +16,14 @@ import { CustomerMeasurementRepository } from "../../measurements/repositories/c
 import { compareMoney } from "../../../shared/utils/money";
 import { balanceDue } from "../../payments/domain/paymentRules";
 import { PaymentRepository } from "../../payments/repositories/payment.repository";
-import { formatOrderNumber, orderTotal } from "../domain/orderMoney";
+import {
+  estimatedMaxTotal,
+  estimatedMinTotal,
+  formatOrderNumber,
+  orderDiscount,
+  orderTotal,
+  type PricedItem,
+} from "../domain/orderMoney";
 import {
   canEditItems,
   canTransitionOrder,
@@ -31,6 +38,7 @@ import type {
   ChangeOrderStatusInput,
   CreateOrderInput,
   ListOrdersQuery,
+  SetPricesInput,
   UpdateOrderInput,
 } from "../validators/order.schema";
 
@@ -99,6 +107,7 @@ export class OrderService {
           status: "confirmed",
           dueDate: input.dueDate ?? null,
           totalAmount: orderTotal(input.items),
+          estimatedMaxTotal: estimatedMaxTotal(input.items),
           currency: business.currency,
           notes: input.notes ?? null,
           createdBy: actor.id,
@@ -140,12 +149,7 @@ export class OrderService {
 
       if (items) {
         // The new total may not fall below what has already been received.
-        const paid = await this.payments.netPaid(id, tx);
-        if (compareMoney(orderTotal(items), paid) < 0) {
-          throw AppError.conflict(
-            `This order has already received ${paid.toFixed(2)}. Refund the difference before lowering the total.`,
-          );
-        }
+        this.assertCoversPaid(items, await this.payments.netPaid(id, tx));
         await this.assertMeasurements(actor, order.customerId, items, tx);
         await this.assertDesigns(actor, items, tx);
         await this.orders.replaceItems(id, items, tx);
@@ -153,7 +157,10 @@ export class OrderService {
       await this.orders.updateOrder(
         id,
         actor.businessId,
-        { ...details, ...(items ? { totalAmount: orderTotal(items) } : {}) },
+        {
+          ...details,
+          ...(items ? { totalAmount: orderTotal(items), estimatedMaxTotal: estimatedMaxTotal(items) } : {}),
+        },
         tx,
       );
       await this.activity.audit(
@@ -172,6 +179,80 @@ export class OrderService {
       );
       return this.describe(actor, (await this.orders.findInBusiness(id, actor.businessId, tx))!, tx);
     });
+  }
+
+  /**
+   * Agrees (or adjusts) the price and discount of items already on the order. Allowed until the order is closed,
+   * production included: the final price is often settled after the work has started, and a discount at collection
+   * is common. What has been received can never exceed what is now owed.
+   */
+  async setPrices(actor: Actor, id: string, input: SetPricesInput): Promise<OrderDetailDTO> {
+    return runInTransaction(async (tx) => {
+      const order = await this.orders.findForUpdate(id, actor.businessId, tx);
+      if (!order) throw AppError.notFound("Order not found");
+      if (isClosed(order.status)) {
+        throw AppError.conflict(`A ${statusLabel(order.status)} order cannot be changed`);
+      }
+
+      const current = await this.orders.findItems(id, tx);
+      const byId = new Map(current.map((item) => [item.id, item]));
+      const changes = input.items.map((change) => {
+        const item = byId.get(change.id);
+        if (!item) {
+          throw AppError.unprocessable("Choose items that are on this order", [
+            { field: "items", message: "An item was not found on this order" },
+          ]);
+        }
+        const gross = item.quantity * change.unitPrice;
+        if (change.discountType === "amount" && change.unitPrice > 0 && (change.discountValue ?? 0) > gross) {
+          throw AppError.unprocessable("The discount can't be more than the price", [
+            { field: "items", message: `${item.garmentName}: the discount is more than the price` },
+          ]);
+        }
+        return { quantity: item.quantity, ...change };
+      });
+
+      const after: PricedItem[] = current.map((item) => ({
+        ...item,
+        ...(changes.find((c) => c.id === item.id) ?? {}),
+      }));
+      this.assertCoversPaid(after, await this.payments.netPaid(id, tx));
+
+      await this.orders.updateItemPrices(id, changes, tx);
+      await this.orders.updateOrder(
+        id,
+        actor.businessId,
+        { totalAmount: orderTotal(after), estimatedMaxTotal: estimatedMaxTotal(after) },
+        tx,
+      );
+      await this.activity.audit(
+        {
+          businessId: actor.businessId,
+          actorId: actor.id,
+          action: "order.prices_set",
+          entityType: "order",
+          entityId: id,
+          payload: {
+            totalBefore: order.totalAmount,
+            totalAfter: orderTotal(after),
+            discountTotal: orderDiscount(after),
+            items: changes.map((c) => c.id),
+          },
+        },
+        tx,
+      );
+      return this.describe(actor, (await this.orders.findInBusiness(id, actor.businessId, tx))!, tx);
+    });
+  }
+
+  /** The most the customer may have paid: the agreed total, or the top of the estimate while a price is pending. */
+  private assertCoversPaid(items: PricedItem[], paid: number): void {
+    const ceiling = estimatedMaxTotal(items) ?? orderTotal(items);
+    if (compareMoney(ceiling, paid) < 0) {
+      throw AppError.conflict(
+        `This order has already received ${paid.toFixed(2)}. Refund the difference before lowering the total.`,
+      );
+    }
   }
 
   /**
@@ -257,6 +338,10 @@ export class OrderService {
       isOverdue: isOverdue(order.status, order.dueDate, localDay(new Date(), actor.timeZone)),
       amountPaid,
       balance: balanceDue(order.status === "cancelled", order.totalAmount, amountPaid),
+      pricePending: items.some((item) => item.pricePending),
+      estimateMinTotal: estimatedMinTotal(items),
+      estimateMaxTotal: estimatedMaxTotal(items),
+      discountTotal: orderDiscount(items),
       customer: customer ? { id: customer.id, fullName: customer.fullName, phone: customer.phone } : null,
       items,
       images,

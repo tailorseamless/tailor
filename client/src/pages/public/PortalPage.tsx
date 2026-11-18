@@ -74,9 +74,26 @@ export default function PortalPage() {
                 </div>
                 <p className="mt-1 text-xs text-fg-muted">
                   {o.orderNumber}
-                  {o.dueDate && ` · Due ${formatDay(o.dueDate)}`} · Total {money(o.totalAmount)}
-                  {o.balance > 0 && o.status !== "cancelled" && (
-                    <span className="font-medium text-warning-fg"> · {money(o.balance)} left to pay</span>
+                  {o.dueDate && ` · Due ${formatDay(o.dueDate)}`}
+                  {o.pricePending && o.estimateMin !== null && o.estimateMax !== null ? (
+                    <>
+                      <span data-cy="portal-price-pending">
+                        {" "}
+                        · Price to be confirmed (estimated {money(o.estimateMin)} – {money(o.estimateMax)})
+                      </span>
+                      {o.amountPaid > 0 && <span> · {money(o.amountPaid)} paid</span>}
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      · Total {money(o.totalAmount)}
+                      {o.discountTotal > 0 && (
+                        <span data-cy="portal-discount"> (includes {money(o.discountTotal)} discount)</span>
+                      )}
+                      {o.balance > 0 && o.status !== "cancelled" && (
+                        <span className="font-medium text-warning-fg"> · {money(o.balance)} left to pay</span>
+                      )}
+                    </>
                   )}
                 </p>
               </li>

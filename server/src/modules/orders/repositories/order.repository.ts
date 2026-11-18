@@ -5,10 +5,11 @@ import { BaseRepository, likePattern } from "../../../shared/repositories/baseRe
 import type { Tx } from "../../../shared/repositories/transaction";
 import { NET_PAID_FOR_ORDER } from "../../payments/domain/paymentRules";
 import { IN_PROGRESS_STATUSES } from "../domain/orderStatus";
-import { lineTotal } from "../domain/orderMoney";
+import { discountAmount, isPricePending, lineTotal } from "../domain/orderMoney";
 import {
   ORDER_LIMITS,
   type ListOrdersParams,
+  type DiscountType,
   type OrderItemInput,
   type OrderItemRecord,
   type OrderListRow,
@@ -30,6 +31,7 @@ function toRecord(row: Order): OrderRecord {
     status: row.status,
     dueDate: row.dueDate ?? null,
     totalAmount: Number(row.totalAmount),
+    estimatedMaxTotal: row.estimatedMaxTotal == null ? null : Number(row.estimatedMaxTotal),
     currency: row.currency,
     notes: row.notes ?? null,
     createdBy: row.createdBy ?? null,
@@ -41,13 +43,27 @@ function toRecord(row: Order): OrderRecord {
 
 function toItemRecord(row: OrderItem): OrderItemRecord {
   const unitPrice = Number(row.unitPrice);
+  const priced = {
+    quantity: row.quantity,
+    unitPrice,
+    estimateMin: row.estimateMin ?? null,
+    estimateMax: row.estimateMax ?? null,
+    discountType: row.discountType ?? null,
+    discountValue: row.discountValue ?? null,
+  };
   return {
     id: row.id,
     garmentName: row.garmentName,
     description: row.description ?? null,
     quantity: row.quantity,
     unitPrice,
-    lineTotal: lineTotal({ quantity: row.quantity, unitPrice }),
+    estimateMin: priced.estimateMin,
+    estimateMax: priced.estimateMax,
+    discountType: priced.discountType,
+    discountValue: priced.discountValue,
+    discountAmount: discountAmount(priced),
+    lineTotal: lineTotal(priced),
+    pricePending: isPricePending(priced),
     fabricSource: row.fabricSource,
     measurementId: row.measurementId ?? null,
     designId: row.designId ?? null,
@@ -67,7 +83,11 @@ function toEventRecord(row: OrderStatusEvent): OrderStatusEventRecord {
 }
 
 /** Raw list row: pg hands `numeric` back as a string. */
-type ListRaw = Omit<OrderListRow, "totalAmount" | "amountPaid"> & { totalAmount: string; amountPaid: string };
+type ListRaw = Omit<OrderListRow, "totalAmount" | "amountPaid" | "estimatedMaxTotal"> & {
+  totalAmount: string;
+  amountPaid: string;
+  estimatedMaxTotal: string | null;
+};
 
 /** Orders, their items and their status history: one aggregate, one repository. */
 export class OrderRepository extends BaseRepository<Order> {
@@ -161,6 +181,7 @@ export class OrderRepository extends BaseRepository<Order> {
       // As text: a raw `date` would arrive as a JS Date and shift by the server's time zone.
       .addSelect("to_char(o.dueDate, 'YYYY-MM-DD')", "dueDate")
       .addSelect("o.totalAmount", "totalAmount")
+      .addSelect("o.estimatedMaxTotal", "estimatedMaxTotal")
       .addSelect("o.currency", "currency")
       .addSelect("o.notes", "notes")
       .addSelect("o.createdBy", "createdBy")
@@ -206,6 +227,7 @@ export class OrderRepository extends BaseRepository<Order> {
       data: page.data.map((row) => ({
         ...row,
         totalAmount: Number(row.totalAmount),
+        estimatedMaxTotal: row.estimatedMaxTotal == null ? null : Number(row.estimatedMaxTotal),
         amountPaid: Number(row.amountPaid),
       })),
       meta: page.meta,
@@ -223,6 +245,7 @@ export class OrderRepository extends BaseRepository<Order> {
       | "status"
       | "dueDate"
       | "totalAmount"
+      | "estimatedMaxTotal"
       | "currency"
       | "notes"
     > & { createdBy: string },
@@ -241,7 +264,12 @@ export class OrderRepository extends BaseRepository<Order> {
   async updateOrder(
     id: string,
     businessId: string,
-    data: Partial<Pick<OrderRecord, "dueDate" | "notes" | "branchId" | "totalAmount" | "status" | "deliveredAt">>,
+    data: Partial<
+      Pick<
+        OrderRecord,
+        "dueDate" | "notes" | "branchId" | "totalAmount" | "estimatedMaxTotal" | "status" | "deliveredAt"
+      >
+    >,
     tx: Tx,
   ): Promise<void> {
     await this.repo(tx).update({ id, businessId }, { ...data, updatedAt: new Date() });
@@ -250,6 +278,31 @@ export class OrderRepository extends BaseRepository<Order> {
   async replaceItems(orderId: string, items: OrderItemInput[], tx: Tx): Promise<void> {
     await this.items(tx).softDelete({ orderId });
     await this.insertItems(orderId, items, tx);
+  }
+
+  /** Agreed prices and discounts for items already on the order. The money in each line is worked out here. */
+  async updateItemPrices(
+    orderId: string,
+    changes: {
+      id: string;
+      quantity: number;
+      unitPrice: number;
+      discountType: DiscountType | null;
+      discountValue: number | null;
+    }[],
+    tx: Tx,
+  ): Promise<void> {
+    for (const change of changes) {
+      await this.items(tx).update(
+        { id: change.id, orderId },
+        {
+          unitPrice: change.unitPrice,
+          discountType: change.discountType,
+          discountValue: change.discountValue,
+          discountAmount: discountAmount(change),
+        },
+      );
+    }
   }
 
   async addStatusEvent(
@@ -273,6 +326,11 @@ export class OrderRepository extends BaseRepository<Order> {
         description: item.description ?? null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
+        estimateMin: item.estimateMin ?? null,
+        estimateMax: item.estimateMax ?? null,
+        discountType: item.discountType ?? null,
+        discountValue: item.discountValue ?? null,
+        discountAmount: discountAmount(item),
         fabricSource: item.fabricSource,
         measurementId: item.measurementId ?? null,
         designId: item.designId ?? null,

@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, FormProvider, useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { CustomerSelect, type PickedCustomer } from "../../components/shared/CustomerSelect";
@@ -10,6 +10,15 @@ import { Card, PageHeader } from "../../components/shared/Display";
 import { DatePicker } from "../../components/shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../../components/shared/Field";
 import { MeasurementForm } from "../../components/customers/MeasurementForm";
+import {
+  blankPricing,
+  checkPricing,
+  ItemPricing,
+  priceFields,
+  toPricedLine,
+  type PriceFormItem,
+  type PriceFormShape,
+} from "../../components/orders/ItemPricing";
 import { useCustomer, useMeasurements } from "../../hooks/useCustomers";
 import { useBranches, useDesigns } from "../../hooks/useTeam";
 import { newOrderKey, useCreateOrder } from "../../hooks/useOrders";
@@ -17,17 +26,20 @@ import { useWorkspace } from "../../hooks/useWorkspace";
 import { errorMessage } from "../../utils/errors";
 import { formatDay } from "../../utils/formatDate";
 import { formatMoney } from "../../utils/money";
+import { orderFigures } from "../../utils/orderMoney";
 import { todayIn } from "../../utils/timezone";
 
-const item = z.object({
-  garmentName: z.string().trim().min(1, "Name the garment").max(120),
-  description: z.string().trim().max(1000),
-  quantity: z.coerce.number().int("Whole numbers only").min(1, "At least 1").max(1000),
-  unitPrice: z.coerce.number().min(0, "Can't be negative").max(999_999_999),
-  fabricSource: z.enum(["customer", "business"]),
-  measurementId: z.string(),
-  designId: z.string(),
-});
+const item = z
+  .object({
+    garmentName: z.string().trim().min(1, "Name the garment").max(120),
+    description: z.string().trim().max(1000),
+    quantity: z.coerce.number().int("Whole numbers only").min(1, "At least 1").max(1000),
+    ...priceFields,
+    fabricSource: z.enum(["customer", "business"]),
+    measurementId: z.string(),
+    designId: z.string(),
+  })
+  .superRefine(checkPricing);
 const schema = z.object({
   dueDate: z.string(),
   notes: z.string().trim().max(2000),
@@ -40,7 +52,7 @@ const blankItem: Values["items"][number] = {
   garmentName: "",
   description: "",
   quantity: 1,
-  unitPrice: 0,
+  ...blankPricing,
   fabricSource: "customer",
   measurementId: "",
   designId: "",
@@ -72,7 +84,7 @@ export default function NewOrderPage() {
   });
   const items = useFieldArray({ control: form.control, name: "items" });
   const watched = form.watch("items");
-  const total = watched.reduce((sum, i) => sum + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
+  const figures = orderFigures((watched as PriceFormItem[]).map(toPricedLine));
   const savedMeasurements = customer ? (measurements.data?.data ?? []) : [];
   const latestMeasurement = savedMeasurements[0];
   const [measuringFor, setMeasuringFor] = useState<number | null>(null);
@@ -109,15 +121,22 @@ export default function NewOrderPage() {
           branchId: branchId || null,
           dueDate: values.dueDate || null,
           notes: values.notes || null,
-          items: values.items.map((i) => ({
-            garmentName: i.garmentName,
-            description: i.description || null,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            fabricSource: i.fabricSource,
-            measurementId: i.measurementId || null,
-            designId: i.designId || null,
-          })),
+          items: values.items.map((i) => {
+            const priced = toPricedLine(i);
+            return {
+              garmentName: i.garmentName,
+              description: i.description || null,
+              quantity: i.quantity,
+              unitPrice: priced.unitPrice,
+              estimateMin: priced.estimateMin ?? null,
+              estimateMax: priced.estimateMax ?? null,
+              discountType: priced.discountType ?? null,
+              discountValue: priced.discountValue ?? null,
+              fabricSource: i.fabricSource,
+              measurementId: i.measurementId || null,
+              designId: i.designId || null,
+            };
+          }),
         },
       },
       {
@@ -133,217 +152,228 @@ export default function NewOrderPage() {
   return (
     <>
       <PageHeader back={{ to: "/orders", label: "Orders" }} title="New order" />
-      <form onSubmit={submit} className="grid grid-cols-1 gap-5 lg:grid-cols-3" noValidate>
-        <div className="space-y-5 lg:col-span-2">
-          <Card className="space-y-4 p-4">
-            <FormError message={create.error ? errorMessage(create.error) : null} />
-            <CustomerSelect
-              value={customer}
-              onChange={(c) => {
-                setCustomer(c);
-                setCustomerError(undefined);
-                // Measurements belong to one customer: don't carry the last customer's onto this order.
-                form.getValues("items").forEach((_, i) => form.setValue(`items.${i}.measurementId`, ""));
-              }}
-              error={customerError}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {branches.length > 0 && (
-                <Field label="Branch">
-                  {(p) => (
-                    <Select
-                      {...p}
-                      value={branchId}
-                      onChange={(e) => setBranchId(e.target.value)}
-                      data-cy="order-branch"
-                    >
-                      <option value="">Main / not set</option>
-                      {branches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </Field>
-              )}
-              <Field label="Due date (optional)" hint="When the customer expects to collect.">
-                {(p) => (
-                  <Controller
-                    control={form.control}
-                    name="dueDate"
-                    render={({ field }) => (
-                      <DatePicker
-                        {...p}
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        min={todayIn(timeZone)}
-                        timeZone={timeZone}
-                        data-cy="order-due-date"
-                      />
-                    )}
-                  />
-                )}
-              </Field>
-            </div>
-          </Card>
-
-          {items.fields.map((field, index) => {
-            const e = errors.items?.[index];
-            return (
-              <Card
-                key={field.id}
-                title={`Item ${index + 1}`}
-                action={
-                  items.fields.length > 1 && (
-                    <IconButton
-                      label={`Remove item ${index + 1}`}
-                      onClick={() => items.remove(index)}
-                      data-cy="order-item-remove"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </IconButton>
-                  )
-                }
-              >
-                <div className="grid gap-4 p-4 sm:grid-cols-2">
-                  <Field label="Garment" error={e?.garmentName?.message} className="sm:col-span-2">
+      {/* The pricing fields of each item read the form through context. */}
+      <FormProvider {...(form as unknown as UseFormReturn<PriceFormShape>)}>
+        <form onSubmit={submit} className="grid grid-cols-1 gap-5 lg:grid-cols-3" noValidate>
+          <div className="space-y-5 lg:col-span-2">
+            <Card className="space-y-4 p-4">
+              <FormError message={create.error ? errorMessage(create.error) : null} />
+              <CustomerSelect
+                value={customer}
+                onChange={(c) => {
+                  setCustomer(c);
+                  setCustomerError(undefined);
+                  // Measurements belong to one customer: don't carry the last customer's onto this order.
+                  form.getValues("items").forEach((_, i) => form.setValue(`items.${i}.measurementId`, ""));
+                }}
+                error={customerError}
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                {branches.length > 0 && (
+                  <Field label="Branch">
                     {(p) => (
-                      <Input
+                      <Select
                         {...p}
-                        placeholder="e.g. Agbada, Kaftan, Wedding gown"
-                        {...form.register(`items.${index}.garmentName`)}
-                        data-cy="order-item-name"
-                      />
-                    )}
-                  </Field>
-                  <Field label="Quantity" error={e?.quantity?.message}>
-                    {(p) => (
-                      <Input
-                        {...p}
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        {...form.register(`items.${index}.quantity`)}
-                        data-cy="order-item-qty"
-                      />
-                    )}
-                  </Field>
-                  <Field label={`Price each (${currency})`} error={e?.unitPrice?.message}>
-                    {(p) => (
-                      <Input
-                        {...p}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="any"
-                        {...form.register(`items.${index}.unitPrice`)}
-                        data-cy="order-item-price"
-                      />
-                    )}
-                  </Field>
-                  <Field label="Fabric">
-                    {(p) => (
-                      <Select {...p} {...form.register(`items.${index}.fabricSource`)} data-cy="order-item-fabric">
-                        <option value="customer">Customer brings fabric</option>
-                        <option value="business">We supply fabric</option>
+                        value={branchId}
+                        onChange={(e) => setBranchId(e.target.value)}
+                        data-cy="order-branch"
+                      >
+                        <option value="">Main / not set</option>
+                        {branches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
                       </Select>
                     )}
                   </Field>
-                  <Field label="Measurements" hint={measurementHint(index)}>
-                    {(p) => (
-                      <Controller
-                        control={form.control}
-                        name={`items.${index}.measurementId`}
-                        render={({ field }) => (
-                          <Select
-                            {...p}
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            disabled={!customer}
-                            data-cy="order-item-measurement"
-                          >
-                            <option value="">
-                              {!customer
-                                ? "Choose a customer first"
-                                : savedMeasurements.length
-                                  ? "None"
-                                  : "None saved yet"}
-                            </option>
-                            {savedMeasurements.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {formatDay(m.measuredOn)}
-                                {m.templateName ? ` · ${m.templateName}` : ""}
-                                {m.id === latestMeasurement?.id ? " (latest)" : ""}
+                )}
+                <Field label="Due date (optional)" hint="When the customer expects to collect.">
+                  {(p) => (
+                    <Controller
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <DatePicker
+                          {...p}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          min={todayIn(timeZone)}
+                          timeZone={timeZone}
+                          data-cy="order-due-date"
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
+              </div>
+            </Card>
+
+            {items.fields.map((field, index) => {
+              const e = errors.items?.[index];
+              return (
+                <Card
+                  key={field.id}
+                  title={`Item ${index + 1}`}
+                  action={
+                    items.fields.length > 1 && (
+                      <IconButton
+                        label={`Remove item ${index + 1}`}
+                        onClick={() => items.remove(index)}
+                        data-cy="order-item-remove"
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </IconButton>
+                    )
+                  }
+                >
+                  <div className="grid gap-4 p-4 sm:grid-cols-2">
+                    <Field label="Garment" error={e?.garmentName?.message} className="sm:col-span-2">
+                      {(p) => (
+                        <Input
+                          {...p}
+                          placeholder="e.g. Agbada, Kaftan, Wedding gown"
+                          {...form.register(`items.${index}.garmentName`)}
+                          data-cy="order-item-name"
+                        />
+                      )}
+                    </Field>
+                    <Field label="Quantity" error={e?.quantity?.message}>
+                      {(p) => (
+                        <Input
+                          {...p}
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          {...form.register(`items.${index}.quantity`)}
+                          data-cy="order-item-qty"
+                        />
+                      )}
+                    </Field>
+                    <ItemPricing index={index} currency={currency} />
+                    <Field label="Fabric">
+                      {(p) => (
+                        <Select {...p} {...form.register(`items.${index}.fabricSource`)} data-cy="order-item-fabric">
+                          <option value="customer">Customer brings fabric</option>
+                          <option value="business">We supply fabric</option>
+                        </Select>
+                      )}
+                    </Field>
+                    <Field label="Measurements" hint={measurementHint(index)}>
+                      {(p) => (
+                        <Controller
+                          control={form.control}
+                          name={`items.${index}.measurementId`}
+                          render={({ field }) => (
+                            <Select
+                              {...p}
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              disabled={!customer}
+                              data-cy="order-item-measurement"
+                            >
+                              <option value="">
+                                {!customer
+                                  ? "Choose a customer first"
+                                  : savedMeasurements.length
+                                    ? "None"
+                                    : "None saved yet"}
+                              </option>
+                              {savedMeasurements.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {formatDay(m.measuredOn)}
+                                  {m.templateName ? ` · ${m.templateName}` : ""}
+                                  {m.id === latestMeasurement?.id ? " (latest)" : ""}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        />
+                      )}
+                    </Field>
+                    {(designs.data?.data.length ?? 0) > 0 && (
+                      <Field label="Design from your catalogue (optional)" className="sm:col-span-2">
+                        {(p) => (
+                          <Select {...p} {...form.register(`items.${index}.designId`)} data-cy="order-item-design">
+                            <option value="">None</option>
+                            {(designs.data?.data ?? []).map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                                {d.category ? ` · ${d.category}` : ""}
                               </option>
                             ))}
                           </Select>
                         )}
-                      />
+                      </Field>
                     )}
-                  </Field>
-                  {(designs.data?.data.length ?? 0) > 0 && (
-                    <Field label="Design from your catalogue (optional)" className="sm:col-span-2">
+                    <Field label="Style notes (optional)" className="sm:col-span-2">
                       {(p) => (
-                        <Select {...p} {...form.register(`items.${index}.designId`)} data-cy="order-item-design">
-                          <option value="">None</option>
-                          {(designs.data?.data ?? []).map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                              {d.category ? ` · ${d.category}` : ""}
-                            </option>
-                          ))}
-                        </Select>
+                        <Textarea
+                          {...p}
+                          rows={2}
+                          placeholder="Neckline, sleeves, lining…"
+                          {...form.register(`items.${index}.description`)}
+                          data-cy="order-item-description"
+                        />
                       )}
                     </Field>
-                  )}
-                  <Field label="Style notes (optional)" className="sm:col-span-2">
-                    {(p) => (
-                      <Textarea
-                        {...p}
-                        rows={2}
-                        placeholder="Neckline, sleeves, lining…"
-                        {...form.register(`items.${index}.description`)}
-                        data-cy="order-item-description"
-                      />
-                    )}
-                  </Field>
-                </div>
-              </Card>
-            );
-          })}
-          {items.fields.length < 50 && (
-            <Button
-              variant="secondary"
-              icon={<Plus className="size-4" aria-hidden />}
-              onClick={() => items.append({ ...blankItem, measurementId: latestMeasurement?.id ?? "" })}
-              data-cy="order-add-item"
-            >
-              Add another item
-            </Button>
-          )}
-        </div>
+                  </div>
+                </Card>
+              );
+            })}
+            {items.fields.length < 50 && (
+              <Button
+                variant="secondary"
+                icon={<Plus className="size-4" aria-hidden />}
+                onClick={() => items.append({ ...blankItem, measurementId: latestMeasurement?.id ?? "" })}
+                data-cy="order-add-item"
+              >
+                Add another item
+              </Button>
+            )}
+          </div>
 
-        <div className="lg:sticky lg:top-20 lg:self-start">
-          <Card className="space-y-4 p-4">
-            <Field label="Order notes (optional)">
-              {(p) => <Textarea {...p} rows={3} {...form.register("notes")} data-cy="order-notes" />}
-            </Field>
-            <div className="flex items-baseline justify-between border-t border-line pt-4">
-              <span className="text-sm text-fg-muted">Total</span>
-              <span className="text-xl font-semibold text-fg tabular-nums" data-cy="order-total">
-                {formatMoney(total, currency)}
-              </span>
-            </div>
-            <Button type="submit" className="w-full" loading={create.isPending} data-cy="order-submit">
-              Create order
-            </Button>
-            <p className="text-xs text-fg-subtle">You can record a deposit on the next screen.</p>
-          </Card>
-        </div>
-      </form>
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <Card className="space-y-4 p-4">
+              <Field label="Order notes (optional)">
+                {(p) => <Textarea {...p} rows={3} {...form.register("notes")} data-cy="order-notes" />}
+              </Field>
+              <dl className="space-y-1.5 border-t border-line pt-4">
+                {figures.discount > 0 && (
+                  <div className="flex items-baseline justify-between text-sm text-fg-muted">
+                    <dt>Discounts</dt>
+                    <dd className="tabular-nums" data-cy="order-discount">
+                      −{formatMoney(figures.discount, currency)}
+                    </dd>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between">
+                  <dt className="text-sm text-fg-muted">{figures.pending ? "Agreed so far" : "Total"}</dt>
+                  <dd className="text-xl font-semibold text-fg tabular-nums" data-cy="order-total">
+                    {formatMoney(figures.total, currency)}
+                  </dd>
+                </div>
+              </dl>
+              {figures.pending && (
+                <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg" data-cy="order-estimate">
+                  Some prices are still to be agreed. Estimated total: {formatMoney(figures.min, currency)} –{" "}
+                  {formatMoney(figures.max, currency)}.
+                </p>
+              )}
+              <Button type="submit" className="w-full" loading={create.isPending} data-cy="order-submit">
+                Create order
+              </Button>
+              <p className="text-xs text-fg-subtle">
+                {figures.pending
+                  ? "You can take a deposit up to the highest estimate, and set the final price from the order."
+                  : "You can record a deposit on the next screen."}
+              </p>
+            </Card>
+          </div>
+        </form>
+      </FormProvider>
       {measuringFor !== null && customer && (
         <MeasurementForm
           open

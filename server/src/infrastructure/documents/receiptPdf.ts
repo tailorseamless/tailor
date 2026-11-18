@@ -70,9 +70,17 @@ export function renderReceiptPdf(receipt: ReceiptDTO): Promise<Buffer> {
     rule();
     row(receipt.kind === "refund" ? "Amount refunded" : "Amount paid", money(receipt.amount), true);
     rule();
-    row("Order total", money(receipt.order.totalAmount));
+    // While an item has only an estimate the total is not final, so say that instead of a misleading 0.00.
+    const pending = receipt.order.pricePending;
+    const estimate = receipt.order.estimatedMaxTotal;
+    row(
+      "Order total",
+      pending
+        ? `To be confirmed${estimate !== null ? ` (up to ${money(estimate)})` : ""}`
+        : money(receipt.order.totalAmount),
+    );
     row("Paid so far", money(receipt.order.amountPaid));
-    row("Balance", money(receipt.order.balance), true);
+    row("Balance", pending ? "To be confirmed" : money(receipt.order.balance), true);
 
     if (receipt.note) {
       doc.moveDown(0.8);

@@ -1,4 +1,7 @@
 import type { ImageRecord } from "../../media/dto/media.dto";
+import type { DiscountType } from "../domain/orderMoney";
+
+export type { DiscountType };
 
 /** The production stages of PRD §3.4, plus `cancelled`. Order matters: it is the usual path. */
 export const ORDER_STATUSES = [
@@ -36,6 +39,8 @@ export interface OrderRecord {
   dueDate: string | null;
   /** Sum of the items, in `currency`. What was PAID lives in payments, never here. */
   totalAmount: number;
+  /** The most the order could come to while an item has only an estimate; null once every price is agreed. */
+  estimatedMaxTotal: number | null;
   currency: string;
   /** The customer's instructions. */
   notes: string | null;
@@ -49,7 +54,14 @@ export interface OrderItemInput {
   garmentName: string;
   description?: string | null;
   quantity: number;
+  /** The agreed price of one piece. 0 while the item has only an estimate. */
   unitPrice: number;
+  /** A quote for one piece, before the price is agreed. Both or neither. */
+  estimateMin?: number | null;
+  estimateMax?: number | null;
+  /** Off the whole line: a fixed amount, or a percentage of it. */
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
   fabricSource: FabricSource;
   /** The customer's measurement record this garment is cut from (PRD BR-007). */
   measurementId?: string | null;
@@ -63,7 +75,16 @@ export interface OrderItemRecord {
   description: string | null;
   quantity: number;
   unitPrice: number;
+  estimateMin: number | null;
+  estimateMax: number | null;
+  discountType: DiscountType | null;
+  discountValue: number | null;
+  /** What the discount comes to in money at the agreed price. */
+  discountAmount: number;
+  /** After the discount. */
   lineTotal: number;
+  /** Has an estimate and no agreed price yet. */
+  pricePending: boolean;
   fabricSource: FabricSource;
   measurementId: string | null;
   designId: string | null;
@@ -103,6 +124,13 @@ export interface OrderDetailDTO extends OrderRecord {
   isOverdue: boolean;
   amountPaid: number;
   balance: number;
+  /** At least one item has only an estimate, so the total is not final. */
+  pricePending: boolean;
+  /** The range the order could come to while the price is pending; null once final. */
+  estimateMinTotal: number | null;
+  estimateMaxTotal: number | null;
+  /** All the discounts on the order added up. */
+  discountTotal: number;
   customer: OrderCustomerSummary | null;
   items: OrderItemRecord[];
   /** Reference pictures (PRD US-021). */

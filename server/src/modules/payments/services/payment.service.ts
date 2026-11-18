@@ -35,6 +35,8 @@ function summarise(order: OrderRecord, amountPaid: number): PaymentSummary {
     totalAmount: order.totalAmount,
     amountPaid,
     balance: balanceDue(order.status === "cancelled", order.totalAmount, amountPaid),
+    pricePending: order.estimatedMaxTotal !== null,
+    estimatedMaxTotal: order.estimatedMaxTotal,
     currency: order.currency,
   };
 }
@@ -79,10 +81,16 @@ export class PaymentService {
       if (order.status === "cancelled") throw AppError.conflict("A cancelled order cannot take payments");
 
       const paid = await this.payments.netPaid(orderId, tx);
-      const balance = balanceDue(false, order.totalAmount, paid);
+      // While an item has only an estimate, a deposit may go up to the top of the estimate.
+      const pending = order.estimatedMaxTotal !== null;
+      const balance = balanceDue(false, order.estimatedMaxTotal ?? order.totalAmount, paid);
       if (exceedsBalance(input.amount, balance)) {
         throw AppError.unprocessable(
-          balance > 0 ? "The amount is more than the outstanding balance" : "This order is already fully paid",
+          balance > 0
+            ? pending
+              ? "The amount is more than the top of the estimate. Agree the final price first."
+              : "The amount is more than the outstanding balance"
+            : "This order is already fully paid",
           [{ field: "amount", message: `The outstanding balance is ${balance.toFixed(2)}` }],
         );
       }
@@ -128,7 +136,7 @@ export class PaymentService {
       if (after < 0) {
         throw AppError.conflict("Voiding this payment would leave more refunded than received. Void the refund first.");
       }
-      if (target.kind === "refund" && compareMoney(after, order.totalAmount) > 0) {
+      if (target.kind === "refund" && compareMoney(after, order.estimatedMaxTotal ?? order.totalAmount) > 0) {
         throw AppError.conflict("Voiding this refund would leave the order paid more than its total");
       }
 
@@ -228,6 +236,8 @@ export class PaymentService {
         totalAmount: summary.totalAmount,
         amountPaid: summary.amountPaid,
         balance: summary.balance,
+        pricePending: summary.pricePending,
+        estimatedMaxTotal: summary.estimatedMaxTotal,
       },
     };
   }

@@ -1,7 +1,9 @@
-import { CalendarClock, Pencil } from "lucide-react";
+import { CalendarClock, Pencil, Tag } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ItemPriceLine } from "../../components/orders/ItemPriceLine";
 import { PaymentsCard } from "../../components/orders/PaymentsCard";
+import { PricesModal } from "../../components/orders/PricesModal";
 import { ItemDesign } from "../../components/orders/ItemDesign";
 import { WhatsAppUpdate } from "../../components/orders/WhatsAppUpdate";
 import { OrderTasksCard } from "../../components/orders/OrderTasksCard";
@@ -26,12 +28,15 @@ export default function OrderDetailPage() {
   const query = useOrder(id);
   const [statusOpen, setStatusOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [pricing, setPricing] = useState(false);
 
   return (
     <QueryState query={query} loadingLabel="Loading order">
       {(o) => {
         const status = ORDER_STATUS[o.status];
         const canMove = can("order.status") && nextStatuses(o.status).length > 0;
+        const open = o.status !== "delivered" && o.status !== "cancelled";
+        const money = (n: number) => formatMoney(n, o.currency);
         return (
           <>
             <PageHeader
@@ -51,7 +56,17 @@ export default function OrderDetailPage() {
               actions={
                 <>
                   <WhatsAppUpdate order={o} />
-                  {can("order.update") && o.status !== "delivered" && o.status !== "cancelled" && (
+                  {can("order.update") && open && (
+                    <Button
+                      variant="secondary"
+                      icon={<Tag className="size-4" aria-hidden />}
+                      onClick={() => setPricing(true)}
+                      data-cy="order-prices"
+                    >
+                      {o.pricePending ? "Set final price" : "Prices"}
+                    </Button>
+                  )}
+                  {can("order.update") && open && (
                     <Button
                       variant="secondary"
                       icon={<Pencil className="size-4" aria-hidden />}
@@ -71,6 +86,19 @@ export default function OrderDetailPage() {
             />
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               <div className="space-y-5 lg:col-span-2">
+                {o.pricePending && o.estimateMinTotal !== null && o.estimateMaxTotal !== null && (
+                  <div
+                    className="rounded-xl bg-warning-bg px-4 py-3 text-sm text-warning-fg"
+                    role="status"
+                    data-cy="order-price-pending"
+                  >
+                    <p className="font-medium">The final price isn&apos;t agreed yet.</p>
+                    <p>
+                      Estimated total {money(o.estimateMinTotal)} – {money(o.estimateMaxTotal)}. Deposits can go up to{" "}
+                      {money(o.estimateMaxTotal)}.
+                    </p>
+                  </div>
+                )}
                 <Card title="Items">
                   <ul className="divide-y divide-line">
                     {o.items.map((item) => (
@@ -89,12 +117,18 @@ export default function OrderDetailPage() {
                           )}
                           {item.designId && <ItemDesign id={item.designId} />}
                         </div>
-                        <span className="text-sm font-medium text-fg tabular-nums">
-                          {formatMoney(item.lineTotal, o.currency)}
-                        </span>
+                        <ItemPriceLine item={item} currency={o.currency} />
                       </li>
                     ))}
                   </ul>
+                  {o.discountTotal > 0 && (
+                    <p className="flex justify-between border-t border-line px-4 py-3 text-sm text-fg-muted">
+                      <span>Discounts given</span>
+                      <span className="tabular-nums" data-cy="order-discount-total">
+                        −{money(o.discountTotal)}
+                      </span>
+                    </p>
+                  )}
                 </Card>
                 {can("payment.read") && <PaymentsCard order={o} />}
                 <OrderTasksCard orderId={o.id} closed={o.status === "delivered" || o.status === "cancelled"} />
@@ -134,6 +168,7 @@ export default function OrderDetailPage() {
             </div>
             <StatusModal open={statusOpen} onClose={() => setStatusOpen(false)} orderId={o.id} current={o.status} />
             {editing && <EditOrderModal order={o} onClose={() => setEditing(false)} />}
+            {pricing && <PricesModal order={o} onClose={() => setPricing(false)} />}
           </>
         );
       }}
