@@ -2,6 +2,7 @@ import { ChevronRight, Mail, Ruler } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BusinessSettings } from "../../components/settings/BusinessSettings";
 import { DangerZone } from "../../components/settings/DangerZone";
+import { GuideSettings } from "../../components/settings/GuideSettings";
 import { DeviceSettings, NotificationSettings, ProfileSettings } from "../../components/settings/PersonalSettings";
 import { Card, PageHeader } from "../../components/shared/Display";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -19,6 +20,7 @@ export default function SettingsPage() {
       {/* grid-cols-1 lets the column shrink to the screen; without it a wide table inside stretches the whole page. */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="space-y-5">
+          <GuideSettings />
           {can("business.update") ? <BusinessSettings /> : <ProfileSettings />}
           {links.length > 0 && (
             <Card>

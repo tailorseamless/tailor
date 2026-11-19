@@ -1,6 +1,6 @@
 import { authEndpoints, businessEndpoints } from "../endpoints/auth.endpoints";
 import { dashboardEndpoints, notificationEndpoints, publicEndpoints } from "../endpoints/misc.endpoints";
-import type { BusinessInput, RegisterInput } from "../types/auth.types";
+import type { BusinessInput, OnboardingState, RegisterInput } from "../types/auth.types";
 import type { NotificationPreference } from "../types/dashboard.types";
 import type { BookingRequestInput, PortalRequestInput } from "../types/portal.types";
 import { keys } from "./queryKeys";
@@ -22,6 +22,13 @@ export function useUpdateProfile() {
       success: "Profile saved",
     },
   );
+}
+
+/** Saves progress through the getting-started guide. Quiet: the guide already shows the change. */
+export function useSaveOnboarding() {
+  return useApiMutation((onboarding: OnboardingState) => authEndpoints.updateProfile({ onboarding }), {
+    toastError: false,
+  });
 }
 
 export function useUpdateBusiness() {

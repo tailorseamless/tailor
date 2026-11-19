@@ -21,6 +21,7 @@ import {
 } from "../../components/orders/ItemPricing";
 import { PendingPictures } from "../../components/orders/PendingPictures";
 import { Photo } from "../../components/public/ShopParts";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useCustomer, useMeasurements } from "../../hooks/useCustomers";
 import { useBranches, useDesigns } from "../../hooks/useTeam";
@@ -97,6 +98,7 @@ export default function NewOrderPage() {
   const pickedDetail = useCustomer(customer?.id);
   const create = useCreateOrder();
   const toast = useToast();
+  const guide = useOnboarding();
   /** Pictures of what the customer wants; they go up once the order exists. */
   const [pictures, setPictures] = useState<File[]>([]);
   const designs = useDesigns({ limit: 100 });
@@ -175,6 +177,7 @@ export default function NewOrderPage() {
       {
         onSuccess: ({ order, uploaded, uploadError }) => {
           key.current = newOrderKey();
+          guide.complete("order");
           // The order is saved either way. Say what is missing, and the order page is where to add it.
           if (uploadError) {
             toast.error(

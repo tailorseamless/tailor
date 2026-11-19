@@ -5,6 +5,7 @@ import { Badge, Card, PageHeader } from "../../components/shared/Display";
 import { Field, FormError, Input } from "../../components/shared/Field";
 import { ConfirmDialog, Modal } from "../../components/shared/Modal";
 import { EmptyState, QueryState } from "../../components/shared/States";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useMeasurementTemplates, useTemplateActions } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { MeasurementTemplate } from "../../types/customer.types";
@@ -109,6 +110,7 @@ interface Row {
 
 function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; onClose: () => void }) {
   const { create, update } = useTemplateActions();
+  const guide = useOnboarding();
   const mutation = template ? update : create;
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
@@ -136,8 +138,12 @@ function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; o
     const names = fields.map((f) => f.name.toLowerCase());
     if (new Set(names).size !== names.length) return setProblem("Each measurement can only appear once.");
     const input = { name: name.trim(), description: description.trim() || null, fields };
-    if (template) update.mutate({ id: template.id, input }, { onSuccess: onClose });
-    else create.mutate(input, { onSuccess: onClose });
+    const saved = () => {
+      guide.complete("templates");
+      onClose();
+    };
+    if (template) update.mutate({ id: template.id, input }, { onSuccess: saved });
+    else create.mutate(input, { onSuccess: saved });
   };
 
   return (

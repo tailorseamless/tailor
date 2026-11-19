@@ -49,6 +49,15 @@ export type Permission =
 
 export type MeasurementUnit = "in" | "cm";
 
+/** The getting-started guide's steps, in order (server: `ONBOARDING_STEPS`). */
+export type OnboardingStep = "templates" | "customers" | "order" | "designs";
+
+export interface OnboardingState {
+  completed: OnboardingStep[];
+  /** They closed the guide; it stays available in Settings. */
+  dismissed: boolean;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -83,6 +92,8 @@ export interface Me {
     timeZone: string;
     platformRole: "user" | "super_admin";
     deletionScheduledFor: ISODate | null;
+    /** Null when the guide was never opened for them (team members, older accounts). */
+    onboarding: OnboardingState | null;
   };
   business: Business;
   roles: AppRole[];

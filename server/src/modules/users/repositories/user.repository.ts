@@ -16,6 +16,7 @@ function toRecord(row: User): UserRecord {
     status: row.status,
     timeZone: row.timeZone,
     deletionScheduledFor: row.deletionScheduledFor ?? null,
+    onboarding: row.onboarding ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -81,7 +82,7 @@ export class UserRepository extends BaseRepository<User> {
 
   async createUser(
     data: Pick<UserRecord, "businessId" | "email" | "fullName"> &
-      Partial<Pick<UserRecord, "firebaseUid" | "phone" | "timeZone">>,
+      Partial<Pick<UserRecord, "firebaseUid" | "phone" | "timeZone" | "onboarding">>,
     tx?: Tx,
   ): Promise<UserRecord> {
     const created = await this.create(data, tx);
@@ -94,7 +95,7 @@ export class UserRepository extends BaseRepository<User> {
 
   async updateUser(
     id: string,
-    data: Partial<Pick<UserRecord, "fullName" | "phone" | "timeZone">>,
+    data: Partial<Pick<UserRecord, "fullName" | "phone" | "timeZone" | "onboarding">>,
     tx?: Tx,
   ): Promise<UserRecord | null> {
     const row = await this.update(id, data, tx);

@@ -2,8 +2,10 @@ import * as Menu from "@radix-ui/react-dropdown-menu";
 import { LogOut, MoreHorizontal, Plus, Settings } from "lucide-react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { OnboardingProvider, useOnboarding } from "../../contexts/OnboardingContext";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import { cn } from "../../utils/cn";
+import { GuideCoach } from "../onboarding/GuideCoach";
 import { Logo } from "./AuthLayout";
 import { NAV, homePath } from "./navItems";
 import { NotificationBell } from "./NotificationBell";
@@ -11,10 +13,20 @@ import { NotificationBell } from "./NotificationBell";
 const menuItem =
   "flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-fg outline-none data-[highlighted]:bg-subtle";
 
-/** Sidebar on desktop; four bottom tabs plus "More" on phones. */
+/** The signed-in app, with the getting-started guide available on every screen. */
 export function AppShell() {
+  return (
+    <OnboardingProvider>
+      <Shell />
+    </OnboardingProvider>
+  );
+}
+
+/** Sidebar on desktop; four bottom tabs plus "More" on phones. */
+function Shell() {
   const { me, business, can } = useWorkspace();
   const { signOut } = useAuth();
+  const guide = useOnboarding();
   const navigate = useNavigate();
   const location = useLocation();
   const items = NAV.filter((item) => can(item.permission));
@@ -107,7 +119,13 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pt-5 pb-28 md:px-8 md:pb-12">
+      <main
+        className={cn(
+          "mx-auto max-w-6xl px-4 pt-5 pb-28 md:px-8 md:pb-12",
+          // Room to scroll the end of the page above the open guide (at most 45dvh tall on phones).
+          guide.active && !guide.collapsed && "max-md:pb-[calc(45dvh+5.5rem)]",
+        )}
+      >
         <Outlet />
       </main>
 
@@ -165,6 +183,7 @@ export function AppShell() {
           </Menu.Root>
         )}
       </nav>
+      <GuideCoach />
     </div>
   );
 }

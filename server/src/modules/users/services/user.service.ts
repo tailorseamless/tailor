@@ -83,6 +83,7 @@ export class UserService {
         timeZone: user.timeZone,
         platformRole: user.platformRole,
         deletionScheduledFor: user.deletionScheduledFor,
+        onboarding: user.onboarding,
       },
       business,
       roles,

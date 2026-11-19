@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useCreateCustomer, useUpdateCustomer } from "../../hooks/useCustomers";
 import type { Customer, CustomerGender } from "../../types/customer.types";
 import { errorMessage, fieldErrors, statusCode } from "../../utils/errors";
@@ -41,6 +42,7 @@ export function CustomerForm({ open, onClose, customer, initial, onSaved, onUseE
   const create = useCreateCustomer();
   const update = useUpdateCustomer(customer?.id ?? "");
   const mutation = customer ? update : create;
+  const guide = useOnboarding();
   const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -73,6 +75,7 @@ export function CustomerForm({ open, onClose, customer, initial, onSaved, onUseE
     };
     mutation.mutate(input, {
       onSuccess: (saved) => {
+        if (!customer) guide.complete("customers");
         onSaved?.(saved);
         close();
       },

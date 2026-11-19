@@ -7,6 +7,20 @@ export type UserStatus = (typeof USER_STATUSES)[number];
 
 export const PLATFORM_ROLES = ["user", "super_admin"] as const;
 
+/** The getting-started guide a new owner is walked through, in order. */
+export const ONBOARDING_STEPS = ["templates", "customers", "order", "designs"] as const;
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+
+/**
+ * Where this person is in the getting-started guide. NULL for people it was never opened for (team members,
+ * accounts from before the guide); they can still start it from Settings.
+ */
+export interface OnboardingState {
+  completed: OnboardingStep[];
+  /** They closed the guide; it stays available in Settings. */
+  dismissed: boolean;
+}
+
 export interface UserRecord {
   id: string;
   businessId: string;
@@ -19,6 +33,7 @@ export interface UserRecord {
   status: UserStatus;
   timeZone: string;
   deletionScheduledFor: Date | null;
+  onboarding: OnboardingState | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +54,10 @@ export interface AuthRow {
 
 /** What the client gets back from /auth/me. */
 export interface MeDTO {
-  user: Pick<UserRecord, "id" | "email" | "fullName" | "phone" | "timeZone" | "platformRole" | "deletionScheduledFor">;
+  user: Pick<
+    UserRecord,
+    "id" | "email" | "fullName" | "phone" | "timeZone" | "platformRole" | "deletionScheduledFor" | "onboarding"
+  >;
   business: BusinessRecord;
   roles: AppRole[];
   /** For showing or hiding UI only — the API checks again on every request. */

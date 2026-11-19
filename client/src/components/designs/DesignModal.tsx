@@ -1,5 +1,6 @@
 import { ImagePlus, Star, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useDesign, useDesignActions } from "../../hooks/useTeam";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -58,6 +59,7 @@ function DesignEditor({
 }) {
   const { can, business } = useWorkspace();
   const toast = useToast();
+  const guide = useOnboarding();
   const actions = useDesignActions();
   const canEdit = can("design.manage");
   const [name, setName] = useState(design?.name ?? "");
@@ -104,6 +106,7 @@ function DesignEditor({
         { input: body, files: pending },
         {
           onSuccess: ({ design: created, uploaded, uploadError }) => {
+            guide.complete("designs");
             if (!uploadError) {
               toast.success(
                 uploaded

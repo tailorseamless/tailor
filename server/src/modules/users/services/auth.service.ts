@@ -96,6 +96,8 @@ export class AuthService {
           fullName: input.fullName,
           phone: input.phone ?? null,
           ...(input.timeZone ? { timeZone: input.timeZone } : {}),
+          // The person who creates the business is walked through setting it up.
+          onboarding: { completed: [], dismissed: false },
         },
         tx,
       );

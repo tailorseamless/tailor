@@ -1,11 +1,15 @@
 import { http, wrapCall } from "../transport/http";
-import type { Business, BusinessInput, Me, RegisterInput } from "../types/auth.types";
+import type { Business, BusinessInput, Me, OnboardingState, RegisterInput } from "../types/auth.types";
 
 export const authEndpoints = {
   me: () => wrapCall<Me>(() => http.get("/auth/me")),
   register: (input: RegisterInput) => wrapCall<Me>(() => http.post("/auth/register", input)),
-  updateProfile: (input: { fullName?: string; phone?: string | null; timeZone?: string }) =>
-    wrapCall<Me["user"]>(() => http.patch("/users/me", input)),
+  updateProfile: (input: {
+    fullName?: string;
+    phone?: string | null;
+    timeZone?: string;
+    onboarding?: OnboardingState;
+  }) => wrapCall<Me["user"]>(() => http.patch("/users/me", input)),
   requestAccountDeletion: () => wrapCall<unknown>(() => http.post("/users/me/deletion")),
   cancelAccountDeletion: () => wrapCall<unknown>(() => http.delete("/users/me/deletion")),
 };

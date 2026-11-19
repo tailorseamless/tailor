@@ -2,7 +2,7 @@ import { Check, Column, Entity, Index } from "typeorm";
 import { DEFAULT_TIME_ZONE } from "../../../config/constants";
 import { BaseEntity, ForeignKey } from "../../../shared/entities/baseEntity";
 import type { PlatformRole } from "../../../shared/services/access.service";
-import type { UserStatus } from "../dto/user.dto";
+import type { OnboardingState, UserStatus } from "../dto/user.dto";
 
 /**
  * A person. Firebase owns the login; this row owns everything else.
@@ -47,4 +47,8 @@ export class User extends BaseEntity {
   @Index("IDX_users_deletion_due", { where: `"deletion_scheduled_for" IS NOT NULL AND "deleted_at" IS NULL` })
   @Column({ name: "deletion_scheduled_for", type: "timestamptz", nullable: true })
   deletionScheduledFor: Date | null;
+
+  /** Progress through the getting-started guide; NULL until it is first opened for them. */
+  @Column({ type: "jsonb", nullable: true })
+  onboarding: OnboardingState | null;
 }
