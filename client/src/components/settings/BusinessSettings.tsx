@@ -1,5 +1,5 @@
 import { Copy, ExternalLink, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useUpdateBusiness } from "../../hooks/useAccount";
 import { useSharePage } from "../../hooks/useSharePage";
@@ -22,8 +22,24 @@ const suggestSlug = (name: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 
-/** Business profile, public page and customer emails (owners and managers). */
-export function BusinessSettings() {
+/** The business cards, handed over one by one so the settings page can put them on different tabs. */
+export interface BusinessCards {
+  /** The business details. */
+  business: ReactNode;
+  /** Publish the page, its address and the appointment-request switch. */
+  page: ReactNode;
+  /** The bank details shown on the public page. */
+  account: ReactNode;
+  /** Which emails customers get. */
+  emails: ReactNode;
+}
+
+/**
+ * Business profile, public page and customer emails (owners and managers). The cards share one form, so this
+ * stays mounted and hands them to `children`: the page decides where each goes, and nothing typed is lost
+ * when someone switches tabs.
+ */
+export function BusinessSettings({ children }: { children: (cards: BusinessCards) => ReactNode }) {
   const { business } = useWorkspace();
   const { refresh } = useAuth();
   const { copy } = useSharePage();
@@ -83,10 +99,16 @@ export function BusinessSettings() {
     setAccountProblem(null);
     const account = clear
       ? { bankName: null, accountNumber: null, accountName: null }
-      : { bankName: orNull(form.bankName), accountNumber: orNull(form.accountNumber), accountName: orNull(form.accountName) };
+      : {
+          bankName: orNull(form.bankName),
+          accountNumber: orNull(form.accountNumber),
+          accountName: orNull(form.accountName),
+        };
     const filled = Object.values(account).filter(Boolean).length;
     if (filled > 0 && filled < 3) {
-      return setAccountProblem("Add the bank name, account number and account name together, or leave all three empty.");
+      return setAccountProblem(
+        "Add the bank name, account number and account name together, or leave all three empty.",
+      );
     }
     if (account.accountNumber && !ACCOUNT_NUMBER.test(account.accountNumber.replace(/[\s-]/g, ""))) {
       return setAccountProblem("The account number can use letters and digits only, 4 to 34 characters.");
@@ -100,7 +122,7 @@ export function BusinessSettings() {
   };
   const accountShown = Boolean(business.bankName && business.accountNumber && business.accountName);
 
-  return (
+  const businessCard = (
     <>
       <Card title="Business">
         <div className="space-y-4 p-4">
@@ -149,7 +171,11 @@ export function BusinessSettings() {
           </Button>
         </div>
       </Card>
+    </>
+  );
 
+  const pageCard = (
+    <>
       <Card title="Your public page">
         <div className="space-y-4 p-4">
           <p className="text-sm text-fg-muted">
@@ -241,12 +267,16 @@ export function BusinessSettings() {
           </div>
         </div>
       </Card>
+    </>
+  );
 
+  const accountCard = (
+    <>
       <Card title="Account details for customers">
         <div className="space-y-4 p-4">
           <p className="text-sm text-fg-muted">
-            Where customers send deposits and balances. These show on your public page with a Copy button, so they
-            don't have to ask. Anyone with your page link can see them. Leave all three empty to show nothing.
+            Where customers send deposits and balances. These show on your public page with a Copy button, so they don't
+            have to ask. Anyone with your page link can see them. Leave all three empty to show nothing.
           </p>
           {!business.pageEnabled && (
             <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg" data-cy="biz-account-unpublished">
@@ -309,7 +339,11 @@ export function BusinessSettings() {
           </div>
         </div>
       </Card>
+    </>
+  );
 
+  const emailsCard = (
+    <>
       <Card title="Emails to customers">
         <div className="divide-y divide-line px-4 py-2">
           <Toggle
@@ -346,4 +380,6 @@ export function BusinessSettings() {
       </Card>
     </>
   );
+
+  return <>{children({ business: businessCard, page: pageCard, account: accountCard, emails: emailsCard })}</>;
 }

@@ -45,7 +45,11 @@ export default function DesignsPage() {
                 Share my page
               </Button>
             ) : (
-              <ButtonLink variant="secondary" to="/settings" icon={<Globe className="size-4" aria-hidden />}>
+              <ButtonLink
+                variant="secondary"
+                to="/settings?tab=customers"
+                icon={<Globe className="size-4" aria-hidden />}
+              >
                 Publish my page
               </ButtonLink>
             )}
