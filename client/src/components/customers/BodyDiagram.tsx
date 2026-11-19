@@ -170,7 +170,14 @@ interface Shape {
 
 const ARM_TILT = 6;
 
-function armFor(side: -1 | 1, shoulderHalf: number, shoulderY: number, length: number, bicep: number, wrist: number): Arm {
+function armFor(
+  side: -1 | 1,
+  shoulderHalf: number,
+  shoulderY: number,
+  length: number,
+  bicep: number,
+  wrist: number,
+): Arm {
   const s = Math.sin(rad(ARM_TILT));
   const c = Math.cos(rad(ARM_TILT));
   const u: Pt = [side * s, c]; // down the arm, drifting outwards
@@ -345,7 +352,15 @@ interface Props {
   className?: string;
 }
 
-export function BodyDiagram({ placed, unit, build = "neutral", compare, labels = true, active = null, className }: Props) {
+export function BodyDiagram({
+  placed,
+  unit,
+  build = "neutral",
+  compare,
+  labels = true,
+  active = null,
+  className,
+}: Props) {
   const shape = shapeFor(sizesFor(placed, build), build);
   const ghost = compare ? shapeFor(sizesFor(compare, build), build) : null;
   const by = new Map(placed.map((p) => [p.landmark, p]));
@@ -400,7 +415,15 @@ export function BodyDiagram({ placed, unit, build = "neutral", compare, labels =
       className={cn("h-auto w-full", className)}
       data-cy="body-diagram"
     >
-      <line x1={CX - 70} x2={CX + 70} y1={FLOOR} y2={FLOOR} className="stroke-line" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1={CX - 70}
+        x2={CX + 70}
+        y1={FLOOR}
+        y2={FLOOR}
+        className="stroke-line"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
 
       {/* Outline first, then fill over it, so overlapping parts read as one shape. */}
       <g className="fill-none stroke-line-strong" strokeWidth="2.6" strokeLinejoin="round">
@@ -459,8 +482,19 @@ export function BodyDiagram({ placed, unit, build = "neutral", compare, labels =
       )}
 
       {lengthBars.map((bar) => (
-        <g key={bar.landmark} fill="none" strokeWidth={stroke(bar.landmark)} strokeLinecap="round" className={tape(bar.landmark)}>
-          <path d={`M${CX + 24} ${bar.y0}H${bar.x}M${CX + 24} ${r1(bar.y1)}H${bar.x}`} strokeWidth="1" strokeDasharray="2 4" opacity=".5" />
+        <g
+          key={bar.landmark}
+          fill="none"
+          strokeWidth={stroke(bar.landmark)}
+          strokeLinecap="round"
+          className={tape(bar.landmark)}
+        >
+          <path
+            d={`M${CX + 24} ${bar.y0}H${bar.x}M${CX + 24} ${r1(bar.y1)}H${bar.x}`}
+            strokeWidth="1"
+            strokeDasharray="2 4"
+            opacity=".5"
+          />
           <path d={`M${bar.x} ${bar.y0}V${r1(bar.y1)}`} strokeDasharray="6 4" />
           <path d={`M${bar.x - 5} ${bar.y0}h10M${bar.x - 5} ${r1(bar.y1)}h10`} />
           {bar.off && <path d={`M${bar.x - 4} ${r1(bar.y1) - 9}l4 6l4 -6`} />}
@@ -477,11 +511,22 @@ export function BodyDiagram({ placed, unit, build = "neutral", compare, labels =
             const delta = prior ? formatDelta(prior.inches, p.inches, unit) : null;
             return (
               <g key={p.landmark} className={cn("transition-opacity", active && active !== p.landmark && "opacity-30")}>
-                <path d={`M${at(m.anchor)}L${edge} ${r1(m.y)}`} className="stroke-line-strong" strokeWidth="1" fill="none" />
+                <path
+                  d={`M${at(m.anchor)}L${edge} ${r1(m.y)}`}
+                  className="stroke-line-strong"
+                  strokeWidth="1"
+                  fill="none"
+                />
                 <circle cx={m.anchor[0]} cy={m.anchor[1]} r="2.8" className="fill-brand" />
                 <g transform={`translate(${x} ${r1(m.y - PILL_H / 2)})`}>
                   <title>{`${p.name}: ${p.value} ${unit}`}</title>
-                  <rect width={PILL_W} height={PILL_H} rx="9" className="fill-surface stroke-line-strong" strokeWidth="1" />
+                  <rect
+                    width={PILL_W}
+                    height={PILL_H}
+                    rx="9"
+                    className="fill-surface stroke-line-strong"
+                    strokeWidth="1"
+                  />
                   <text x="9" y="14.5" fontSize="10" className="fill-fg-subtle">
                     {short(p.name)}
                   </text>
@@ -489,7 +534,14 @@ export function BodyDiagram({ placed, unit, build = "neutral", compare, labels =
                     {p.value} {unit}
                   </text>
                   {delta && (
-                    <text x={PILL_W - 8} y="29.5" fontSize="11.5" fontWeight="600" textAnchor="end" className="fill-link">
+                    <text
+                      x={PILL_W - 8}
+                      y="29.5"
+                      fontSize="11.5"
+                      fontWeight="600"
+                      textAnchor="end"
+                      className="fill-link"
+                    >
                       {delta}
                     </text>
                   )}

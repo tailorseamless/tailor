@@ -377,7 +377,9 @@ export default function NewOrderPage() {
                 Add another item
               </Button>
             )}
-            {can("order.update") && <PendingPictures files={pictures} onChange={setPictures} disabled={create.isPending} />}
+            {can("order.update") && (
+              <PendingPictures files={pictures} onChange={setPictures} disabled={create.isPending} />
+            )}
           </div>
 
           <div className="lg:sticky lg:top-20 lg:self-start">

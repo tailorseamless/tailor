@@ -50,8 +50,8 @@ export function Hero() {
             className="lp-fade-up mt-7 max-w-xl text-base leading-relaxed text-[#e9d3de] sm:text-lg"
             style={delay(650)}
           >
-            Tailor Seamless keeps your customers, measurements, orders, fittings and payments in one place, and keeps your
-            customers in the loop. No more lost notebooks. No more <q>Is my outfit ready?</q> calls.
+            Tailor Seamless keeps your customers, measurements, orders, fittings and payments in one place, and keeps
+            your customers in the loop. No more lost notebooks. No more <q>Is my outfit ready?</q> calls.
           </p>
 
           <div className="lp-fade-up mt-9 flex flex-col gap-3 sm:flex-row sm:items-center" style={delay(800)}>

@@ -28,7 +28,8 @@ export function parseMeasure(text: string): number | null {
 
   // A whole number first, so "8/16" is not quietly read as a half.
   const mixed = /^(\d+)(?:\s+|\s*-\s*)(\d+)\s*\/\s*(\d+)$/.exec(s);
-  if (mixed && Number(mixed[3]) > Number(mixed[2])) return round(Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]));
+  if (mixed && Number(mixed[3]) > Number(mixed[2]))
+    return round(Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]));
 
   return null;
 }

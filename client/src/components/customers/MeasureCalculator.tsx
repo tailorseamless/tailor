@@ -70,7 +70,12 @@ export function MeasureCalculator({ unit, target, onUse, onClose }: Props) {
   );
 
   return (
-    <div role="group" aria-label="Calculator" className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_15rem]" data-cy="measure-calc">
+    <div
+      role="group"
+      aria-label="Calculator"
+      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_15rem]"
+      data-cy="measure-calc"
+    >
       <div className="space-y-2">
         {/* On a phone every line counts, so the title goes and the close button moves up beside the keys. */}
         <div className="hidden items-center justify-between sm:flex">
@@ -117,7 +122,12 @@ export function MeasureCalculator({ unit, target, onUse, onClose }: Props) {
           >
             C
           </button>
-          <IconButton label="Close calculator" className="size-8 shrink-0 sm:hidden" onClick={onClose} data-cy="calc-close-phone">
+          <IconButton
+            label="Close calculator"
+            className="size-8 shrink-0 sm:hidden"
+            onClick={onClose}
+            data-cy="calc-close-phone"
+          >
             <X className="size-4" aria-hidden />
           </IconButton>
         </div>
@@ -144,9 +154,7 @@ export function MeasureCalculator({ unit, target, onUse, onClose }: Props) {
       </div>
 
       <div className="space-y-2">
-        <div className="grid grid-cols-7 gap-1">
-          {FRACTION_KEYS.map((fraction) => key(fraction, "h-8 text-sm"))}
-        </div>
+        <div className="grid grid-cols-7 gap-1">{FRACTION_KEYS.map((fraction) => key(fraction, "h-8 text-sm"))}</div>
         <div className="grid grid-cols-4 gap-1">
           {KEYPAD.map((label) => key(label, "+−×÷=".includes(label) ? "bg-subtle" : undefined))}
         </div>

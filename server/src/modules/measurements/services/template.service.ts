@@ -96,7 +96,7 @@ export class MeasurementTemplateService {
     for (const template of DEFAULT_MEASUREMENT_TEMPLATES) {
       await this.templates.createTemplate(
         { businessId, name: template.name },
-        template.fields.map((name) => ({ name, isRequired: false })),
+        template.fields.map((field) => ({ ...field, isRequired: false })),
         tx,
       );
     }

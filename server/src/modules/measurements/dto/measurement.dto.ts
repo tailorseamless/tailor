@@ -9,11 +9,43 @@ export const MEASUREMENT_LIMITS = {
   maxValue: 1000,
 } as const;
 
+/**
+ * Where on the body a measurement is taken, so the figure can mark it. The same list as the web app's `Landmark`.
+ * `length` runs from the shoulder down (gown, jacket, shirt…); `trouserLength` runs from the waist down.
+ */
+export const BODY_LANDMARKS = [
+  "neck",
+  "shoulder",
+  "bust",
+  "underbust",
+  "waist",
+  "hip",
+  "thigh",
+  "knee",
+  "calf",
+  "ankle",
+  "bicep",
+  "wrist",
+  "sleeve",
+  "length",
+  "trouserLength",
+] as const;
+export type BodyLandmark = (typeof BODY_LANDMARKS)[number];
+
+/**
+ * What a template field says about the figure: one of the spots above, or `none` to keep it off the figure. A field
+ * with no setting at all (`null`) is placed by the words in its name, as before.
+ */
+export const FIELD_LANDMARKS = [...BODY_LANDMARKS, "none"] as const;
+export type FieldLandmark = (typeof FIELD_LANDMARKS)[number];
+
 export interface MeasurementFieldRecord {
   id: string;
   name: string;
   position: number;
   isRequired: boolean;
+  /** Null = place it by its name. */
+  landmark: FieldLandmark | null;
 }
 
 /** A reusable list of what to measure for a kind of garment (Shirt, Gown, …). */
@@ -33,12 +65,17 @@ export interface MeasurementTemplateDTO extends MeasurementTemplateRecord {
 export interface TemplateFieldInput {
   name: string;
   isRequired: boolean;
+  landmark?: FieldLandmark | null;
 }
 
-/** One measured value. The name is copied in, so later template edits never change history. */
+/**
+ * One measured value. The name is copied in, so later template edits never change history. So is the spot on the body
+ * when the template field had one: absent means "place it by its name".
+ */
 export interface MeasurementValue {
   name: string;
   value: number;
+  landmark?: FieldLandmark;
 }
 
 /** Who took the numbers: the business's own staff, or the customer (sent in, taken by another tailor). */

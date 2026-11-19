@@ -29,10 +29,13 @@ async function main(): Promise<void> {
     {
       to,
       subject: emailSubject("Test email"),
-      html: emailLayout(heading("It works") + paragraph(intro) + button("Open Tailor Seamless", "https://tailorflow.app"), {
-        businessName: "Tailor Seamless",
-        preheader: intro,
-      }),
+      html: emailLayout(
+        heading("It works") + paragraph(intro) + button("Open Tailor Seamless", "https://tailorflow.app"),
+        {
+          businessName: "Tailor Seamless",
+          preheader: intro,
+        },
+      ),
       text: textBody(["It works", intro]),
     },
     provider ? { provider } : {},

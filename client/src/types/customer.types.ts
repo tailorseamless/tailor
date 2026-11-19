@@ -3,6 +3,31 @@ import type { MeasurementUnit } from "./auth.types";
 
 export type CustomerGender = "female" | "male" | "other";
 
+/**
+ * Where on the body a measurement is taken. `length` runs from the shoulder
+ * down (gown, jacket, shirt…); `trouserLength` runs from the waist down.
+ * Same list as the server's `BODY_LANDMARKS`.
+ */
+export type Landmark =
+  | "neck"
+  | "shoulder"
+  | "bust"
+  | "underbust"
+  | "waist"
+  | "hip"
+  | "thigh"
+  | "knee"
+  | "calf"
+  | "ankle"
+  | "bicep"
+  | "wrist"
+  | "sleeve"
+  | "length"
+  | "trouserLength";
+
+/** What a template field says about the figure: a spot, or `none` to keep it off. No setting at all means "by its name". */
+export type FieldLandmark = Landmark | "none";
+
 export interface Customer {
   id: string;
   fullName: string;
@@ -31,6 +56,8 @@ export interface MeasurementField {
   name: string;
   position: number;
   isRequired: boolean;
+  /** Where on the body it is taken. Null: placed by the words in its name. */
+  landmark: FieldLandmark | null;
 }
 
 export interface MeasurementTemplate {
@@ -43,12 +70,14 @@ export interface MeasurementTemplate {
 export interface TemplateInput {
   name: string;
   description?: string | null;
-  fields: { name: string; isRequired: boolean }[];
+  fields: { name: string; isRequired: boolean; landmark?: FieldLandmark | null }[];
 }
 
 export interface MeasurementValue {
   name: string;
   value: number;
+  /** Where on the body, copied from the template field when it was taken. Absent: placed by its name. */
+  landmark?: FieldLandmark;
 }
 
 export interface Measurement {

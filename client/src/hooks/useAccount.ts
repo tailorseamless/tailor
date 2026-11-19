@@ -91,11 +91,11 @@ export function usePortalActions(token: string) {
     invalidate: [keys.portal(token)],
     success: "Thanks — we've let them know you're coming",
   });
-  const request = useApiMutation(
-    (input: PortalRequestInput) =>
-      publicEndpoints.portalRequest(token, input),
-    { invalidate: [keys.portal(token)], success: "Request sent", toastError: false },
-  );
+  const request = useApiMutation((input: PortalRequestInput) => publicEndpoints.portalRequest(token, input), {
+    invalidate: [keys.portal(token)],
+    success: "Request sent",
+    toastError: false,
+  });
   return { confirm, request, receiptUrl: (paymentId: string) => publicEndpoints.portalReceiptUrl(token, paymentId) };
 }
 

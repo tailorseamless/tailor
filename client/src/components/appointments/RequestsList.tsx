@@ -19,13 +19,7 @@ import { DURATIONS } from "./AppointmentForm";
 import { ClashWarning, clashesIn } from "./ClashWarning";
 
 /** The style a request was made from: tap for the full picture. */
-function RequestDesign({
-  design,
-  currency,
-}: {
-  design: NonNullable<AppointmentRequest["design"]>;
-  currency: string;
-}) {
+function RequestDesign({ design, currency }: { design: NonNullable<AppointmentRequest["design"]>; currency: string }) {
   const [open, setOpen] = useState(false);
   const price = formatPriceRange(design.priceMin, design.priceMax, currency);
   const detail = [design.category, price].filter(Boolean).join(" · ");

@@ -169,9 +169,7 @@ export function MeasurementsCard({
                           {formatDay(m.measuredOn)}
                           {m.templateName && <span className="font-normal text-fg-subtle"> · {m.templateName}</span>}
                         </span>
-                        {m.source === "customer" && (
-                          <Badge tone="info">Sent by customer</Badge>
-                        )}
+                        {m.source === "customer" && <Badge tone="info">Sent by customer</Badge>}
                       </p>
                       {can("measurement.delete") && (
                         <IconButton

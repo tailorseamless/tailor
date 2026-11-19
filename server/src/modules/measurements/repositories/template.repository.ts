@@ -25,7 +25,13 @@ function toRecord(row: MeasurementTemplate): MeasurementTemplateRecord {
 }
 
 function toFieldRecord(row: MeasurementField): MeasurementFieldRecord {
-  return { id: row.id, name: row.name, position: row.position, isRequired: row.isRequired };
+  return {
+    id: row.id,
+    name: row.name,
+    position: row.position,
+    isRequired: row.isRequired,
+    landmark: row.landmark ?? null,
+  };
 }
 
 /** Templates and their fields: one aggregate, one repository. */
@@ -130,7 +136,13 @@ export class TemplateRepository extends BaseRepository<MeasurementTemplate> {
   private async insertFields(templateId: string, fields: TemplateFieldInput[], tx: Tx): Promise<void> {
     if (fields.length === 0) return;
     await this.fields(tx).insert(
-      fields.map((field, position) => ({ templateId, name: field.name, isRequired: field.isRequired, position })),
+      fields.map((field, position) => ({
+        templateId,
+        name: field.name,
+        isRequired: field.isRequired,
+        landmark: field.landmark ?? null,
+        position,
+      })),
     );
   }
 }

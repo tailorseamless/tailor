@@ -1,26 +1,30 @@
 import type { MeasurementUnit } from "../types/auth.types";
-import type { CustomerGender, MeasurementValue } from "../types/customer.types";
+import type { CustomerGender, FieldLandmark, Landmark, MeasurementValue } from "../types/customer.types";
 
-/**
- * Where on the body a measurement is taken. `length` runs from the shoulder
- * down (gown, jacket, shirt…); `trouserLength` runs from the waist down.
- */
-export type Landmark =
-  | "neck"
-  | "shoulder"
-  | "bust"
-  | "underbust"
-  | "waist"
-  | "hip"
-  | "thigh"
-  | "knee"
-  | "calf"
-  | "ankle"
-  | "bicep"
-  | "wrist"
-  | "sleeve"
-  | "length"
-  | "trouserLength";
+export type { Landmark };
+
+/** The spots a template field can be set to, in the words the template editor shows, top of the body first. */
+export const LANDMARK_CHOICES: { value: Landmark; label: string }[] = [
+  { value: "neck", label: "Neck" },
+  { value: "shoulder", label: "Shoulder" },
+  { value: "bust", label: "Chest / bust" },
+  { value: "underbust", label: "Under the bust" },
+  { value: "waist", label: "Waist" },
+  { value: "hip", label: "Hip / seat" },
+  { value: "thigh", label: "Thigh" },
+  { value: "knee", label: "Knee" },
+  { value: "calf", label: "Calf" },
+  { value: "ankle", label: "Ankle / trouser bottom" },
+  { value: "bicep", label: "Upper arm (round)" },
+  { value: "wrist", label: "Wrist / cuff" },
+  { value: "sleeve", label: "Sleeve length" },
+  { value: "length", label: "Length from the shoulder (gown, shirt, jacket)" },
+  { value: "trouserLength", label: "Length from the waist (trousers, skirt)" },
+];
+
+export const landmarkLabel = (spot: Landmark): string => LANDMARK_CHOICES.find((c) => c.value === spot)?.label ?? spot;
+
+const isLandmark = (value: unknown): value is Landmark => LANDMARK_CHOICES.some((c) => c.value === value);
 
 /** Which silhouette to draw. */
 export type Build = "female" | "male" | "neutral";
@@ -65,7 +69,8 @@ export function landmarkFor(name: string, templateName?: string | null): Landmar
   if (/inseam/.test(n)) return null;
 
   if (/length|\blen\b/.test(n)) {
-    const lowerBody = /trouser|pant|short|skirt|waist/;
+    // "Short gown length" is a short gown, not shorts: only "shorts" itself means the garment.
+    const lowerBody = /trouser|\bpants?\b|\bshorts\b|skirt|waist/;
     if (lowerBody.test(n)) return "trouserLength";
     if (n === "length" && lowerBody.test(normalise(templateName ?? ""))) return "trouserLength";
     return "length";
@@ -82,6 +87,16 @@ export function landmarkFor(name: string, templateName?: string | null): Landmar
   // A trouser's "base" is its bottom opening, which sits at the ankle.
   if (/ankle|\bbase\b|leg opening|trouser (bottom|hem)/.test(n)) return "ankle";
   return null;
+}
+
+/**
+ * Where a measurement goes on the figure. What its template field chose wins: a spot, or `none` to keep it off the
+ * figure. With no choice (older templates, custom rows) it is guessed from the words in the name.
+ */
+export function spotFor(name: string, templateName?: string | null, chosen?: FieldLandmark | null): Landmark | null {
+  if (chosen === "none") return null;
+  if (isLandmark(chosen)) return chosen;
+  return landmarkFor(name, templateName);
 }
 
 export interface Placed {
@@ -103,7 +118,7 @@ export function placeMeasurements(
   const placed = new Map<Landmark, Placed>();
   for (const v of values) {
     if (!(v.value > 0)) continue;
-    const landmark = landmarkFor(v.name, templateName);
+    const landmark = spotFor(v.name, templateName, v.landmark);
     if (landmark && !placed.has(landmark))
       placed.set(landmark, { name: v.name, landmark, value: v.value, inches: toInches(v.value, unit) });
   }

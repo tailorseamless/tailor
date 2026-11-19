@@ -97,7 +97,8 @@ export function InstallSection() {
                 </ol>
               ) : (
                 <p className="max-w-md text-sm text-fg-subtle" data-cy="landing-install-hint">
-                  Open Tailor Seamless in Chrome, Edge or Safari and use <strong className="text-fg">Install app</strong> or{" "}
+                  Open Tailor Seamless in Chrome, Edge or Safari and use{" "}
+                  <strong className="text-fg">Install app</strong> or{" "}
                   <strong className="text-fg">Add to Home Screen</strong> from the browser menu.
                 </p>
               )}

@@ -3,12 +3,19 @@ import { paginationQuery } from "../../../shared/pagination/paginate";
 import { idParams, isoDate, optionalText, trimmed, uuid } from "../../../shared/utils/zod";
 import { MEASUREMENT_UNITS } from "../../businesses/dto/business.dto";
 import { hasDuplicateNames } from "../domain/measurementValues";
-import { MEASUREMENT_LIMITS } from "../dto/measurement.dto";
+import { FIELD_LANDMARKS, MEASUREMENT_LIMITS } from "../dto/measurement.dto";
 
 // ── Templates ────────────────────────────────────────────────────────
 
 const templateFields = z
-  .array(z.object({ name: trimmed(1, 80), isRequired: z.boolean().default(false) }))
+  .array(
+    z.object({
+      name: trimmed(1, 80),
+      isRequired: z.boolean().default(false),
+      /** Where it sits on the figure; leave out (or null) to place it by its name. */
+      landmark: z.enum(FIELD_LANDMARKS).nullable().optional(),
+    }),
+  )
   .min(1, "Add at least one measurement")
   .max(MEASUREMENT_LIMITS.maxFields)
   .refine((fields) => !hasDuplicateNames(fields), "Each measurement can only appear once");

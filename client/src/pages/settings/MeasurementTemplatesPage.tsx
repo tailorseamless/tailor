@@ -8,7 +8,8 @@ import { EmptyState, QueryState } from "../../components/shared/States";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useMeasurementTemplates, useTemplateActions } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
-import type { MeasurementTemplate } from "../../types/customer.types";
+import { LandmarkSelect } from "../../components/customers/LandmarkSelect";
+import type { FieldLandmark, MeasurementTemplate } from "../../types/customer.types";
 import { errorMessage } from "../../utils/errors";
 
 /** The lists of measurements taken for each kind of garment. */
@@ -106,6 +107,8 @@ export default function MeasurementTemplatesPage() {
 interface Row {
   name: string;
   isRequired: boolean;
+  /** Where on the body it is taken; null = guess from the name. */
+  landmark: FieldLandmark | null;
 }
 
 function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; onClose: () => void }) {
@@ -118,8 +121,12 @@ function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; o
     template
       ? [...template.fields]
           .sort((a, b) => a.position - b.position)
-          .map((f) => ({ name: f.name, isRequired: f.isRequired }))
-      : ["Chest", "Waist", "Hip", "Shoulder", "Sleeve", "Length"].map((n) => ({ name: n, isRequired: false })),
+          .map((f) => ({ name: f.name, isRequired: f.isRequired, landmark: f.landmark ?? null }))
+      : ["Chest", "Waist", "Hip", "Shoulder", "Sleeve", "Length"].map((n) => ({
+          name: n,
+          isRequired: false,
+          landmark: null,
+        })),
   );
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -187,41 +194,56 @@ function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; o
           )}
         </Field>
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-fg">Measurements, in the order you take them</legend>
+          <legend className="mb-1 text-sm font-medium text-fg">Measurements, in the order you take them</legend>
+          <p className="mb-2 text-xs text-fg-subtle">
+            Choose where each one sits so the body figure marks it in the right place. “Guess” reads the words in the
+            name, which can miss a new one.
+          </p>
           <ul className="space-y-2">
             {rows.map((row, i) => (
-              <li key={i} className="flex items-center gap-1">
-                <Input
-                  aria-label={`Measurement ${i + 1}`}
-                  value={row.name}
-                  onChange={(e) => set(i, { name: e.target.value })}
-                  maxLength={80}
-                  className="flex-1"
-                  data-cy="template-field"
-                />
-                <label className="flex items-center gap-1 px-2 text-xs text-fg-muted">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-brand"
-                    checked={row.isRequired}
-                    onChange={(e) => set(i, { isRequired: e.target.checked })}
-                    data-cy="template-required"
+              <li key={i} className="rounded-lg border border-line p-2">
+                <div className="flex items-center gap-1">
+                  <Input
+                    aria-label={`Measurement ${i + 1}`}
+                    value={row.name}
+                    onChange={(e) => set(i, { name: e.target.value })}
+                    maxLength={80}
+                    className="flex-1"
+                    data-cy="template-field"
                   />
-                  Required
-                </label>
-                <IconButton label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
-                  <ArrowUp className="size-4" aria-hidden />
-                </IconButton>
-                <IconButton label="Move down" disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
-                  <ArrowDown className="size-4" aria-hidden />
-                </IconButton>
-                <IconButton
-                  label="Remove"
-                  onClick={() => setRows(rows.filter((_, j) => j !== i))}
-                  data-cy="template-field-remove"
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                </IconButton>
+                  <IconButton label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
+                    <ArrowUp className="size-4" aria-hidden />
+                  </IconButton>
+                  <IconButton label="Move down" disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
+                    <ArrowDown className="size-4" aria-hidden />
+                  </IconButton>
+                  <IconButton
+                    label="Remove"
+                    onClick={() => setRows(rows.filter((_, j) => j !== i))}
+                    data-cy="template-field-remove"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                  </IconButton>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <LandmarkSelect
+                    name={row.name}
+                    templateName={name}
+                    value={row.landmark}
+                    onChange={(landmark) => set(i, { landmark })}
+                    className="min-w-0 flex-1"
+                  />
+                  <label className="flex shrink-0 items-center gap-1 px-1 text-xs text-fg-muted">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-brand"
+                      checked={row.isRequired}
+                      onChange={(e) => set(i, { isRequired: e.target.checked })}
+                      data-cy="template-required"
+                    />
+                    Required
+                  </label>
+                </div>
               </li>
             ))}
           </ul>
@@ -231,7 +253,7 @@ function TemplateForm({ template, onClose }: { template?: MeasurementTemplate; o
               variant="ghost"
               className="mt-2"
               icon={<Plus className="size-4" aria-hidden />}
-              onClick={() => setRows([...rows, { name: "", isRequired: false }])}
+              onClick={() => setRows([...rows, { name: "", isRequired: false, landmark: null }])}
               data-cy="template-field-add"
             >
               Add a measurement

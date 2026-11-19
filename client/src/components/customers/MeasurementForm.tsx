@@ -2,9 +2,9 @@ import { Calculator, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useMeasurementTemplates, useRecordMeasurement } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
-import type { Measurement, MeasurementTemplate } from "../../types/customer.types";
+import type { FieldLandmark, Measurement, MeasurementTemplate } from "../../types/customer.types";
 import type { MeasurementUnit } from "../../types/auth.types";
-import { landmarkFor, placeMeasurements, type Build } from "../../utils/bodyMap";
+import { placeMeasurements, spotFor, type Build } from "../../utils/bodyMap";
 import { cn } from "../../utils/cn";
 import { errorMessage } from "../../utils/errors";
 import { parseMeasure } from "../../utils/measureInput";
@@ -20,15 +20,27 @@ interface Row {
   name: string;
   value: string;
   required: boolean;
+  /** Where the template says this is taken, so the figure marks it. Null: guessed from the name. */
+  landmark: FieldLandmark | null;
 }
 
 const rowsFor = (template: MeasurementTemplate | undefined, previous?: Measurement): Row[] => {
   const prev = new Map(previous?.values.map((v) => [v.name.toLowerCase(), String(v.value)]));
   if (!template)
-    return (previous?.values ?? []).map((v) => ({ name: v.name, value: String(v.value), required: false }));
+    return (previous?.values ?? []).map((v) => ({
+      name: v.name,
+      value: String(v.value),
+      required: false,
+      landmark: v.landmark ?? null,
+    }));
   return [...template.fields]
     .sort((a, b) => a.position - b.position)
-    .map((f) => ({ name: f.name, value: prev.get(f.name.toLowerCase()) ?? "", required: f.isRequired }));
+    .map((f) => ({
+      name: f.name,
+      value: prev.get(f.name.toLowerCase()) ?? "",
+      required: f.isRequired,
+      landmark: f.landmark ?? null,
+    }));
 };
 
 interface Props {
@@ -66,13 +78,15 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
   const preview = placeMeasurements(
     current.flatMap((r) => {
       const value = parseMeasure(r.value);
-      return r.name.trim() && value && value > 0 ? [{ name: r.name.trim(), value }] : [];
+      return r.name.trim() && value && value > 0
+        ? [{ name: r.name.trim(), value, ...(r.landmark ? { landmark: r.landmark } : {}) }]
+        : [];
     }),
     unit,
     template?.name,
   );
   const focusedRow = focused === null ? undefined : current[focused];
-  const active = focusedRow ? landmarkFor(focusedRow.name, template?.name) : null;
+  const active = focusedRow ? spotFor(focusedRow.name, template?.name, focusedRow.landmark) : null;
   const focusing = (index: number) => ({
     onFocus: () => {
       setFocused(index);
@@ -277,7 +291,7 @@ export function MeasurementForm({ open, onClose, customerId, previous, onSaved, 
               variant="ghost"
               size="sm"
               icon={<Plus className="size-4" aria-hidden />}
-              onClick={() => setRows([...current, { name: "", value: "", required: false }])}
+              onClick={() => setRows([...current, { name: "", value: "", required: false, landmark: null }])}
               data-cy="measure-add"
             >
               Add a measurement
