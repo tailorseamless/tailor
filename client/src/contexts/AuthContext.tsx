@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
+      // Best effort: if this fails, the request below and the 403 retry in the transport still get a say.
+      await authClient.syncVerifiedToken(current).catch(() => undefined);
       const result = await authEndpoints.me();
       setMe(result);
       setError(null);

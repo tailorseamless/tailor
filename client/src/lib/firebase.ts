@@ -103,6 +103,18 @@ export const authClient = {
     if (user) await sendEmailVerification(user, { url: continueUrl() });
   },
 
+  /**
+   * Makes the token agree with the user. On every page load Firebase re-reads the user, so `emailVerified` turns true
+   * as soon as the link is clicked (even in another tab or app), but the token saved on the device keeps saying
+   * `email_verified: false` for up to an hour. The API reads the token, so it would refuse to create the business
+   * while the app shows the form. Fetches a new token only when the two disagree; otherwise costs no network call.
+   */
+  async syncVerifiedToken(user: User): Promise<void> {
+    if (!user.emailVerified) return;
+    const { claims } = await user.getIdTokenResult();
+    if (claims.email_verified !== true) await this.token(true);
+  },
+
   /** Re-reads the user from Firebase (after they click the verification link) and refreshes the token. */
   async reload(): Promise<User | null> {
     const user = this.currentUser();

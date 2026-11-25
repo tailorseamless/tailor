@@ -49,7 +49,10 @@ http.interceptors.response.use(undefined, async (error: AxiosError) => {
   // The token was too old (the API's ACCESS_TOKEN_LIFETIME) or ran out in flight: get a new one straight away and send
   // the request again, once. The person stays signed in and never sees it. A request fired together with this one may
   // already have fetched the new token, so use the current one if it differs before asking for another.
-  if (error.response?.status === 401 && config && !config._retried && authClient.currentUser()) {
+  // The API says the email isn't confirmed, but the person has confirmed it since this token was issued: its claim is
+  // stale. The token is the API's only source for that, so a fresh one is the fix. Once only: if it still says no, it's true.
+  const staleVerification = error.response?.status === 403 && body?.errors?.[0]?.message === "not_verified";
+  if ((error.response?.status === 401 || staleVerification) && config && !config._retried && authClient.currentUser()) {
     config._retried = true;
     const sent = String(config.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
     let token = await authClient.token();
