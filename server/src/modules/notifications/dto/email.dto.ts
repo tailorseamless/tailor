@@ -9,6 +9,7 @@ export const EMAIL_KINDS = [
   "appointment.request_decided",
   "notification",
   "order.status",
+  "admin.alert",
 ] as const;
 export type EmailKind = (typeof EMAIL_KINDS)[number];
 
@@ -42,10 +43,13 @@ export interface EmailPayloads {
   notification: { notificationId: string };
   /** Built at send time; skipped if the order has moved to another status by then. */
   "order.status": { orderId: string; status: OrderStatus };
+  /** A critical alert, to a platform admin. Read fresh: not sent once the alert is resolved. */
+  "admin.alert": { alertId: string };
 }
 
 export interface QueueEmailInput<K extends EmailKind = EmailKind> {
-  businessId: string;
+  /** NULL only for platform emails (to platform admins). */
+  businessId: string | null;
   kind: K;
   to: string;
   toName?: string | null;
@@ -56,7 +60,7 @@ export interface QueueEmailInput<K extends EmailKind = EmailKind> {
 
 export interface OutboxRow {
   id: string;
-  businessId: string;
+  businessId: string | null;
   kind: EmailKind;
   toAddress: string;
   toName: string | null;

@@ -1,4 +1,9 @@
 import { AuditLog } from "../../modules/activity/entities/auditLog.entity";
+import { AdminAlert } from "../../modules/admin/entities/adminAlert.entity";
+import { AdminNote } from "../../modules/admin/entities/adminNote.entity";
+import { PlatformDailyStat } from "../../modules/admin/entities/platformDailyStat.entity";
+import { JobStatus } from "../../modules/system/entities/jobStatus.entity";
+import { SecurityCounter } from "../../modules/system/entities/securityCounter.entity";
 import { Appointment } from "../../modules/appointments/entities/appointment.entity";
 import { Branch } from "../../modules/branches/entities/branch.entity";
 import { Business } from "../../modules/businesses/entities/business.entity";
@@ -58,4 +63,9 @@ export const ENTITIES = [
   EmailOutbox,
   IdempotencyKey,
   AuditLog,
+  AdminAlert,
+  AdminNote,
+  PlatformDailyStat,
+  JobStatus,
+  SecurityCounter,
 ];

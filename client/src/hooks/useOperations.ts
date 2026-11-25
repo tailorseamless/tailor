@@ -9,7 +9,9 @@ import { newIdempotencyKey } from "../transport/http";
 import type {
   AdminBusiness,
   AdminBusinessInput,
+  AdminReportKind,
   AdminUser,
+  AlertFilters,
   AuditFilters,
   ExpenseFilters,
   ExpenseInput,
@@ -156,6 +158,70 @@ export function useAdminAdmins() {
 
 export function useAdminAuditLogs(params: AuditFilters, enabled = true) {
   return usePaginatedQuery([...admin, "audit", params], () => adminEndpoints.auditLogs(params), { enabled });
+}
+
+export function useAdminBusinessDetail(id: string | undefined) {
+  return useApiQuery([...admin, "business", id], () => adminEndpoints.businessDetail(id as string), {
+    enabled: Boolean(id),
+  });
+}
+
+export function useAdminUserDetail(id: string | undefined) {
+  return useApiQuery([...admin, "user", id], () => adminEndpoints.userDetail(id as string), { enabled: Boolean(id) });
+}
+
+export function useAdminActivity(params: { cursor?: string; businessId?: string; limit?: number }) {
+  return usePaginatedQuery([...admin, "activity", params], () => adminEndpoints.activity(params));
+}
+
+export function useAdminSystemHealth() {
+  return useApiQuery([...admin, "health"], () => adminEndpoints.systemHealth(), { refetchInterval: 60_000 });
+}
+
+export function useAdminAlerts(params: AlertFilters) {
+  return usePaginatedQuery([...admin, "alerts", params], () => adminEndpoints.alerts(params));
+}
+
+export function useAdminDailyStats(days: number) {
+  return useApiQuery([...admin, "stats", days], () => adminEndpoints.dailyStats(days));
+}
+
+export function useAdminAdoption(days: number) {
+  return useApiQuery([...admin, "adoption", days], () => adminEndpoints.adoption(days));
+}
+
+export function useAdminCohorts(weeks: number) {
+  return useApiQuery([...admin, "cohorts", weeks], () => adminEndpoints.cohorts(weeks));
+}
+
+export function useAdminNotes(businessId: string) {
+  return useApiQuery([...admin, "notes", businessId], () => adminEndpoints.notes(businessId));
+}
+
+export function useAddAdminNote(businessId: string) {
+  return useApiMutation((body: string) => adminEndpoints.addNote(businessId, body), {
+    invalidate: [[...admin, "notes", businessId]],
+    success: "Note added",
+  });
+}
+
+export function useAdminExport() {
+  return useApiMutation(async (vars: { kind: AdminReportKind; format: "csv" | "xlsx"; days: number }) => {
+    const file = await adminEndpoints.exportReport(vars.kind, vars.format, vars.days);
+    saveFile(file.blob, file.filename);
+  });
+}
+
+export function useAdminAlertActions() {
+  const acknowledge = useApiMutation((id: string) => adminEndpoints.acknowledgeAlert(id), {
+    invalidate: [admin],
+    success: "Alert acknowledged",
+  });
+  const resolve = useApiMutation(
+    (vars: { id: string; note?: string }) => adminEndpoints.resolveAlert(vars.id, vars.note),
+    { invalidate: [admin], success: "Alert resolved" },
+  );
+  return { acknowledge, resolve };
 }
 
 export function useAdminActions() {

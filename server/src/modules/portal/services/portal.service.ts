@@ -9,6 +9,7 @@ import { ActivityService } from "../../activity/services/activity.service";
 import { APPOINTMENT_TYPES } from "../../appointments/dto/appointment.dto";
 import { AppointmentRepository } from "../../appointments/repositories/appointment.repository";
 import { shopPath } from "../../businesses/domain/shopAddress";
+import { SecurityMonitor } from "../../system/services/securityMonitor.service";
 import type { BusinessRecord } from "../../businesses/dto/business.dto";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import type { CustomerRecord } from "../../customers/dto/customer.dto";
@@ -246,7 +247,10 @@ export class PortalService {
 
   private async resolve(token: string): Promise<{ customer: CustomerRecord; business: BusinessRecord }> {
     const customer = await this.customers.findByPortalHash(sha256(token));
-    if (!customer) throw AppError.notFound(NOT_FOUND);
+    if (!customer) {
+      SecurityMonitor.Instance.note("portal_token_invalid"); // someone guessing links shows up as a burst
+      throw AppError.notFound(NOT_FOUND);
+    }
     const business = await this.businesses.findBusiness(customer.businessId);
     if (!business || business.status !== "active") throw AppError.notFound(NOT_FOUND);
     return { customer, business };

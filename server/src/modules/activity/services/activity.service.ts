@@ -1,5 +1,6 @@
 import type { Tx } from "../../../shared/repositories/transaction";
-import type { AuditInput, ListAuditParams } from "../dto/activity.dto";
+import { FEED_ACTIONS } from "../domain/auditRules";
+import type { ActivityItemDTO, AuditInput, ListAuditParams } from "../dto/activity.dto";
 import { AuditRepository, type AuditPage } from "../repositories/audit.repository";
 
 export class ActivityService {
@@ -19,5 +20,25 @@ export class ActivityService {
   /** The platform-wide audit view (platform admins with `admin.audit` only). */
   list(params: ListAuditParams): Promise<AuditPage> {
     return this.audits.list(params);
+  }
+
+  /** The activity feed: allow-listed actions, stripped of request details and payloads. */
+  async feed(
+    params: Omit<ListAuditParams, "actions" | "actorId" | "entityType" | "entityId">,
+  ): Promise<{ data: ActivityItemDTO[]; nextCursor: string | null }> {
+    const page = await this.audits.list({ ...params, actions: FEED_ACTIONS });
+    return {
+      data: page.data.map((entry) => ({
+        id: entry.id,
+        createdAt: entry.createdAt,
+        action: entry.action,
+        actorKind: entry.actorKind,
+        actorName: entry.actor ? entry.actor.fullName || entry.actor.email : null,
+        business: entry.business,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+      })),
+      nextCursor: page.nextCursor,
+    };
   }
 }

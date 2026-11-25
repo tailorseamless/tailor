@@ -45,7 +45,25 @@ export class AuthService {
   private async resolveOrLink(identity: FirebaseIdentity): Promise<UserRecord> {
     let user = await this.users.findByFirebaseUid(identity.uid);
     if (!user && hasTrustedEmail(identity)) {
-      user = await this.users.linkByEmail(identity.email, identity.uid);
+      const email = identity.email;
+      // An invited person's first sign-in: the link and its audit entry commit together.
+      user = await runInTransaction(async (tx) => {
+        const linked = await this.users.linkByEmail(email, identity.uid, tx);
+        if (linked) {
+          await this.activity.audit(
+            {
+              businessId: linked.businessId,
+              actorId: linked.id,
+              action: "account.linked",
+              entityType: "user",
+              entityId: linked.id,
+              payload: { signInProvider: identity.signInProvider },
+            },
+            tx,
+          );
+        }
+        return linked;
+      });
     }
     if (!user) {
       throw AppError.notFound("Account not linked", [{ field: "account", message: "not_linked" }]);

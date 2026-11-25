@@ -113,3 +113,9 @@ export const PERMISSIONS = {
 } as const satisfies Record<string, AppRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
+
+/** Whether someone with these roles holds the permission (for a response that shows more to some). */
+export function hasPermission(roles: readonly AppRole[], permission: Permission): boolean {
+  const allowed: readonly AppRole[] = PERMISSIONS[permission];
+  return roles.some((role) => allowed.includes(role));
+}

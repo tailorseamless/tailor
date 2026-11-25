@@ -241,3 +241,27 @@ export function orderUpdateEmail(p: {
     ]),
   };
 }
+
+/** A critical alert, to the platform admins. Only what the alert itself says; the details are in the app. */
+export function adminAlertEmail(p: {
+  title: string;
+  detail: string | null;
+  severity: string;
+  businessName: string | null;
+}): RenderedEmail {
+  const link = `${env.appUrl}/admin?view=alerts`;
+  const where = p.businessName ? `Business: ${p.businessName}` : "Platform-wide";
+  const severity = `${p.severity.charAt(0).toUpperCase()}${p.severity.slice(1)} alert`;
+  return {
+    subject: emailSubject(`${severity}: ${p.title}`, "Tailor Seamless"),
+    html: emailLayout(
+      heading(p.title) +
+        (p.detail ? paragraph(p.detail) : "") +
+        paragraph(where) +
+        button("Open the Alerts tab", link) +
+        footnote("You get this because you are a Tailor Seamless platform admin."),
+      { businessName: "Tailor Seamless", preheader: p.detail ?? p.title },
+    ),
+    text: textBody([`${severity}: ${p.title}`, p.detail, where, `Open the Alerts tab: ${link}`]),
+  };
+}

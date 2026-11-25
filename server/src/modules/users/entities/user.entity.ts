@@ -48,6 +48,10 @@ export class User extends BaseEntity {
   @Column({ name: "deletion_scheduled_for", type: "timestamptz", nullable: true })
   deletionScheduledFor: Date | null;
 
+  /** When they last used the app (a signed-in request), to the hour; NULL until their first one. */
+  @Column({ name: "last_seen_at", type: "timestamptz", nullable: true })
+  lastSeenAt: Date | null;
+
   /** Progress through the getting-started guide; NULL until it is first opened for them. */
   @Column({ type: "jsonb", nullable: true })
   onboarding: OnboardingState | null;

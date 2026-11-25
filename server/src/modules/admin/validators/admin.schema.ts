@@ -6,6 +6,8 @@ import { ACTOR_KINDS } from "../../activity/dto/activity.dto";
 import { MEASUREMENT_UNITS } from "../../businesses/dto/business.dto";
 import { currencyCode } from "../../businesses/validators/business.schema";
 import { STOP_REASON_MIN } from "../domain/adminRules";
+import { ALERT_SEVERITIES, ALERT_STATUSES } from "../dto/alert.dto";
+import { ADMIN_REPORTS } from "../dto/insights.dto";
 
 const search = z.string().trim().min(1).max(100).optional();
 
@@ -91,6 +93,60 @@ export const listAuditLogsSchema = z.object({
       to: z.coerce.date().optional(),
     })
     .refine((q) => !q.from || !q.to || q.from < q.to, { message: "`from` must be before `to`", path: ["from"] }),
+});
+
+export const activityFeedSchema = z.object({
+  query: z
+    .object({
+      limit: z.coerce.number().int().min(1).max(PAGINATION.maxLimit).default(30),
+      cursor: z.string().trim().max(200).optional(),
+      businessId: uuid.optional(),
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+    })
+    .refine((q) => !q.from || !q.to || q.from < q.to, { message: "`from` must be before `to`", path: ["from"] }),
+});
+
+export const listAlertsSchema = z.object({
+  query: z.object({
+    ...paginationQuery,
+    status: z.enum([...ALERT_STATUSES, "active"]).default("active"),
+    severity: z.enum(ALERT_SEVERITIES).optional(),
+  }),
+});
+
+export const alertIdSchema = z.object({ params: idParams("id") });
+
+export const resolveAlertSchema = z.object({
+  params: idParams("id"),
+  /** What was done about it (kept on the alert and in the audit log). */
+  body: z.object({ note: optionalText(1000) }),
+});
+
+export const dailyStatsSchema = z.object({
+  query: z.object({ days: z.coerce.number().int().min(7).max(366).default(90) }),
+});
+
+export const adoptionSchema = z.object({
+  query: z.object({ days: z.coerce.number().int().min(7).max(366).default(30) }),
+});
+
+export const cohortsSchema = z.object({
+  query: z.object({ weeks: z.coerce.number().int().min(4).max(52).default(12) }),
+});
+
+export const adminExportSchema = z.object({
+  params: z.object({ kind: z.enum(ADMIN_REPORTS) }),
+  query: z.object({
+    format: z.enum(["csv", "xlsx"]).default("csv"),
+    /** For the reports over a period (admin actions, daily figures, adoption). */
+    days: z.coerce.number().int().min(1).max(366).default(90),
+  }),
+});
+
+export const addNoteSchema = z.object({
+  params: idParams("id"),
+  body: z.object({ body: trimmed(1, 2000) }),
 });
 
 export type UpdateBusinessProfileInput = z.infer<typeof updateBusinessProfileSchema>["body"];

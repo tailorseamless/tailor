@@ -16,8 +16,9 @@ export class EmailOutbox {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: "business_id", type: "uuid" })
-  businessId: string;
+  /** NULL for platform emails that belong to no business (alerts to platform admins). */
+  @Column({ name: "business_id", type: "uuid", nullable: true })
+  businessId: string | null;
 
   @ForeignKey("Business", "business_id", "CASCADE")
   business?: unknown;

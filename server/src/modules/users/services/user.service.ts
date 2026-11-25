@@ -1,5 +1,6 @@
-import { AUTH_CACHE_TTL_MS } from "../../../config/constants";
+import { AUTH_CACHE_TTL_MS, LAST_SEEN_EVERY_MS } from "../../../config/constants";
 import { env } from "../../../config/env";
+import { logger } from "../../../infrastructure/logger/logger";
 import { PERMISSIONS, type AppRole, type Permission } from "../../../config/permissions";
 import { AppError } from "../../../shared/errors/AppError";
 import { rolesFromFlags, type Actor, type AuthUser } from "../../../shared/services/access.service";
@@ -20,6 +21,8 @@ export class UserService {
   static Instance = new UserService();
 
   private readonly authCache = new TtlCache<AuthUser>(AUTH_CACHE_TTL_MS);
+  /** When `last_seen_at` was last written for each person, by this server. */
+  private readonly seenAt = new Map<string, number>();
 
   private constructor(
     private readonly users = UserRepository.Instance,
@@ -50,6 +53,17 @@ export class UserService {
     };
     this.authCache.set(firebaseUid, user);
     return user;
+  }
+
+  /**
+   * Notes that this person is using the app, for the admin's "last seen". At most one write per
+   * person per hour per server (remembered here), and never in the request's way: a failure is logged.
+   */
+  noteSeen(userId: string, now = Date.now()): void {
+    const last = this.seenAt.get(userId);
+    if (last !== undefined && now - last < LAST_SEEN_EVERY_MS) return;
+    this.seenAt.set(userId, now);
+    this.users.touchLastSeen(userId).catch((err: unknown) => logger.warn({ err, userId }, "last seen not recorded"));
   }
 
   /** Call after anything that changes a person's roles, status or time zone. */

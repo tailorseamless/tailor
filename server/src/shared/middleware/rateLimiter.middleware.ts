@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import rateLimit, { ipKeyGenerator, type RateLimitRequestHandler } from "express-rate-limit";
 import { env } from "../../config/env";
+import { SecurityMonitor } from "../../modules/system/services/securityMonitor.service";
 import { ApiResponse } from "../response/apiResponse";
 
 /**
@@ -24,6 +25,7 @@ function limiter(
     legacyHeaders: false,
     skip: () => env.isTest,
     handler: (_req, res) => {
+      SecurityMonitor.Instance.note("rate_limited");
       res.status(429).json(ApiResponse.error(message, 429));
     },
   });

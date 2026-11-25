@@ -106,6 +106,15 @@ export class UserRepository extends BaseRepository<User> {
    * Links a Firebase login to the one UNLINKED user with this email, atomically:
    * two first sign-ins at once cannot both claim the row.
    */
+  /** Records that they used the app now, unless that was already recorded within the hour. */
+  async touchLastSeen(id: string): Promise<void> {
+    await this.repo().query(
+      `UPDATE users SET last_seen_at = now()
+        WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - interval '1 hour')`,
+      [id],
+    );
+  }
+
   async linkByEmail(email: string, firebaseUid: string, tx?: Tx): Promise<UserRecord | null> {
     const result: unknown = await this.repo(tx).query(
       `UPDATE users

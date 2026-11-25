@@ -1,9 +1,19 @@
 import { cleanParams, downloadFile, http, wrapCall, wrapPage, wrapUpload } from "../transport/http";
 import type { OrderImage } from "../types/order.types";
 import type {
+  ActivityItem,
+  AdminAlert,
   AdminBusiness,
+  AdminBusinessDetail,
   AdminBusinessInput,
+  AdminNote,
+  AdminReportKind,
+  Adoption,
+  Cohort,
+  DailyStat,
   AdminUser,
+  AdminUserDetail,
+  AlertFilters,
   AuditEntry,
   AuditFilters,
   Branch,
@@ -24,6 +34,7 @@ import type {
   PlatformAdmin,
   PlatformOverview,
   StockMovement,
+  SystemHealth,
   Task,
   TaskFilters,
   TaskInput,
@@ -123,6 +134,25 @@ export const adminEndpoints = {
   setUserStatus: (id: string, status: AdminUser["status"], reason?: string) =>
     wrapCall<unknown>(() => http.post(`/admin/users/${id}/status`, { status, reason: reason || undefined })),
   admins: () => wrapCall<PlatformAdmin[]>(() => http.get("/admin/admins")),
+  businessDetail: (id: string) => wrapCall<AdminBusinessDetail>(() => http.get(`/admin/businesses/${id}/detail`)),
+  userDetail: (id: string) => wrapCall<AdminUserDetail>(() => http.get(`/admin/users/${id}`)),
+  /** Keyset-paged like the audit log. */
+  activity: (params: { cursor?: string; businessId?: string; limit?: number }) =>
+    wrapPage<ActivityItem>(() => http.get("/admin/activity", { params: cleanParams({ limit: 30, ...params }) })),
+  systemHealth: () => wrapCall<SystemHealth>(() => http.get("/admin/system-health")),
+  alerts: (params: AlertFilters) =>
+    wrapPage<AdminAlert>(() => http.get("/admin/alerts", { params: cleanParams({ limit: 20, ...params }) })),
+  dailyStats: (days: number) => wrapCall<DailyStat[]>(() => http.get("/admin/stats/daily", { params: { days } })),
+  adoption: (days: number) => wrapCall<Adoption>(() => http.get("/admin/reports/adoption", { params: { days } })),
+  cohorts: (weeks: number) => wrapCall<Cohort[]>(() => http.get("/admin/reports/cohorts", { params: { weeks } })),
+  notes: (businessId: string) => wrapCall<AdminNote[]>(() => http.get(`/admin/businesses/${businessId}/notes`)),
+  addNote: (businessId: string, body: string) =>
+    wrapCall<AdminNote[]>(() => http.post(`/admin/businesses/${businessId}/notes`, { body })),
+  exportReport: (kind: AdminReportKind, format: "csv" | "xlsx", days: number) =>
+    downloadFile(`/admin/reports/${kind}/export`, `${kind}.${format}`, { params: { format, days }, timeout: 120_000 }),
+  acknowledgeAlert: (id: string) => wrapCall<AdminAlert>(() => http.post(`/admin/alerts/${id}/acknowledge`)),
+  resolveAlert: (id: string, note?: string) =>
+    wrapCall<AdminAlert>(() => http.post(`/admin/alerts/${id}/resolve`, { note: note || undefined })),
   /** Keyset-paged: `meta.nextCursor` opens the next (older) page. */
   auditLogs: (params: AuditFilters) =>
     wrapPage<AuditEntry>(() => http.get("/admin/audit-logs", { params: cleanParams({ limit: 50, ...params }) })),

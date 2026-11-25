@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { env } from "../../config/env";
 import { firebaseAuth } from "../../infrastructure/firebase/firebaseAdmin";
+import { SecurityMonitor } from "../../modules/system/services/securityMonitor.service";
 import { UserService } from "../../modules/users/services/user.service";
 import { AppError } from "../errors/AppError";
 import { isConfiguredAdmin, type FirebaseIdentity } from "../services/access.service";
@@ -23,6 +24,7 @@ async function verify(req: Request): Promise<FirebaseIdentity> {
     // disabling the user, whose status is re-read from a 60 s cache.
     decoded = await firebaseAuth().verifyIdToken(token);
   } catch {
+    SecurityMonitor.Instance.note("auth_failed");
     throw AppError.unauthorised("Token invalid or expired");
   }
   // Firebase sign-ins never lapse on their own, so the limit is ours. Outside the try above: this is not a bad token.
@@ -51,7 +53,11 @@ async function verify(req: Request): Promise<FirebaseIdentity> {
 export async function authMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const identity = await verify(req);
   const user = await UserService.Instance.resolveAuthUser(identity.uid);
-  if (!user) throw AppError.unauthorised("Account not linked or disabled");
+  if (!user) {
+    SecurityMonitor.Instance.note("disabled_access");
+    throw AppError.unauthorised("Account not linked or disabled");
+  }
+  UserService.Instance.noteSeen(user.id);
   req.firebase = identity;
   // A person named in PLATFORM_ADMIN_EMAILS is a super admin for this request (raised from user or support).
   // Nothing is written to the database (and the cached `user` is left alone), so removing them from the

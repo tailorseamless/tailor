@@ -47,7 +47,11 @@ export const router = createBrowserRouter([
           gated("expense.read", [{ path: "expenses", lazy: page(() => import("./pages/expenses/ExpensesPage")) }]),
           gated("report.read", [{ path: "reports", lazy: page(() => import("./pages/reports/ReportsPage")) }]),
           { path: "team", lazy: page(() => import("./pages/team/TeamPage")) },
-          gated("admin.read", [{ path: "admin", lazy: page(() => import("./pages/admin/AdminPage")) }]),
+          gated("admin.read", [
+            { path: "admin", lazy: page(() => import("./pages/admin/AdminPage")) },
+            { path: "admin/businesses/:id", lazy: page(() => import("./pages/admin/AdminBusinessPage")) },
+            { path: "admin/users/:id", lazy: page(() => import("./pages/admin/AdminUserPage")) },
+          ]),
           { path: "notifications", lazy: page(() => import("./pages/NotificationsPage")) },
           { path: "settings", lazy: page(() => import("./pages/settings/SettingsPage")) },
           { path: "settings/measurements", lazy: page(() => import("./pages/settings/MeasurementTemplatesPage")) },

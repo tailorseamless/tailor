@@ -3,8 +3,11 @@ import { buildMeta, getOffset, type Paginated } from "../../../shared/pagination
 import { likePattern } from "../../../shared/repositories/baseRepository";
 import type { Tx } from "../../../shared/repositories/transaction";
 import type { PlatformRole } from "../../../shared/services/access.service";
+import type { OnboardingState } from "../../users/dto/user.dto";
 import type {
+  AdminBusinessDetailDTO,
   AdminBusinessDTO,
+  AdminMemberDTO,
   AdminUserDTO,
   ListAdminBusinessesParams,
   ListAdminUsersParams,
@@ -24,7 +27,7 @@ export class AdminRepository {
 
   private constructor() {}
 
-  async overview(): Promise<PlatformOverviewDTO> {
+  async overview(): Promise<Omit<PlatformOverviewDTO, "alerts">> {
     const [b] = await AppDataSource.query(
       `SELECT COUNT(*) AS total,
               COUNT(*) FILTER (WHERE status = 'active') AS active,
@@ -156,7 +159,7 @@ export class AdminRepository {
 
   private userSelect = `
     SELECT u.id, u.full_name AS "fullName", u.email, u.status, u.platform_role AS "platformRole",
-           u.firebase_uid IS NOT NULL AS "hasSignedIn", u.business_id AS "businessId", b.name AS "businessName",
+           u.firebase_uid IS NOT NULL AS "hasSignedIn", u.last_seen_at AS "lastSeenAt", u.business_id AS "businessId", b.name AS "businessName",
            m.role, u.created_at AS "createdAt"
       FROM users u
       JOIN businesses b ON b.id = u.business_id
@@ -207,6 +210,130 @@ export class AdminRepository {
       id,
       status,
     ]);
+  }
+
+  /** Business 360, without the business row itself (the service adds it). One query per concern, all by business id. */
+  async businessDetail(id: string): Promise<Omit<AdminBusinessDetailDTO, "business" | "openAlerts">> {
+    const [page] = await AppDataSource.query(
+      `SELECT slug, page_enabled AS "pageEnabled", booking_enabled AS "bookingEnabled" FROM businesses WHERE id = $1`,
+      [id],
+    );
+    const members: AdminMemberDTO[] = await AppDataSource.query(
+      `SELECT u.id AS "userId", u.full_name AS "fullName", u.email, m.role, m.status AS "memberStatus",
+              u.status AS "userStatus", u.platform_role AS "platformRole", u.firebase_uid IS NOT NULL AS "hasSignedIn",
+              u.last_seen_at AS "lastSeenAt", m.created_at AS "addedAt"
+         FROM business_members m JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+        WHERE m.business_id = $1 AND m.deleted_at IS NULL
+        ORDER BY (m.role = 'owner') DESC, m.created_at`,
+      [id],
+    );
+    const [owner] = await AppDataSource.query(
+      `SELECT u.onboarding FROM business_members m JOIN users u ON u.id = m.user_id
+        WHERE m.business_id = $1 AND m.role = 'owner' AND m.deleted_at IS NULL LIMIT 1`,
+      [id],
+    );
+    const [c] = await AppDataSource.query(
+      `SELECT
+         (SELECT COUNT(*) FROM branches WHERE business_id = $1 AND deleted_at IS NULL) AS branches,
+         (SELECT COUNT(*) FROM customers WHERE business_id = $1 AND deleted_at IS NULL) AS customers,
+         (SELECT COUNT(*) FROM orders WHERE business_id = $1 AND deleted_at IS NULL
+             AND status NOT IN ('delivered', 'cancelled')) AS orders_open,
+         (SELECT COUNT(*) FROM orders WHERE business_id = $1 AND deleted_at IS NULL
+             AND status NOT IN ('delivered', 'cancelled', 'ready') AND due_date < CURRENT_DATE) AS orders_overdue,
+         (SELECT COUNT(*) FROM orders WHERE business_id = $1 AND deleted_at IS NULL AND status = 'delivered') AS orders_delivered,
+         (SELECT COUNT(*) FROM orders WHERE business_id = $1 AND deleted_at IS NULL AND status = 'cancelled') AS orders_cancelled,
+         (SELECT COUNT(*) FROM payments WHERE business_id = $1) AS payments,
+         (SELECT COUNT(*) FROM appointments WHERE business_id = $1 AND deleted_at IS NULL
+             AND status = 'scheduled' AND starts_at > now()) AS appointments_upcoming,
+         (SELECT COUNT(*) FROM appointment_requests WHERE business_id = $1 AND deleted_at IS NULL AND status = 'pending') AS requests_pending,
+         (SELECT COUNT(*) FROM production_tasks WHERE business_id = $1 AND deleted_at IS NULL
+             AND status IN ('todo', 'in_progress')) AS tasks_open,
+         (SELECT COUNT(*) FROM designs WHERE business_id = $1 AND deleted_at IS NULL) AS designs,
+         (SELECT COUNT(*) FROM materials WHERE business_id = $1 AND deleted_at IS NULL) AS materials,
+         (SELECT COUNT(*) FROM expenses WHERE business_id = $1 AND deleted_at IS NULL) AS expenses`,
+      [id],
+    );
+    const [mail] = await AppDataSource.query(
+      `SELECT COUNT(*) FILTER (WHERE status = 'sent') AS sent, COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+              COUNT(*) FILTER (WHERE status = 'pending') AS pending
+         FROM email_outbox WHERE business_id = $1 AND created_at > now() - interval '30 days'`,
+      [id],
+    );
+    const weeks: { weekStart: string; events: string }[] = await AppDataSource.query(
+      `SELECT to_char(w.week, 'YYYY-MM-DD') AS "weekStart", COUNT(a.id) AS events
+         FROM generate_series(date_trunc('week', now()) - interval '11 weeks', date_trunc('week', now()), interval '1 week') AS w(week)
+         LEFT JOIN audit_logs a ON a.business_id = $1 AND a.created_at >= w.week AND a.created_at < w.week + interval '1 week'
+        GROUP BY w.week ORDER BY w.week`,
+      [id],
+    );
+    const [last] = await AppDataSource.query(`SELECT MAX(created_at) AS at FROM audit_logs WHERE business_id = $1`, [
+      id,
+    ]);
+    return {
+      publicPage: {
+        slug: (page?.slug as string | null) ?? null,
+        pageEnabled: page?.pageEnabled === true,
+        bookingEnabled: page?.bookingEnabled === true,
+      },
+      members,
+      onboarding: (owner?.onboarding as OnboardingState | null) ?? null,
+      counts: {
+        branches: toInt(c.branches),
+        customers: toInt(c.customers),
+        ordersOpen: toInt(c.orders_open),
+        ordersOverdue: toInt(c.orders_overdue),
+        ordersDelivered: toInt(c.orders_delivered),
+        ordersCancelled: toInt(c.orders_cancelled),
+        payments: toInt(c.payments),
+        appointmentsUpcoming: toInt(c.appointments_upcoming),
+        requestsPending: toInt(c.requests_pending),
+        tasksOpen: toInt(c.tasks_open),
+        designs: toInt(c.designs),
+        materials: toInt(c.materials),
+        expenses: toInt(c.expenses),
+      },
+      email30d: { sent: toInt(mail.sent), failed: toInt(mail.failed), pending: toInt(mail.pending) },
+      activityByWeek: weeks.map((w) => ({ weekStart: w.weekStart, events: toInt(w.events) })),
+      lastActivityAt: (last?.at as Date | null) ?? null,
+    };
+  }
+
+  /** User 360's extra account fields and how much they have done. */
+  async userDetail(id: string): Promise<{
+    timeZone: string;
+    deletionScheduledFor: Date | null;
+    onboarding: OnboardingState | null;
+    memberStatus: "active" | "suspended" | null;
+    actionsTotal: number;
+    actionsLast30Days: number;
+  } | null> {
+    const [row] = await AppDataSource.query(
+      `SELECT u.time_zone AS "timeZone", u.deletion_scheduled_for AS "deletionScheduledFor", u.onboarding,
+              m.status AS "memberStatus",
+              (SELECT COUNT(*) FROM audit_logs a WHERE a.actor_id = u.id) AS total,
+              (SELECT COUNT(*) FROM audit_logs a WHERE a.actor_id = u.id AND a.created_at > now() - interval '30 days') AS recent
+         FROM users u
+         LEFT JOIN business_members m ON m.user_id = u.id AND m.business_id = u.business_id AND m.deleted_at IS NULL
+        WHERE u.id = $1 AND u.deleted_at IS NULL`,
+      [id],
+    );
+    if (!row) return null;
+    return {
+      timeZone: row.timeZone,
+      deletionScheduledFor: row.deletionScheduledFor ?? null,
+      onboarding: row.onboarding ?? null,
+      memberStatus: row.memberStatus ?? null,
+      actionsTotal: toInt(row.total),
+      actionsLast30Days: toInt(row.recent),
+    };
+  }
+
+  async openAlertsFor(businessId: string): Promise<number> {
+    const [row] = await AppDataSource.query(
+      `SELECT COUNT(*) AS n FROM admin_alerts WHERE business_id = $1 AND status <> 'resolved'`,
+      [businessId],
+    );
+    return toInt(row.n);
   }
 
   /** Whether the business has ever taken a payment (voided and refunded ones count: they are on receipts). */

@@ -1,5 +1,5 @@
 import type { ISODate } from "./api.types";
-import type { MemberRole, PlatformRole } from "./auth.types";
+import type { MemberRole, OnboardingState, PlatformRole } from "./auth.types";
 import type { OrderImage } from "./order.types";
 import type { PaymentMethod } from "./payment.types";
 
@@ -248,6 +248,8 @@ export interface PlatformOverview {
   businesses: { total: number; active: number; suspended: number; scheduledForDeletion: number; newLast30Days: number };
   users: { total: number; active: number; disabled: number; signedIn: number };
   activity: { ordersLast30Days: number; appointmentsLast30Days: number; activeBusinessesLast30Days: number };
+  /** Open (unresolved) alerts by severity. */
+  alerts: Record<AlertSeverity, number>;
 }
 
 /** What a platform admin can change on any business, including what its owner can't (email, currency, time zone). */
@@ -280,6 +282,9 @@ export interface AdminUser {
   /** As stored; someone named in the server's PLATFORM_ADMIN_EMAILS may show `user` (see the Admins tab). */
   platformRole: PlatformRole;
   hasSignedIn: boolean;
+  /** Their last signed-in request, to the hour. */
+  lastSeenAt: ISODate | null;
+  businessId: string;
   businessName: string;
   role: MemberRole | null;
   createdAt: ISODate;
@@ -322,9 +327,180 @@ export interface AuditEntry {
 export interface AuditFilters {
   cursor?: string;
   businessId?: string;
+  actorId?: string;
+  entityType?: string;
+  entityId?: string;
   actorKind?: AuditActorKind;
   /** An exact action ("payment.voided") or a domain ("payment."). */
   action?: string;
   from?: string;
   to?: string;
 }
+
+export type AlertSeverity = "critical" | "high" | "medium" | "low";
+export type AlertStatus = "open" | "acknowledged" | "resolved";
+
+/** Something that needs a platform admin's attention (server: `AdminAlertDTO`). */
+export interface AdminAlert {
+  id: string;
+  createdAt: ISODate;
+  type: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  title: string;
+  detail: string | null;
+  business: { id: string; name: string } | null;
+  data: Record<string, unknown>;
+  occurrences: number;
+  lastSeenAt: ISODate;
+  acknowledged: { by: string | null; at: ISODate } | null;
+  /** `by` null = it cleared by itself. */
+  resolved: { by: string | null; at: ISODate; note: string | null } | null;
+}
+
+export interface AlertFilters {
+  page?: number;
+  status?: AlertStatus | "active";
+  severity?: AlertSeverity;
+}
+
+/** One item of the platform activity feed (server: `ActivityItemDTO`). */
+export interface ActivityItem {
+  id: string;
+  createdAt: ISODate;
+  action: string;
+  actorKind: AuditActorKind;
+  actorName: string | null;
+  business: { id: string; name: string } | null;
+  entityType: string;
+  entityId: string | null;
+}
+
+export interface AdminMember {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: MemberRole;
+  memberStatus: "active" | "suspended";
+  userStatus: "active" | "disabled";
+  platformRole: PlatformRole;
+  hasSignedIn: boolean;
+  lastSeenAt: ISODate | null;
+  addedAt: ISODate;
+}
+
+/** Business 360 (server: `AdminBusinessDetailDTO`). Counts only, never the business's records. */
+export interface AdminBusinessDetail {
+  business: AdminBusiness;
+  publicPage: { slug: string | null; pageEnabled: boolean; bookingEnabled: boolean };
+  members: AdminMember[];
+  onboarding: OnboardingState | null;
+  counts: {
+    branches: number;
+    customers: number;
+    ordersOpen: number;
+    ordersOverdue: number;
+    ordersDelivered: number;
+    ordersCancelled: number;
+    payments: number;
+    appointmentsUpcoming: number;
+    requestsPending: number;
+    tasksOpen: number;
+    designs: number;
+    materials: number;
+    expenses: number;
+  };
+  email30d: { sent: number; failed: number; pending: number };
+  activityByWeek: { weekStart: string; events: number }[];
+  lastActivityAt: ISODate | null;
+  openAlerts: number;
+}
+
+/** User 360 (server: `AdminUserDetailDTO`). */
+export interface AdminUserDetail {
+  user: AdminUser & {
+    timeZone: string;
+    deletionScheduledFor: ISODate | null;
+    onboarding: OnboardingState | null;
+    memberStatus: "active" | "suspended" | null;
+    adminBySetting: boolean;
+  };
+  actions: { total: number; last30Days: number };
+}
+
+export interface JobHealth {
+  name: string;
+  lastStartedAt: ISODate | null;
+  lastFinishedAt: ISODate | null;
+  lastOutcome: "succeeded" | "failed" | null;
+  lastSucceededAt: ISODate | null;
+  lastFailedAt: ISODate | null;
+  consecutiveFailures: number;
+  lastDurationMs: number | null;
+  lastResult: unknown;
+  /** Only for admins with `admin.technical`. */
+  lastError: string | null;
+}
+
+export interface DeliveryHealth {
+  enabled: boolean;
+  last24h: { sent: number; failed: number; cancelled: number };
+  pending: number;
+  oldestPendingAt: ISODate | null;
+}
+
+/** GET /admin/system-health (server: `SystemHealthDTO`). */
+export interface SystemHealth {
+  checkedAt: ISODate;
+  api: { uptimeSeconds: number; nodeVersion: string; environment: string };
+  database: { ok: boolean; pendingMigrations: boolean | null };
+  jobs: { inProcess: boolean; list: JobHealth[] };
+  email: DeliveryHealth & {
+    recentFailures: { id: string; kind: string; attempts: number; lastError: string | null; updatedAt: ISODate }[];
+  };
+  push: DeliveryHealth;
+  errorMonitoring: { enabled: boolean };
+  security: {
+    last24h: Record<string, number>;
+    /** Only for admins with `admin.technical`. */
+    topSources: { kind: string; ip: string; count: number; lastAt: ISODate }[];
+  };
+}
+
+/** One UTC day of platform figures (server: `DailyStatDTO`). */
+export interface DailyStat {
+  day: string;
+  businessesTotal: number;
+  businessesNew: number;
+  businessesActive7d: number;
+  peopleNew: number;
+  peopleActive7d: number;
+  ordersNew: number;
+  appointmentsNew: number;
+  paymentsNew: number;
+  emailsSent: number;
+  emailsFailed: number;
+}
+
+export interface Adoption {
+  days: number;
+  activeBusinesses: number;
+  features: { key: string; label: string; businesses: number }[];
+}
+
+export interface Cohort {
+  weekStart: string;
+  size: number;
+  activated: number;
+  retention: { week: number; eligible: number; retained: number }[];
+}
+
+export interface AdminNote {
+  id: string;
+  createdAt: ISODate;
+  body: string;
+  author: { id: string; fullName: string } | null;
+}
+
+export type AdminReportKind =
+  "businesses" | "people" | "admin-actions" | "alerts" | "daily-stats" | "adoption" | "cohorts";

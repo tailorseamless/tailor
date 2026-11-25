@@ -1,4 +1,7 @@
+import { VIEW_NOTE_EVERY_MS } from "../../../config/constants";
 import { env } from "../../../config/env";
+import { hasPermission } from "../../../config/permissions";
+import { logger } from "../../../infrastructure/logger/logger";
 import { AppError } from "../../../shared/errors/AppError";
 import type { Paginated } from "../../../shared/pagination/paginate";
 import { runInTransaction } from "../../../shared/repositories/transaction";
@@ -8,9 +11,21 @@ import type { AuditPage } from "../../activity/repositories/audit.repository";
 import { ActivityService } from "../../activity/services/activity.service";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import { UserService } from "../../users/services/user.service";
+import type { SystemHealthDTO } from "../../system/dto/system.dto";
+import { SystemHealthService } from "../../system/services/systemHealth.service";
 import { auditedChanges, canChangeCurrency } from "../domain/adminRules";
-import type { AdminBusinessDTO, AdminUserDTO, PlatformAdminDTO, PlatformOverviewDTO } from "../dto/admin.dto";
+import type {
+  AdminBusinessDetailDTO,
+  AdminBusinessDTO,
+  AdminUserDetailDTO,
+  AdminUserDTO,
+  PlatformAdminDTO,
+  PlatformOverviewDTO,
+} from "../dto/admin.dto";
+import type { AdminAlertDTO, ListAlertsParams } from "../dto/alert.dto";
 import { AdminRepository } from "../repositories/admin.repository";
+import { AlertRepository } from "../repositories/alert.repository";
+import { AlertService } from "./alert.service";
 import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } from "../validators/admin.schema";
 
 /**
@@ -21,15 +36,91 @@ import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } 
 export class AdminService {
   static Instance = new AdminService();
 
+  /** When each admin last had a view of a business or person recorded (see `noteView`). */
+  private readonly viewsNoted = new Map<string, number>();
+
   private constructor(
     private readonly admin = AdminRepository.Instance,
     private readonly activity = ActivityService.Instance,
     private readonly userService = UserService.Instance,
     private readonly businessRows = BusinessRepository.Instance,
+    private readonly alerts = AlertRepository.Instance,
+    private readonly alertService = AlertService.Instance,
+    private readonly health = SystemHealthService.Instance,
   ) {}
 
-  overview(): Promise<PlatformOverviewDTO> {
-    return this.admin.overview();
+  async overview(): Promise<PlatformOverviewDTO> {
+    const [counts, alerts] = await Promise.all([this.admin.overview(), this.alerts.openCounts()]);
+    return { ...counts, alerts };
+  }
+
+  /** Business 360. Opening it is recorded in that business's audit log (once an hour per admin). */
+  async businessDetail(actor: Actor, id: string): Promise<AdminBusinessDetailDTO> {
+    const business = await this.business(id);
+    const [detail, openAlerts] = await Promise.all([this.admin.businessDetail(id), this.admin.openAlertsFor(id)]);
+    await this.noteView(actor, "admin.viewed_business", "business", id, id);
+    return { business, ...detail, openAlerts };
+  }
+
+  /** User 360. Opening it is recorded in their business's audit log (once an hour per admin). */
+  async userDetail(actor: Actor, id: string): Promise<AdminUserDetailDTO> {
+    const [user, extra] = await Promise.all([this.admin.findUser(id), this.admin.userDetail(id)]);
+    if (!user || !extra) throw AppError.notFound("Person not found");
+    await this.noteView(actor, "admin.viewed_user", "user", id, user.businessId);
+    return {
+      user: {
+        ...user,
+        timeZone: extra.timeZone,
+        deletionScheduledFor: extra.deletionScheduledFor,
+        onboarding: extra.onboarding,
+        memberStatus: extra.memberStatus,
+        adminBySetting: env.platformAdmins.has(user.email),
+      },
+      actions: { total: extra.actionsTotal, last30Days: extra.actionsLast30Days },
+    };
+  }
+
+  /** What is happening across the platform: joins, team changes, departures, admin actions. */
+  feed(params: Omit<ListAuditParams, "actions" | "actorId" | "entityType" | "entityId">) {
+    return this.activity.feed(params);
+  }
+
+  /** Is the application healthy? Error text only for `admin.technical`. */
+  systemHealth(actor: Actor): Promise<SystemHealthDTO> {
+    return this.health.check({ technical: hasPermission(actor.roles, "admin.technical") });
+  }
+
+  alertsList(params: ListAlertsParams): Promise<Paginated<AdminAlertDTO>> {
+    return this.alertService.list(params);
+  }
+
+  acknowledgeAlert(actor: Actor, id: string): Promise<AdminAlertDTO> {
+    return this.alertService.acknowledge(actor, id);
+  }
+
+  resolveAlert(actor: Actor, id: string, note: string | null): Promise<AdminAlertDTO> {
+    return this.alertService.resolve(actor, id, note);
+  }
+
+  /**
+   * Admins looking at a business or a person is itself on the record (who looked at whom). Repeats
+   * within the hour by the same admin are not written again. A failure to record never blocks the view.
+   */
+  private async noteView(
+    actor: Actor,
+    action: "admin.viewed_business" | "admin.viewed_user",
+    entityType: "business" | "user",
+    entityId: string,
+    businessId: string,
+  ): Promise<void> {
+    const key = `${actor.id}:${action}:${entityId}`;
+    const now = Date.now();
+    const last = this.viewsNoted.get(key);
+    if (last !== undefined && now - last < VIEW_NOTE_EVERY_MS) return;
+    this.viewsNoted.set(key, now);
+    await this.activity
+      .audit({ businessId, actorId: actor.id, action, entityType, entityId })
+      .catch((err: unknown) => logger.warn({ err, action, entityId }, "admin view not recorded"));
   }
 
   businesses(query: ListBusinessesQuery): Promise<Paginated<AdminBusinessDTO>> {

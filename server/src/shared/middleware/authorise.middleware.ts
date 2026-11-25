@@ -1,5 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { PERMISSIONS, type AppRole, type Permission } from "../../config/permissions";
+import { SecurityMonitor } from "../../modules/system/services/securityMonitor.service";
 import { AppError } from "../errors/AppError";
 
 export type PermissionGuard = RequestHandler & { permission: Permission };
@@ -13,7 +14,10 @@ export function authorise(permission: Permission): PermissionGuard {
   const allowed: readonly AppRole[] = PERMISSIONS[permission];
   const guard = (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) throw AppError.unauthorised();
-    if (!req.user.roles.some((role) => allowed.includes(role))) throw AppError.forbidden();
+    if (!req.user.roles.some((role) => allowed.includes(role))) {
+      SecurityMonitor.Instance.note("forbidden", req.user.id);
+      throw AppError.forbidden();
+    }
     next();
   };
   // Read by the authorisation-matrix test to map every route to its permission.

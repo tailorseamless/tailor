@@ -42,6 +42,7 @@ export const AUDIT_ACTIONS = [
   "expense.created",
   "expense.updated",
   "expense.deleted",
+  "account.linked",
   "account.deletion_requested",
   "account.deletion_cancelled",
   "account.deleted",
@@ -55,6 +56,12 @@ export const AUDIT_ACTIONS = [
   "admin.user_enabled",
   "admin.role_granted",
   "admin.role_revoked",
+  "admin.viewed_business",
+  "admin.viewed_user",
+  "admin.alert_acknowledged",
+  "admin.alert_resolved",
+  "admin.note_added",
+  "admin.exported",
   "design.created",
   "design.updated",
   "design.deleted",
@@ -101,8 +108,25 @@ export interface AuditEntryDTO {
   userAgent: string | null;
 }
 
+/**
+ * One item of the platform activity feed ("what is happening?"): the audit entry without its
+ * request details or payload, so anyone with `admin.read` may see it.
+ */
+export interface ActivityItemDTO {
+  id: string;
+  createdAt: Date;
+  action: string;
+  actorKind: ActorKind;
+  actorName: string | null;
+  business: { id: string; name: string } | null;
+  entityType: string;
+  entityId: string | null;
+}
+
 export interface ListAuditParams {
   limit: number;
+  /** Only these actions (the activity feed's allow-list). */
+  actions?: readonly string[];
   /** Opaque: the `nextCursor` of the previous page. */
   cursor?: string;
   businessId?: string;

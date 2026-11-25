@@ -1,7 +1,12 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ActivityFeed } from "../../components/admin/ActivityFeed";
 import { AdminsPanel } from "../../components/admin/AdminsPanel";
+import { AlertsPanel } from "../../components/admin/AlertsPanel";
 import { AuditLogPanel } from "../../components/admin/AuditLogPanel";
+import { GrowthPanel } from "../../components/admin/GrowthPanel";
+import { SystemHealthPanel } from "../../components/admin/SystemHealthPanel";
 import { BusinessEditModal } from "../../components/admin/BusinessEditModal";
 import { Button } from "../../components/shared/Button";
 import { Badge, Card, FilterChips, PageHeader, Pagination, StatCard } from "../../components/shared/Display";
@@ -19,7 +24,9 @@ import { ROLE } from "../../utils/labels";
 const STOP_REASON_MIN = 10;
 const PREFIX = "admin";
 
-type View = "directory" | "audit" | "admins";
+const VIEWS = ["directory", "alerts", "activity", "growth", "audit", "health", "admins"] as const;
+type View = (typeof VIEWS)[number];
+const isView = (value: string | null): value is View => VIEWS.includes(value as View);
 
 type Pending =
   | { kind: "business"; item: AdminBusiness; status: AdminBusiness["status"] }
@@ -34,7 +41,11 @@ export default function AdminPage() {
   const manage = can("admin.manage");
   const audit = can("admin.audit");
   const overview = useAdminOverview();
-  const [view, setView] = useState<View>("directory");
+  // The open section lives in the address (?view=alerts), so links and the back button land on it.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("view");
+  const view: View = isView(requested) && (requested !== "audit" || audit) ? requested : "directory";
+  const setView = (next: View) => setParams(next === "directory" ? {} : { view: next }, { replace: true });
   const [auditBusiness, setAuditBusiness] = useState<{ id: string; name: string } | null>(null);
   const [tab, setTab] = useState<"businesses" | "people">("businesses");
   const [term, setTerm] = useState("");
@@ -61,7 +72,11 @@ export default function AdminPage() {
 
   const views = [
     { id: "directory", label: "Businesses and people" },
+    { id: "alerts", label: "Alerts" },
+    { id: "activity", label: "Activity" },
+    { id: "growth", label: "Growth" },
     ...(audit ? [{ id: "audit", label: "Audit log" }] : []),
+    { id: "health", label: "System health" },
     { id: "admins", label: "Admins" },
   ];
 
@@ -70,7 +85,14 @@ export default function AdminPage() {
       <PageHeader title="Platform" subtitle="Every business and person on Tailor Seamless." />
       <QueryState query={overview}>
         {(o) => (
-          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <StatCard
+              label="Needs attention"
+              value={o.alerts.critical + o.alerts.high + o.alerts.medium + o.alerts.low}
+              tone={o.alerts.critical ? "danger" : o.alerts.high ? "warning" : "default"}
+              hint={`${o.alerts.critical} critical · ${o.alerts.high} high`}
+              to="/admin?view=alerts"
+            />
             <StatCard
               label="Businesses"
               value={o.businesses.total}
@@ -145,7 +167,13 @@ export default function AdminPage() {
                       {data.map((b) => (
                         <li key={b.id} className="flex flex-wrap items-center gap-3 px-4 py-3" data-cy="admin-business">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-fg">{b.name}</p>
+                            <Link
+                              to={`/admin/businesses/${b.id}`}
+                              className="text-sm font-medium text-fg hover:underline"
+                              data-cy="admin-business-open"
+                            >
+                              {b.name}
+                            </Link>
                             <p className="text-xs text-fg-muted">
                               {b.owner ? `${b.owner.fullName} · ${b.owner.email}` : "No owner"} · since{" "}
                               {formatDate(b.createdAt, timeZone)}
@@ -215,7 +243,9 @@ export default function AdminPage() {
                         <li key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3" data-cy="admin-user">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-fg">
-                              {u.fullName}
+                              <Link to={`/admin/users/${u.id}`} className="hover:underline" data-cy="admin-user-open">
+                                {u.fullName}
+                              </Link>
                               {u.platformRole !== "user" && (
                                 <span className="font-normal text-fg-subtle">
                                   {" "}
@@ -226,6 +256,7 @@ export default function AdminPage() {
                             <p className="text-xs text-fg-muted">
                               {u.email} · {u.businessName}
                               {u.role && ` · ${ROLE[u.role].label}`}
+                              {u.lastSeenAt && ` · seen ${relative(u.lastSeenAt)}`}
                             </p>
                           </div>
                           {!u.hasSignedIn && <Badge tone="warning">Never signed in</Badge>}
@@ -267,6 +298,26 @@ export default function AdminPage() {
           {view === "audit" && <AuditLogPanel business={auditBusiness} onBusiness={setAuditBusiness} />}
         </TabPanel>
       )}
+
+      <TabPanel idPrefix={PREFIX} id="alerts" active={view === "alerts"}>
+        {view === "alerts" && <AlertsPanel />}
+      </TabPanel>
+
+      <TabPanel idPrefix={PREFIX} id="activity" active={view === "activity"}>
+        {view === "activity" && (
+          <Card>
+            <ActivityFeed />
+          </Card>
+        )}
+      </TabPanel>
+
+      <TabPanel idPrefix={PREFIX} id="growth" active={view === "growth"}>
+        {view === "growth" && <GrowthPanel />}
+      </TabPanel>
+
+      <TabPanel idPrefix={PREFIX} id="health" active={view === "health"}>
+        {view === "health" && <SystemHealthPanel />}
+      </TabPanel>
 
       <TabPanel idPrefix={PREFIX} id="admins" active={view === "admins"}>
         {view === "admins" && <AdminsPanel />}

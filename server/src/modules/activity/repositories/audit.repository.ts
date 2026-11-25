@@ -71,6 +71,7 @@ export class AuditRepository extends BaseRepository<AuditLog> {
     if (params.actorKind) add((n) => `a.actor_kind = $${n}`, params.actorKind);
     if (params.action?.endsWith(".")) add((n) => `left(a.action, length($${n})) = $${n}`, params.action);
     else if (params.action) add((n) => `a.action = $${n}`, params.action);
+    if (params.actions) add((n) => `a.action = ANY($${n}::text[])`, params.actions);
     if (params.entityType) add((n) => `a.entity_type = $${n}`, params.entityType);
     if (params.entityId) add((n) => `a.entity_id = $${n}`, params.entityId);
     if (params.from) add((n) => `a.created_at >= $${n}`, params.from);

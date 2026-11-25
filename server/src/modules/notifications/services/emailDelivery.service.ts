@@ -9,7 +9,9 @@ import { balanceDue } from "../../payments/domain/paymentRules";
 import { PaymentRepository } from "../../payments/repositories/payment.repository";
 import { PaymentService } from "../../payments/services/payment.service";
 import { canReceiveEmail, isTooOld, nextRetry } from "../domain/emailRules";
+import { AlertRepository } from "../../admin/repositories/alert.repository";
 import {
+  adminAlertEmail,
   appointmentReminderEmail,
   invitationEmail,
   notificationEmail,
@@ -86,22 +88,22 @@ export class EmailDeliveryService {
       case "appointment.request_received":
         return {
           ...to,
-          ...(await this.withReplyTo(row.businessId)),
+          ...(await this.withReplyTo(this.businessOf(row))),
           ...requestReceivedEmail(row.payload as unknown as EmailPayloads["appointment.request_received"]),
         };
 
       case "appointment.request_decided":
         return {
           ...to,
-          ...(await this.withReplyTo(row.businessId)),
+          ...(await this.withReplyTo(this.businessOf(row))),
           ...requestDecidedEmail(row.payload as unknown as EmailPayloads["appointment.request_decided"]),
         };
 
       case "appointment.reminder": {
         const { appointmentId } = row.payload as unknown as EmailPayloads["appointment.reminder"];
         const [appointment, business] = await Promise.all([
-          this.appointments.findInBusiness(appointmentId, row.businessId),
-          this.businesses.findBusiness(row.businessId),
+          this.appointments.findInBusiness(appointmentId, this.businessOf(row)),
+          this.businesses.findBusiness(this.businessOf(row)),
         ]);
         if (!appointment || !business) throw new Skip("Appointment no longer exists");
         if (appointment.status !== "scheduled") throw new Skip(`Appointment is ${appointment.status}`);
@@ -127,7 +129,7 @@ export class EmailDeliveryService {
         const notification = await this.notificationRows.findById(notificationId);
         if (!notification) throw new Skip("Notification no longer exists");
         if (notification.readAt) throw new Skip("Already read in the app");
-        const business = await this.businesses.findBusiness(row.businessId);
+        const business = await this.businesses.findBusiness(this.businessOf(row));
         return {
           ...to,
           ...notificationEmail({
@@ -142,8 +144,8 @@ export class EmailDeliveryService {
       case "order.status": {
         const { orderId, status } = row.payload as unknown as EmailPayloads["order.status"];
         const [order, business] = await Promise.all([
-          this.orders.findInBusiness(orderId, row.businessId),
-          this.businesses.findBusiness(row.businessId),
+          this.orders.findInBusiness(orderId, this.businessOf(row)),
+          this.businesses.findBusiness(this.businessOf(row)),
         ]);
         if (!order || !business) throw new Skip("Order no longer exists");
         // Moved on before we sent it (e.g. marked ready by mistake): say nothing out of date.
@@ -172,9 +174,25 @@ export class EmailDeliveryService {
         };
       }
 
+      case "admin.alert": {
+        const { alertId } = row.payload as unknown as EmailPayloads["admin.alert"];
+        const alert = await AlertRepository.Instance.find(alertId);
+        if (!alert) throw new Skip("Alert no longer exists");
+        if (alert.status === "resolved") throw new Skip("Alert already resolved");
+        return {
+          ...to,
+          ...adminAlertEmail({
+            title: alert.title,
+            detail: alert.detail,
+            severity: alert.severity,
+            businessName: alert.business?.name ?? null,
+          }),
+        };
+      }
+
       case "receipt": {
         const { paymentId } = row.payload as unknown as EmailPayloads["receipt"];
-        const receipt = await this.payments.receiptFor(row.businessId, paymentId).catch(() => null);
+        const receipt = await this.payments.receiptFor(this.businessOf(row), paymentId).catch(() => null);
         if (!receipt) throw new Skip("Receipt no longer exists");
         if (receipt.voided) throw new Skip("Payment was voided");
         return {
@@ -191,6 +209,12 @@ export class EmailDeliveryService {
         };
       }
     }
+  }
+
+  /** The business a business email belongs to; a platform row of a business kind is skipped, not sent. */
+  private businessOf(row: OutboxRow): string {
+    if (!row.businessId) throw new Skip("Business email without a business");
+    return row.businessId;
   }
 
   private async withReplyTo(businessId: string): Promise<{ replyTo: string | null }> {

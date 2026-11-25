@@ -1,5 +1,8 @@
-import { JOB_LOCK_IDS, JOBS } from "../config/constants";
+import { JOB_LOCK_IDS, JOBS, SECURITY } from "../config/constants";
 import { AccountDeletionService } from "../modules/accounts/services/accountDeletion.service";
+import { AlertService } from "../modules/admin/services/alert.service";
+import { InsightsService } from "../modules/admin/services/insights.service";
+import { SecurityCounterRepository } from "../modules/system/repositories/securityCounter.repository";
 import { AppointmentService } from "../modules/appointments/services/appointment.service";
 import { EmailDeliveryService } from "../modules/notifications/services/emailDelivery.service";
 import { PushDeliveryService } from "../modules/notifications/services/pushDelivery.service";
@@ -39,7 +42,22 @@ export const pruneDevices = () =>
     removed: await PushDeliveryService.Instance.pruneStaleDevices(),
   }));
 
+/** The platform admin's alert rules (what needs attention). Runs after the other jobs, so it sees how they went. */
+export const evaluateAdminAlerts = () =>
+  withJobLock("evaluateAdminAlerts", JOB_LOCK_IDS.evaluateAdminAlerts, () => AlertService.Instance.evaluate());
+
+/** The platform's daily figures (trends), recomputed for the last few days. */
+export const rollupPlatformStats = () =>
+  withJobLock("rollupPlatformStats", JOB_LOCK_IDS.rollupPlatformStats, () => InsightsService.Instance.rollup());
+
+/** Security counters older than their retention. */
+export const purgeMonitoringData = () =>
+  withJobLock("purgeMonitoringData", JOB_LOCK_IDS.purgeMonitoringData, async () => ({
+    securityWindows: await SecurityCounterRepository.Instance.purgeOlderThan(SECURITY.retentionDays),
+  }));
+
 let lastPurgeAt = 0;
+let lastAlertsAt = 0;
 
 /** One pass over the jobs. `all` forces the occasional ones too. */
 export async function runTick(options: { all?: boolean } = {}): Promise<Record<string, unknown>> {
@@ -53,6 +71,12 @@ export async function runTick(options: { all?: boolean } = {}): Promise<Record<s
     results.purgeIdempotencyKeys = await purgeIdempotencyKeys();
     results.pruneDevices = await pruneDevices();
     results.processAccountDeletions = await processAccountDeletions();
+    results.rollupPlatformStats = await rollupPlatformStats();
+    results.purgeMonitoringData = await purgeMonitoringData();
+  }
+  if (options.all || Date.now() - lastAlertsAt >= JOBS.alertsEveryMs) {
+    lastAlertsAt = Date.now();
+    results.evaluateAdminAlerts = await evaluateAdminAlerts();
   }
   return results;
 }

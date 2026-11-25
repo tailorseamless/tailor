@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useAdminAuditLogs } from "../../hooks/useOperations";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -103,14 +104,18 @@ function AuditRow({ entry, timeZone, onBusiness }: { entry: AuditEntry; timeZone
  * back page by page (the server pages by position, so there are no page numbers).
  */
 export function AuditLogPanel({
-  business,
+  business = null,
   onBusiness,
+  fixed,
 }: {
-  /** Show only this business's entries. */
-  business: { id: string; name: string } | null;
-  onBusiness: (business: { id: string; name: string } | null) => void;
+  /** Show only this business's entries (removable when `onBusiness` is given). */
+  business?: { id: string; name: string } | null;
+  onBusiness?: (business: { id: string; name: string } | null) => void;
+  /** Filters the page sets and the admin can't change: one person's actions, one record's history. */
+  fixed?: Pick<AuditFilters, "actorId" | "entityType" | "entityId" | "businessId">;
 }) {
   const { timeZone } = useWorkspace();
+  const navigate = useNavigate();
   const [actorKind, setActorKind] = useState<AuditActorKind | "all">("all");
   const [actionTerm, setActionTerm] = useState("");
   const [from, setFrom] = useState("");
@@ -127,6 +132,7 @@ export function AuditLogPanel({
     action: action && actionValid ? action : undefined,
     from: from || undefined,
     to: to || undefined,
+    ...fixed,
   };
   const entries = useAdminAuditLogs(filters);
   const reset = () => setCursors([]);
@@ -196,7 +202,7 @@ export function AuditLogPanel({
             )}
           </Field>
         </div>
-        {business && (
+        {business && onBusiness && (
           <div>
             <Badge tone="neutral">
               <span className="inline-flex items-center gap-1">
@@ -228,8 +234,11 @@ export function AuditLogPanel({
                       entry={entry}
                       timeZone={timeZone}
                       onBusiness={() => {
-                        if (entry.business) onBusiness(entry.business);
-                        reset();
+                        if (!entry.business) return;
+                        if (onBusiness) {
+                          onBusiness(entry.business);
+                          reset();
+                        } else navigate(`/admin/businesses/${entry.business.id}`);
                       }}
                     />
                   ))}
