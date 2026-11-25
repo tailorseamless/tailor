@@ -62,6 +62,8 @@ export const AUDIT_ACTIONS = [
   "admin.alert_resolved",
   "admin.note_added",
   "admin.exported",
+  "admin.announcement_created",
+  "admin.announcement_cancelled",
   "design.created",
   "design.updated",
   "design.deleted",

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ActivityFeed } from "../../components/admin/ActivityFeed";
 import { AdminsPanel } from "../../components/admin/AdminsPanel";
 import { AlertsPanel } from "../../components/admin/AlertsPanel";
+import { AnnouncementsPanel } from "../../components/admin/AnnouncementsPanel";
 import { AuditLogPanel } from "../../components/admin/AuditLogPanel";
 import { GrowthPanel } from "../../components/admin/GrowthPanel";
 import { SystemHealthPanel } from "../../components/admin/SystemHealthPanel";
@@ -24,7 +25,7 @@ import { ROLE } from "../../utils/labels";
 const STOP_REASON_MIN = 10;
 const PREFIX = "admin";
 
-const VIEWS = ["directory", "alerts", "activity", "growth", "audit", "health", "admins"] as const;
+const VIEWS = ["directory", "alerts", "activity", "growth", "announcements", "audit", "health", "admins"] as const;
 type View = (typeof VIEWS)[number];
 const isView = (value: string | null): value is View => VIEWS.includes(value as View);
 
@@ -75,6 +76,7 @@ export default function AdminPage() {
     { id: "alerts", label: "Alerts" },
     { id: "activity", label: "Activity" },
     { id: "growth", label: "Growth" },
+    { id: "announcements", label: "Announcements" },
     ...(audit ? [{ id: "audit", label: "Audit log" }] : []),
     { id: "health", label: "System health" },
     { id: "admins", label: "Admins" },
@@ -313,6 +315,10 @@ export default function AdminPage() {
 
       <TabPanel idPrefix={PREFIX} id="growth" active={view === "growth"}>
         {view === "growth" && <GrowthPanel />}
+      </TabPanel>
+
+      <TabPanel idPrefix={PREFIX} id="announcements" active={view === "announcements"}>
+        {view === "announcements" && <AnnouncementsPanel />}
       </TabPanel>
 
       <TabPanel idPrefix={PREFIX} id="health" active={view === "health"}>

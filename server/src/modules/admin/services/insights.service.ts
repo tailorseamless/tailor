@@ -5,7 +5,16 @@ import { AppError } from "../../../shared/errors/AppError";
 import { runInTransaction } from "../../../shared/repositories/transaction";
 import type { Actor } from "../../../shared/services/access.service";
 import { ActivityService } from "../../activity/services/activity.service";
-import type { AdminNoteDTO, AdminReportKind, AdoptionDTO, CohortDTO, DailyStatDTO } from "../dto/insights.dto";
+import { churnRisk } from "../domain/riskRules";
+import type {
+  AdminNoteDTO,
+  AdminReportKind,
+  AdoptionDTO,
+  ChurnRiskDTO,
+  CohortDTO,
+  DailyStatDTO,
+} from "../dto/insights.dto";
+import { RiskRepository, type ChurnRow } from "../repositories/risk.repository";
 import { AdminRepository } from "../repositories/admin.repository";
 import { AdminNoteRepository } from "../repositories/adminNote.repository";
 import { AlertRepository } from "../repositories/alert.repository";
@@ -15,6 +24,8 @@ const DAY_MS = 86_400_000;
 /** On the first run, the rollup reaches back this far; after that it redoes the last few days. */
 const BACKFILL_DAYS = 90;
 const REDO_DAYS = 2;
+/** Businesses younger than this are still setting up; the churn list leaves them out. */
+const CHURN_MIN_AGE_DAYS = 14;
 
 const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
@@ -36,6 +47,7 @@ export class InsightsService {
     private readonly admin = AdminRepository.Instance,
     private readonly alerts = AlertRepository.Instance,
     private readonly activity = ActivityService.Instance,
+    private readonly risk = RiskRepository.Instance,
   ) {}
 
   /** The `rollupPlatformStats` job: the last few days again (late data), or 90 days on the first run. */
@@ -58,6 +70,37 @@ export class InsightsService {
 
   cohorts(weeks: number): Promise<CohortDTO[]> {
     return this.insights.cohorts(weeks);
+  }
+
+  /**
+   * Businesses most at risk of leaving, highest score first. Only those old enough to judge
+   * (CHURN_MIN_AGE_DAYS) and scoring at least `minScore`.
+   */
+  async churnRisk(minScore: number, limit: number): Promise<ChurnRiskDTO[]> {
+    const rows = await this.risk.churnInputs({ minAgeDays: CHURN_MIN_AGE_DAYS });
+    return rows
+      .map((row) => this.toChurn(row))
+      .filter((item) => item.score >= minScore)
+      .sort((a, b) => b.score - a.score || (b.daysSinceActivity ?? 9999) - (a.daysSinceActivity ?? 9999))
+      .slice(0, limit);
+  }
+
+  /** One business's churn risk, whatever its age (for Business 360). */
+  async churnRiskFor(businessId: string): Promise<ChurnRiskDTO | null> {
+    const [row] = await this.risk.churnInputs({ minAgeDays: 0, businessId });
+    return row ? this.toChurn(row) : null;
+  }
+
+  private toChurn(row: ChurnRow): ChurnRiskDTO {
+    const risk = churnRisk(row);
+    return {
+      businessId: row.businessId,
+      name: row.name,
+      ownerEmail: row.ownerEmail,
+      createdAt: row.createdAt,
+      daysSinceActivity: row.daysSinceActivity,
+      ...risk,
+    };
   }
 
   async listNotes(businessId: string): Promise<AdminNoteDTO[]> {
@@ -125,6 +168,24 @@ export class InsightsService {
   private async sheets(kind: AdminReportKind, days: number): Promise<ExportSheet[]> {
     const max = EXPORT.maxRows;
     switch (kind) {
+      case "churn-risk": {
+        const list = await this.churnRisk(0, max);
+        return [
+          {
+            name: "Churn risk",
+            columns: [
+              { key: "name", header: "Business", type: "text" },
+              { key: "ownerEmail", header: "Owner email", type: "text" },
+              { key: "score", header: "Risk score (0-100)", type: "number" },
+              { key: "level", header: "Level", type: "text" },
+              { key: "daysSinceActivity", header: "Days since last activity", type: "number" },
+              { key: "reasons", header: "Why", type: "text" },
+              { key: "createdAt", header: "Joined", type: "datetime" },
+            ],
+            rows: list.map((c) => ({ ...c, reasons: c.reasons.join("; ") })),
+          },
+        ];
+      }
       case "businesses": {
         const { data } = await this.admin.listBusinesses({ page: 1, limit: max });
         return [

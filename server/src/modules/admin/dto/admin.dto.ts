@@ -96,6 +96,8 @@ export interface AdminBusinessDetailDTO {
   activityByWeek: { weekStart: string; events: number }[];
   lastActivityAt: Date | null;
   openAlerts: number;
+  /** How likely it is to stop using the platform, and why. */
+  churnRisk: { score: number; level: "high" | "medium" | "low"; reasons: string[] } | null;
 }
 
 /** User 360: one person's account. What they did and what was done to them come from the audit log. */

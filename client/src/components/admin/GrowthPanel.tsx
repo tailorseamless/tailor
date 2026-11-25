@@ -1,10 +1,17 @@
 import { Download } from "lucide-react";
 import { useState } from "react";
-import { useAdminAdoption, useAdminCohorts, useAdminDailyStats, useAdminExport } from "../../hooks/useOperations";
+import { Link } from "react-router-dom";
+import {
+  useAdminAdoption,
+  useAdminChurnRisk,
+  useAdminCohorts,
+  useAdminDailyStats,
+  useAdminExport,
+} from "../../hooks/useOperations";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { AdminReportKind, Cohort, DailyStat } from "../../types/workspace.types";
 import { Button } from "../shared/Button";
-import { Card, FilterChips } from "../shared/Display";
+import { Badge, Card, FilterChips } from "../shared/Display";
 import { EmptyState, QueryState } from "../shared/States";
 import { TrendBars } from "./TrendBars";
 
@@ -50,6 +57,7 @@ function retentionCell(cohort: Cohort, week: number) {
 }
 
 const REPORTS: { kind: AdminReportKind; label: string; audit?: boolean }[] = [
+  { kind: "churn-risk", label: "Churn risk, every business" },
   { kind: "businesses", label: "Businesses and their status" },
   { kind: "people", label: "People and their accounts" },
   { kind: "alerts", label: "Alerts and how they were resolved" },
@@ -68,6 +76,7 @@ export function GrowthPanel() {
   const adoption = useAdminAdoption(30);
   const cohorts = useAdminCohorts(Number(weeks));
   const exporter = useAdminExport();
+  const churn = useAdminChurnRisk(35);
 
   return (
     <div className="space-y-5">
@@ -136,6 +145,37 @@ export function GrowthPanel() {
           );
         }}
       </QueryState>
+
+      <Card title="Businesses at risk of leaving">
+        <QueryState query={churn}>
+          {(list) =>
+            list.length ? (
+              <ul className="divide-y divide-line">
+                {list.map((c) => (
+                  <li key={c.businessId} className="flex flex-wrap items-start gap-3 px-4 py-3" data-cy="churn-risk">
+                    <Badge tone={c.level === "high" ? "danger" : "warning"}>{c.score}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/admin/businesses/${c.businessId}`}
+                        className="text-sm font-medium text-fg hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                      <p className="text-xs text-fg-muted">{c.reasons.join(" · ")}</p>
+                    </div>
+                    {c.ownerEmail && <span className="text-xs text-fg-subtle">{c.ownerEmail}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState
+                title="No business looks at risk"
+                message="Scores of 35 or more show here. Businesses under 2 weeks old are still settling in and left out."
+              />
+            )
+          }
+        </QueryState>
+      </Card>
 
       <Card title="Feature adoption, last 30 days">
         <QueryState query={adoption}>

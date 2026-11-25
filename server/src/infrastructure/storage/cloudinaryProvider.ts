@@ -57,3 +57,37 @@ export class CloudinaryProvider implements StorageProvider {
     await client().uploader.destroy(publicId, { resource_type: "image", invalidate: true });
   }
 }
+
+/** How much of the Cloudinary plan is used (Admin API `usage`). Null when Cloudinary isn't set up. */
+export interface CloudinaryUsage {
+  plan: string | null;
+  /** Credits are what Cloudinary bills on (storage, bandwidth and transformations combined). */
+  credits: { used: number; limit: number | null; usedPercent: number | null };
+  storageBytes: number;
+  bandwidthBytes: number;
+  objects: number;
+  transformations: number;
+  lastUpdated: string | null;
+}
+
+const num = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+
+export async function cloudinaryUsage(): Promise<CloudinaryUsage | null> {
+  if (!env.cloudinary.configured) return null;
+  const raw = (await client().api.usage()) as Record<string, unknown>;
+  const part = (key: string) => (raw[key] ?? {}) as Record<string, unknown>;
+  const credits = part("credits");
+  return {
+    plan: typeof raw.plan === "string" ? raw.plan : null,
+    credits: {
+      used: num(credits.usage),
+      limit: typeof credits.limit === "number" ? credits.limit : null,
+      usedPercent: typeof credits.used_percent === "number" ? credits.used_percent : null,
+    },
+    storageBytes: num(part("storage").usage),
+    bandwidthBytes: num(part("bandwidth").usage),
+    objects: num(part("objects").usage),
+    transformations: num(part("transformations").usage),
+    lastUpdated: typeof raw.last_updated === "string" ? raw.last_updated : null,
+  };
+}

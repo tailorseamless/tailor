@@ -1,3 +1,5 @@
+import type { CloudinaryUsage } from "../../../infrastructure/storage/cloudinaryProvider";
+
 export type JobOutcome = "succeeded" | "failed";
 
 export interface JobStatusDTO {
@@ -41,6 +43,10 @@ export interface SystemHealthDTO {
   push: DeliveryHealthDTO & { enabled: boolean };
   /** Errors themselves live in Sentry; this says whether it is set up. */
   errorMonitoring: { enabled: boolean };
+  /** Image storage plan usage (Cloudinary); null when not set up or not reachable. */
+  storage: (CloudinaryUsage & { checkedAt: Date }) | null;
+  /** The tables that grow without bound: estimated rows and size on disk. */
+  tables: { name: string; rows: number; bytes: number }[];
   /** Requests turned away for security reasons in the last 24 hours. */
   security: {
     last24h: Record<string, number>;

@@ -42,11 +42,13 @@ export class AlertService {
       { find: () => this.rules.emailFailureRate(), clears: "email_failure_rate" },
       { find: () => this.rules.businessDeletions(), clears: "business_deletion" },
       { find: () => this.rules.ownerChanges() },
-      { find: () => this.rules.paymentReversals() },
+      { find: () => this.rules.anomalies() },
       { find: () => this.rules.pendingRequests(), clears: "requests_pending" },
       { find: () => this.rules.pendingInvites(), clears: "invites_pending" },
       { find: () => this.rules.stuckOnboarding(), clears: "onboarding_stuck" },
       { find: () => this.rules.securityBursts() },
+      { find: () => this.rules.storageNearlyFull(), clears: "storage_credits" },
+      { find: () => this.rules.auditLogSize(), clears: "audit_log_size" },
     ];
   }
 

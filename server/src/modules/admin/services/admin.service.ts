@@ -26,6 +26,7 @@ import type { AdminAlertDTO, ListAlertsParams } from "../dto/alert.dto";
 import { AdminRepository } from "../repositories/admin.repository";
 import { AlertRepository } from "../repositories/alert.repository";
 import { AlertService } from "./alert.service";
+import { InsightsService } from "./insights.service";
 import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } from "../validators/admin.schema";
 
 /**
@@ -57,9 +58,18 @@ export class AdminService {
   /** Business 360. Opening it is recorded in that business's audit log (once an hour per admin). */
   async businessDetail(actor: Actor, id: string): Promise<AdminBusinessDetailDTO> {
     const business = await this.business(id);
-    const [detail, openAlerts] = await Promise.all([this.admin.businessDetail(id), this.admin.openAlertsFor(id)]);
+    const [detail, openAlerts, risk] = await Promise.all([
+      this.admin.businessDetail(id),
+      this.admin.openAlertsFor(id),
+      InsightsService.Instance.churnRiskFor(id),
+    ]);
     await this.noteView(actor, "admin.viewed_business", "business", id, id);
-    return { business, ...detail, openAlerts };
+    return {
+      business,
+      ...detail,
+      openAlerts,
+      churnRisk: risk ? { score: risk.score, level: risk.level, reasons: risk.reasons } : null,
+    };
   }
 
   /** User 360. Opening it is recorded in their business's audit log (once an hour per admin). */

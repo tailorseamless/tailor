@@ -7,6 +7,7 @@ import { MEASUREMENT_UNITS } from "../../businesses/dto/business.dto";
 import { currencyCode } from "../../businesses/validators/business.schema";
 import { STOP_REASON_MIN } from "../domain/adminRules";
 import { ALERT_SEVERITIES, ALERT_STATUSES } from "../dto/alert.dto";
+import { ANNOUNCEMENT_AUDIENCES } from "../dto/announcement.dto";
 import { ADMIN_REPORTS } from "../dto/insights.dto";
 
 const search = z.string().trim().min(1).max(100).optional();
@@ -148,6 +149,31 @@ export const addNoteSchema = z.object({
   params: idParams("id"),
   body: z.object({ body: trimmed(1, 2000) }),
 });
+
+export const churnRiskSchema = z.object({
+  query: z.object({
+    minScore: z.coerce.number().int().min(0).max(100).default(35),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+  }),
+});
+
+/** An in-app path only: "/settings", never "//elsewhere" or a full address. */
+const appPath = z
+  .string()
+  .trim()
+  .max(300)
+  .regex(/^\/(?![/\\])\S*$/, "Use a path inside the app, like /settings");
+
+export const createAnnouncementSchema = z.object({
+  body: z.object({
+    title: trimmed(3, 120),
+    body: trimmed(3, 1000),
+    linkPath: appPath.nullable().optional(),
+    audience: z.enum(ANNOUNCEMENT_AUDIENCES),
+  }),
+});
+
+export const announcementIdSchema = z.object({ params: idParams("id") });
 
 export type UpdateBusinessProfileInput = z.infer<typeof updateBusinessProfileSchema>["body"];
 export type ListBusinessesQuery = z.infer<typeof listBusinessesSchema>["query"];

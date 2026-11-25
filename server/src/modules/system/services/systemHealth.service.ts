@@ -1,10 +1,15 @@
 import { env } from "../../../config/env";
 import { AppDataSource } from "../../../infrastructure/database/dataSource";
+import { logger } from "../../../infrastructure/logger/logger";
+import { cloudinaryUsage } from "../../../infrastructure/storage/cloudinaryProvider";
 import { MailerService } from "../../../shared/services/mailer.service";
 import type { SystemHealthDTO } from "../dto/system.dto";
 import { JobStatusRepository } from "../repositories/jobStatus.repository";
 import { SecurityCounterRepository } from "../repositories/securityCounter.repository";
 import { SystemHealthRepository } from "../repositories/systemHealth.repository";
+
+/** Cloudinary updates its usage figures a few times a day; asking once an hour is plenty. */
+const STORAGE_CHECK_EVERY_MS = 3_600_000;
 
 /**
  * Is the application healthy? For the admin's System health tab. Error TEXT (job failures, email
@@ -13,12 +18,32 @@ import { SystemHealthRepository } from "../repositories/systemHealth.repository"
 export class SystemHealthService {
   static Instance = new SystemHealthService();
 
+  /** The last Cloudinary usage read (a network call to Cloudinary), kept for STORAGE_CHECK_EVERY_MS. */
+  private storageCache: { value: SystemHealthDTO["storage"]; at: number } | null = null;
+
   private constructor(
     private readonly health = SystemHealthRepository.Instance,
     private readonly jobs = JobStatusRepository.Instance,
     private readonly mailer = MailerService.Instance,
     private readonly security = SecurityCounterRepository.Instance,
   ) {}
+
+  /**
+   * Image storage usage, from cache when fresh. A Cloudinary outage or a key without Admin API
+   * access gives null (logged), never a failed health check.
+   */
+  async storage(now = Date.now()): Promise<SystemHealthDTO["storage"]> {
+    if (this.storageCache && now - this.storageCache.at < STORAGE_CHECK_EVERY_MS) return this.storageCache.value;
+    let value: SystemHealthDTO["storage"] = null;
+    try {
+      const usage = await cloudinaryUsage();
+      value = usage ? { ...usage, checkedAt: new Date(now) } : null;
+    } catch (err) {
+      logger.warn({ err }, "cloudinary usage not available");
+    }
+    this.storageCache = { value, at: now };
+    return value;
+  }
 
   async check(options: { technical: boolean }): Promise<SystemHealthDTO> {
     const ok = await this.health.ping();
@@ -32,18 +57,23 @@ export class SystemHealthService {
         email: { ...this.emptyDelivery(), enabled: this.mailer.enabled, recentFailures: [] },
         push: { ...this.emptyDelivery(), enabled: env.push.enabled },
         errorMonitoring: { enabled: Boolean(env.monitoring.sentryDsn) },
+        storage: await this.storage(),
+        tables: [],
         security: { last24h: {}, topSources: [] },
       };
     }
-    const [pendingMigrations, jobs, email, push, failures, securityTotals, topSources] = await Promise.all([
-      AppDataSource.showMigrations().catch(() => null),
-      this.jobs.list(),
-      this.health.email(),
-      this.health.push(),
-      options.technical ? this.health.recentEmailFailures() : Promise.resolve([]),
-      this.security.totals24h(),
-      options.technical ? this.security.topSources() : Promise.resolve([]),
-    ]);
+    const [pendingMigrations, jobs, email, push, failures, securityTotals, topSources, storage, tables] =
+      await Promise.all([
+        AppDataSource.showMigrations().catch(() => null),
+        this.jobs.list(),
+        this.health.email(),
+        this.health.push(),
+        options.technical ? this.health.recentEmailFailures() : Promise.resolve([]),
+        this.security.totals24h(),
+        options.technical ? this.security.topSources() : Promise.resolve([]),
+        this.storage(),
+        this.health.growingTables(),
+      ]);
     return {
       checkedAt: new Date(),
       api: this.api(),
@@ -55,6 +85,8 @@ export class SystemHealthService {
       email: { ...email, enabled: this.mailer.enabled, recentFailures: failures },
       push: { ...push, enabled: env.push.enabled },
       errorMonitoring: { enabled: Boolean(env.monitoring.sentryDsn) },
+      storage,
+      tables,
       security: { last24h: securityTotals, topSources },
     };
   }

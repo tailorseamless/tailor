@@ -38,7 +38,20 @@ export interface AdminNoteDTO {
   author: { id: string; fullName: string } | null;
 }
 
+/** A business and how likely it is to stop using the platform, with the reasons. */
+export interface ChurnRiskDTO {
+  businessId: string;
+  name: string;
+  ownerEmail: string | null;
+  createdAt: Date;
+  daysSinceActivity: number | null;
+  score: number;
+  level: "high" | "medium" | "low";
+  reasons: string[];
+}
+
 export const ADMIN_REPORTS = [
+  "churn-risk",
   "businesses",
   "people",
   "admin-actions",

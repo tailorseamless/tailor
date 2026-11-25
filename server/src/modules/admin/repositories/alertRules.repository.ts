@@ -1,5 +1,9 @@
 import { ALERTS, SECURITY } from "../../../config/constants";
 import { SecurityCounterRepository } from "../../system/repositories/securityCounter.repository";
+import { SystemHealthRepository } from "../../system/repositories/systemHealth.repository";
+import { SystemHealthService } from "../../system/services/systemHealth.service";
+import { ANOMALY_GROUPS, anomalyThreshold, baselineStats } from "../domain/riskRules";
+import { RiskRepository } from "./risk.repository";
 import { AppDataSource } from "../../../infrastructure/database/dataSource";
 import { ONBOARDING_STEPS } from "../../users/dto/user.dto";
 import type { AlertCandidate } from "../dto/alert.dto";
@@ -94,25 +98,30 @@ export class AlertRulesRepository {
     }));
   }
 
-  /** Many voids and refunds in one business today: a mistake, misuse or fraud worth a look. */
-  async paymentReversals(): Promise<AlertCandidate[]> {
-    const rows: { businessId: string; name: string; reversals: string; day: string }[] = await AppDataSource.query(
-      `SELECT a.business_id AS "businessId", b.name, COUNT(*) AS reversals, to_char(now(), 'YYYY-MM-DD') AS day
-         FROM audit_logs a JOIN businesses b ON b.id = a.business_id
-        WHERE a.action IN ('payment.voided', 'payment.refunded') AND a.created_at > now() - interval '24 hours'
-          AND ${LIVE_BUSINESS}
-        GROUP BY a.business_id, b.name HAVING COUNT(*) >= $1`,
-      [ALERTS.paymentReversalsPerDay],
-    );
-    return rows.map((row) => ({
-      type: "payment_reversals",
-      severity: "high",
-      title: `Unusual voids and refunds in ${row.name}`,
-      detail: `${toInt(row.reversals)} payments voided or refunded in the last 24 hours.`,
-      businessId: row.businessId,
-      data: { reversals: toInt(row.reversals) },
-      dedupeKey: `payment_reversals:${row.businessId}:${row.day}`,
-    }));
+  /**
+   * Activity far above THIS business's own normal in the last 24 hours (voids and refunds, deleted
+   * customers or measurements, cancelled orders): a mistake, misuse or fraud worth a look. Each
+   * business is compared with its own last 28 days, so a busy shop isn't flagged for being busy.
+   */
+  async anomalies(): Promise<AlertCandidate[]> {
+    const day = new Date().toISOString().slice(0, 10);
+    const found: AlertCandidate[] = [];
+    for (const row of await RiskRepository.Instance.anomalyCandidates()) {
+      const { mean, stdDev } = baselineStats(row.sum, row.sumOfSquares);
+      const threshold = anomalyThreshold(row.group, mean, stdDev);
+      if (row.last24h < threshold) continue;
+      const { label } = ANOMALY_GROUPS[row.group];
+      found.push({
+        type: "activity_anomaly",
+        severity: "high",
+        title: `Unusual activity in ${row.name}: ${label}`,
+        detail: `${row.last24h} ${label} in the last 24 hours; this business usually has about ${mean.toFixed(1)} a day.`,
+        businessId: row.businessId,
+        data: { group: row.group, last24h: row.last24h, dailyMean: Number(mean.toFixed(2)), threshold },
+        dedupeKey: `anomaly:${row.group}:${row.businessId}:${day}`,
+      });
+    }
+    return found;
   }
 
   /** Appointment requests from customers that nobody has answered. */
@@ -180,6 +189,40 @@ export class AlertRulesRepository {
       data: { kind: burst.kind, count: burst.count },
       dedupeKey: `security_burst:${burst.kind}:${burst.ip}:${hour}`,
     }));
+  }
+
+  /** The image storage plan nearly used up: uploads stop working when it runs out. */
+  async storageNearlyFull(): Promise<AlertCandidate[]> {
+    const usage = await SystemHealthService.Instance.storage();
+    const percent = usage?.credits.usedPercent;
+    if (percent === null || percent === undefined || percent < ALERTS.storageCreditsPercent) return [];
+    return [
+      {
+        type: "storage_credits",
+        severity: percent >= 95 ? "high" : "medium",
+        title: "Image storage plan nearly used up",
+        detail: `${Math.round(percent)}% of the Cloudinary ${usage?.plan ?? ""} plan's credits are used. Pictures stop uploading when it runs out.`,
+        data: { usedPercent: percent, plan: usage?.plan ?? null },
+        dedupeKey: "storage_credits",
+      },
+    ];
+  }
+
+  /** The audit log has grown to where it should be partitioned by month and old months archived. */
+  async auditLogSize(): Promise<AlertCandidate[]> {
+    const tables = await SystemHealthRepository.Instance.growingTables();
+    const audit = tables.find((t) => t.name === "audit_logs");
+    if (!audit || audit.rows < ALERTS.auditRowsPartitionAt) return [];
+    return [
+      {
+        type: "audit_log_size",
+        severity: "low",
+        title: "Time to partition the audit log",
+        detail: `audit_logs holds about ${audit.rows.toLocaleString()} rows (${Math.round(audit.bytes / 1_048_576)} MB). Plan monthly partitions and archiving.`,
+        data: { rows: audit.rows, bytes: audit.bytes },
+        dedupeKey: "audit_log_size",
+      },
+    ];
   }
 
   /** New owners who started the getting-started guide and stalled. */

@@ -11,6 +11,7 @@ import type {
   AdminBusinessInput,
   AdminReportKind,
   AdminUser,
+  AnnouncementInput,
   AlertFilters,
   AuditFilters,
   ExpenseFilters,
@@ -192,6 +193,31 @@ export function useAdminAdoption(days: number) {
 
 export function useAdminCohorts(weeks: number) {
   return useApiQuery([...admin, "cohorts", weeks], () => adminEndpoints.cohorts(weeks));
+}
+
+export function useAdminChurnRisk(minScore: number) {
+  return useApiQuery([...admin, "churn", minScore], () => adminEndpoints.churnRisk(minScore));
+}
+
+export function useAdminAnnouncements() {
+  // Refreshes while one is being delivered, so its progress shows.
+  return useApiQuery([...admin, "announcements"], () => adminEndpoints.announcements(), {
+    refetchInterval: (query) =>
+      query.state.data?.some((a) => a.status === "queued" || a.status === "sending") ? 15_000 : false,
+  });
+}
+
+export function useAdminAnnouncementActions() {
+  const create = useApiMutation((input: AnnouncementInput) => adminEndpoints.createAnnouncement(input), {
+    invalidate: [[...admin, "announcements"]],
+    success: "Announcement queued",
+    toastError: false,
+  });
+  const cancel = useApiMutation((id: string) => adminEndpoints.cancelAnnouncement(id), {
+    invalidate: [[...admin, "announcements"]],
+    success: "Announcement cancelled",
+  });
+  return { create, cancel };
 }
 
 export function useAdminNotes(businessId: string) {

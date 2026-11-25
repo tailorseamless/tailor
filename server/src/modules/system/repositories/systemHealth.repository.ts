@@ -46,6 +46,22 @@ export class SystemHealthRepository {
     return this.delivery("push_deliveries");
   }
 
+  /**
+   * The size of the tables that grow without bound, so the admin can see when the audit log needs
+   * partitioning or archiving (planned at ~10 million rows). Row counts are Postgres's estimate
+   * (instant, no scan), accurate after the table's last ANALYZE.
+   */
+  async growingTables(): Promise<{ name: string; rows: number; bytes: number }[]> {
+    const rows: { name: string; rows: string; bytes: string }[] = await AppDataSource.query(
+      `SELECT c.relname AS name, GREATEST(c.reltuples, 0)::bigint AS rows, pg_total_relation_size(c.oid) AS bytes
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = current_schema() AND c.relkind = 'r'
+          AND c.relname IN ('audit_logs', 'notifications', 'email_outbox', 'push_deliveries', 'security_counters')
+        ORDER BY pg_total_relation_size(c.oid) DESC`,
+    );
+    return rows.map((row) => ({ name: row.name, rows: toInt(row.rows), bytes: toInt(row.bytes) }));
+  }
+
   /** The latest emails that gave up, newest first: kind and error only. */
   recentEmailFailures(limit = 10): Promise<FailedEmailDTO[]> {
     return AppDataSource.query(

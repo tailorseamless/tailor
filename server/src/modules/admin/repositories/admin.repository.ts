@@ -213,7 +213,7 @@ export class AdminRepository {
   }
 
   /** Business 360, without the business row itself (the service adds it). One query per concern, all by business id. */
-  async businessDetail(id: string): Promise<Omit<AdminBusinessDetailDTO, "business" | "openAlerts">> {
+  async businessDetail(id: string): Promise<Omit<AdminBusinessDetailDTO, "business" | "openAlerts" | "churnRisk">> {
     const [page] = await AppDataSource.query(
       `SELECT slug, page_enabled AS "pageEnabled", booking_enabled AS "bookingEnabled" FROM businesses WHERE id = $1`,
       [id],

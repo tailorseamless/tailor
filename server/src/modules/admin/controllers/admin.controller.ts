@@ -2,9 +2,13 @@ import type { Request, Response } from "express";
 import { authUser, input } from "../../../shared/http/request";
 import { ApiResponse, type PaginationMeta } from "../../../shared/response/apiResponse";
 import { AdminService } from "../services/admin.service";
+import { AnnouncementService } from "../services/announcement.service";
 import { InsightsService } from "../services/insights.service";
 import {
   activityFeedSchema,
+  announcementIdSchema,
+  churnRiskSchema,
+  createAnnouncementSchema,
   addNoteSchema,
   adminExportSchema,
   adoptionSchema,
@@ -128,6 +132,29 @@ export class AdminController {
       "Cache-Control": "no-store",
     });
     res.send(file.content);
+  }
+
+  static async churnRisk(req: Request, res: Response): Promise<void> {
+    const { query } = input(req, churnRiskSchema);
+    res.json(
+      ApiResponse.ok("Churn risk fetched", await InsightsService.Instance.churnRisk(query.minScore, query.limit)),
+    );
+  }
+
+  static async announcements(_req: Request, res: Response): Promise<void> {
+    res.json(ApiResponse.ok("Announcements fetched", await AnnouncementService.Instance.list()));
+  }
+
+  static async createAnnouncement(req: Request, res: Response): Promise<void> {
+    const { body } = input(req, createAnnouncementSchema);
+    res.json(ApiResponse.ok("Announcement queued", await AnnouncementService.Instance.create(authUser(req), body)));
+  }
+
+  static async cancelAnnouncement(req: Request, res: Response): Promise<void> {
+    const { params } = input(req, announcementIdSchema);
+    res.json(
+      ApiResponse.ok("Announcement cancelled", await AnnouncementService.Instance.cancel(authUser(req), params.id)),
+    );
   }
 
   static async notes(req: Request, res: Response): Promise<void> {

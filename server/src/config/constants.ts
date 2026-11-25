@@ -34,6 +34,9 @@ export const JOBS = {
   alertsEveryMs: 600_000,
 } as const;
 
+/** Platform announcements: businesses notified per job run (one run a minute). */
+export const ANNOUNCEMENTS = { businessesPerRun: 50 } as const;
+
 /** Security counters (SecurityMonitor): 10-minute windows, kept 30 days. */
 export const SECURITY = {
   windowMs: 600_000,
@@ -61,12 +64,14 @@ export const ALERTS = {
   emailFailureRate: 0.1,
   /** …counted only once there were at least this many attempts. */
   emailMinAttempts: 10,
-  /** Voids + refunds in one business within 24 hours worth a look. */
-  paymentReversalsPerDay: 5,
   /** Appointment requests nobody has answered for this long. */
   requestPendingHours: 48,
   /** People invited this long ago who never signed in. */
   invitePendingDays: 7,
+  /** Image storage (Cloudinary) credits used, in percent, that raise an alert (high from 95). */
+  storageCreditsPercent: 80,
+  /** Rows in audit_logs at which it is time to partition or archive it (a low alert). */
+  auditRowsPartitionAt: 10_000_000,
   /** A new owner who hasn't finished (or dismissed) the getting-started guide after this long… */
   onboardingStuckDays: 3,
   /** …but only for businesses this new; older ones have found their own way. */
@@ -137,4 +142,5 @@ export const JOB_LOCK_IDS = {
   evaluateAdminAlerts: 710_007,
   rollupPlatformStats: 710_008,
   purgeMonitoringData: 710_009,
+  deliverAnnouncements: 710_010,
 } as const;

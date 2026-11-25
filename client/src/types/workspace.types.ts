@@ -414,6 +414,8 @@ export interface AdminBusinessDetail {
   activityByWeek: { weekStart: string; events: number }[];
   lastActivityAt: ISODate | null;
   openAlerts: number;
+  /** How likely it is to stop using the platform, and why; null when suspended. */
+  churnRisk: { score: number; level: ChurnLevel; reasons: string[] } | null;
 }
 
 /** User 360 (server: `AdminUserDetailDTO`). */
@@ -460,6 +462,17 @@ export interface SystemHealth {
   };
   push: DeliveryHealth;
   errorMonitoring: { enabled: boolean };
+  storage: {
+    plan: string | null;
+    credits: { used: number; limit: number | null; usedPercent: number | null };
+    storageBytes: number;
+    bandwidthBytes: number;
+    objects: number;
+    transformations: number;
+    lastUpdated: string | null;
+    checkedAt: ISODate;
+  } | null;
+  tables: { name: string; rows: number; bytes: number }[];
   security: {
     last24h: Record<string, number>;
     /** Only for admins with `admin.technical`. */
@@ -503,4 +516,42 @@ export interface AdminNote {
 }
 
 export type AdminReportKind =
-  "businesses" | "people" | "admin-actions" | "alerts" | "daily-stats" | "adoption" | "cohorts";
+  "churn-risk" | "businesses" | "people" | "admin-actions" | "alerts" | "daily-stats" | "adoption" | "cohorts";
+
+export type ChurnLevel = "high" | "medium" | "low";
+
+/** A business and how likely it is to stop using the platform (server: `ChurnRiskDTO`). */
+export interface ChurnRiskItem {
+  businessId: string;
+  name: string;
+  ownerEmail: string | null;
+  createdAt: ISODate;
+  daysSinceActivity: number | null;
+  score: number;
+  level: ChurnLevel;
+  reasons: string[];
+}
+
+export type AnnouncementAudience = "owners" | "everyone";
+
+/** A message from Tailor Seamless to the businesses (server: `AnnouncementDTO`). */
+export interface Announcement {
+  id: string;
+  createdAt: ISODate;
+  title: string;
+  body: string;
+  linkPath: string | null;
+  audience: AnnouncementAudience;
+  status: "queued" | "sending" | "sent" | "cancelled";
+  businessesReached: number;
+  recipients: number;
+  sentAt: ISODate | null;
+  author: { id: string; fullName: string } | null;
+}
+
+export interface AnnouncementInput {
+  title: string;
+  body: string;
+  linkPath?: string | null;
+  audience: AnnouncementAudience;
+}

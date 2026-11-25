@@ -4,6 +4,7 @@ export const NOTIFICATION_TYPES = [
   "task.assigned",
   "appointment.requested",
   "appointment.confirmed",
+  "platform.announcement",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

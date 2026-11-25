@@ -9,6 +9,9 @@ import type {
   AdminNote,
   AdminReportKind,
   Adoption,
+  Announcement,
+  AnnouncementInput,
+  ChurnRiskItem,
   Cohort,
   DailyStat,
   AdminUser,
@@ -145,6 +148,12 @@ export const adminEndpoints = {
   dailyStats: (days: number) => wrapCall<DailyStat[]>(() => http.get("/admin/stats/daily", { params: { days } })),
   adoption: (days: number) => wrapCall<Adoption>(() => http.get("/admin/reports/adoption", { params: { days } })),
   cohorts: (weeks: number) => wrapCall<Cohort[]>(() => http.get("/admin/reports/cohorts", { params: { weeks } })),
+  churnRisk: (minScore: number) =>
+    wrapCall<ChurnRiskItem[]>(() => http.get("/admin/reports/churn-risk", { params: { minScore, limit: 50 } })),
+  announcements: () => wrapCall<Announcement[]>(() => http.get("/admin/announcements")),
+  createAnnouncement: (input: AnnouncementInput) =>
+    wrapCall<Announcement[]>(() => http.post("/admin/announcements", input)),
+  cancelAnnouncement: (id: string) => wrapCall<Announcement[]>(() => http.post(`/admin/announcements/${id}/cancel`)),
   notes: (businessId: string) => wrapCall<AdminNote[]>(() => http.get(`/admin/businesses/${businessId}/notes`)),
   addNote: (businessId: string, body: string) =>
     wrapCall<AdminNote[]>(() => http.post(`/admin/businesses/${businessId}/notes`, { body })),

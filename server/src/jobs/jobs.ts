@@ -1,6 +1,7 @@
 import { JOB_LOCK_IDS, JOBS, SECURITY } from "../config/constants";
 import { AccountDeletionService } from "../modules/accounts/services/accountDeletion.service";
 import { AlertService } from "../modules/admin/services/alert.service";
+import { AnnouncementService } from "../modules/admin/services/announcement.service";
 import { InsightsService } from "../modules/admin/services/insights.service";
 import { SecurityCounterRepository } from "../modules/system/repositories/securityCounter.repository";
 import { AppointmentService } from "../modules/appointments/services/appointment.service";
@@ -46,6 +47,12 @@ export const pruneDevices = () =>
 export const evaluateAdminAlerts = () =>
   withJobLock("evaluateAdminAlerts", JOB_LOCK_IDS.evaluateAdminAlerts, () => AlertService.Instance.evaluate());
 
+/** Platform announcements: one batch of businesses per run. */
+export const deliverAnnouncements = () =>
+  withJobLock("deliverAnnouncements", JOB_LOCK_IDS.deliverAnnouncements, () =>
+    AnnouncementService.Instance.deliverNext(),
+  );
+
 /** The platform's daily figures (trends), recomputed for the last few days. */
 export const rollupPlatformStats = () =>
   withJobLock("rollupPlatformStats", JOB_LOCK_IDS.rollupPlatformStats, () => InsightsService.Instance.rollup());
@@ -63,6 +70,8 @@ let lastAlertsAt = 0;
 export async function runTick(options: { all?: boolean } = {}): Promise<Record<string, unknown>> {
   const results: Record<string, unknown> = {};
   results.sendAppointmentReminders = await sendAppointmentReminders();
+  // Before email and push delivery, so this run's announcement copies go out this run.
+  results.deliverAnnouncements = await deliverAnnouncements();
   results.deliverEmails = await deliverEmails();
   results.deliverPush = await deliverPush();
 

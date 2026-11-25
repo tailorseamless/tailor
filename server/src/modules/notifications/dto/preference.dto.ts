@@ -6,6 +6,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   "task.assigned": "A task is given to you",
   "appointment.requested": "A customer asks for an appointment online",
   "appointment.confirmed": "A customer confirms an appointment",
+  "platform.announcement": "News and announcements from Tailor Seamless",
 };
 
 /** Emailed unless switched off. The rest are opt-in for email: they are frequent, or the app covers them. */

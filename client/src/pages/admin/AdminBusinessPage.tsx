@@ -71,7 +71,17 @@ export default function AdminBusinessPage() {
                 {d.publicPage.bookingEnabled && d.publicPage.pageEnabled && (
                   <Badge tone="info">Online booking on</Badge>
                 )}
+                {d.churnRisk && d.churnRisk.level !== "low" && (
+                  <Badge tone={d.churnRisk.level === "high" ? "danger" : "warning"}>
+                    Churn risk {d.churnRisk.score}/100
+                  </Badge>
+                )}
               </div>
+              {d.churnRisk && d.churnRisk.level !== "low" && (
+                <p className="-mt-3 mb-5 text-xs text-fg-muted" data-cy="churn-reasons">
+                  Why: {d.churnRisk.reasons.join(" · ")}
+                </p>
+              )}
 
               <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard label="Customers" value={d.counts.customers} />

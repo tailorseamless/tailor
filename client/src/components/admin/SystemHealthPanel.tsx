@@ -16,8 +16,21 @@ const JOB_LABEL: Record<string, string> = {
   processAccountDeletions: "Account deletions",
   evaluateAdminAlerts: "Admin alerts",
   rollupPlatformStats: "Daily platform figures",
+  deliverAnnouncements: "Announcements",
   purgeMonitoringData: "Clean-up: security counters",
 };
+
+/** 1536 → "1.5 KB". */
+function bytes(n: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = n;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units.at(unit)}`;
+}
 
 /** The kinds of refusal the API counts (server: `SecurityEventKind`). */
 const SECURITY_LABEL: Record<string, string> = {
@@ -133,6 +146,70 @@ export function SystemHealthPanel() {
               <p className="px-4 py-3 text-sm text-fg-muted">No job has reported yet.</p>
             )}
           </Card>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card title="Image storage (Cloudinary)">
+              {h.storage ? (
+                <div className="space-y-3 p-4">
+                  {h.storage.credits.usedPercent !== null && (
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-fg-muted">
+                        <span>Plan credits used{h.storage.plan ? ` · ${h.storage.plan} plan` : ""}</span>
+                        <span>{Math.round(h.storage.credits.usedPercent)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-subtle" aria-hidden>
+                        <div
+                          className={`h-2 rounded-full ${h.storage.credits.usedPercent >= 80 ? "bg-danger-solid" : "bg-brand"}`}
+                          style={{ width: `${Math.min(100, h.storage.credits.usedPercent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-xs text-fg-muted">Stored</dt>
+                      <dd className="text-fg">{bytes(h.storage.storageBytes)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-fg-muted">Bandwidth</dt>
+                      <dd className="text-fg">{bytes(h.storage.bandwidthBytes)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-fg-muted">Pictures and files</dt>
+                      <dd className="text-fg">{h.storage.objects.toLocaleString()}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-fg-muted">Transformations</dt>
+                      <dd className="text-fg">{h.storage.transformations.toLocaleString()}</dd>
+                    </div>
+                  </dl>
+                  <p className="text-xs text-fg-subtle">Checked {relative(h.storage.checkedAt)}; read hourly.</p>
+                </div>
+              ) : (
+                <p className="p-4 text-sm text-fg-muted">
+                  Not available: Cloudinary isn't set up, or its key can't read usage.
+                </p>
+              )}
+            </Card>
+            <Card title="Growing tables">
+              {h.tables.length ? (
+                <ul className="divide-y divide-line">
+                  {h.tables.map((t) => (
+                    <li key={t.name} className="flex items-center gap-3 px-4 py-2 text-sm">
+                      <span className="flex-1 font-mono text-xs text-fg">{t.name}</span>
+                      <span className="text-fg-muted">~{t.rows.toLocaleString()} rows</span>
+                      <span className="w-20 text-right text-fg">{bytes(t.bytes)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="p-4 text-sm text-fg-muted">Not available.</p>
+              )}
+              <p className="px-4 py-2 text-xs text-fg-subtle">
+                The audit log is planned to be split by month at about 10 million rows; an alert says when.
+              </p>
+            </Card>
+          </div>
 
           <Card>
             <div className="border-b border-line px-4 py-3">

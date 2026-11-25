@@ -28,6 +28,10 @@ router.post("/admin/businesses/:id/notes", read, validate(s.addNoteSchema), A.ad
 router.get("/admin/stats/daily", read, validate(s.dailyStatsSchema), A.dailyStats);
 router.get("/admin/reports/adoption", read, validate(s.adoptionSchema), A.adoption);
 router.get("/admin/reports/cohorts", read, validate(s.cohortsSchema), A.cohorts);
+router.get("/admin/reports/churn-risk", read, validate(s.churnRiskSchema), A.churnRisk);
+router.get("/admin/announcements", read, validate(s.noInputSchema), A.announcements);
+router.post("/admin/announcements", manage, validate(s.createAnnouncementSchema), A.createAnnouncement);
+router.post("/admin/announcements/:id/cancel", manage, validate(s.announcementIdSchema), A.cancelAnnouncement);
 // admin-actions needs admin.audit as well; the service checks.
 router.get("/admin/reports/:kind/export", read, exportRateLimiter, validate(s.adminExportSchema), A.export);
 router.get("/admin/alerts", read, validate(s.listAlertsSchema), A.alerts);
