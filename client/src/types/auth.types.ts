@@ -1,7 +1,10 @@
 import type { ISODate } from "./api.types";
 
 export type MemberRole = "owner" | "manager" | "tailor" | "receptionist" | "accountant" | "apprentice";
-export type AppRole = MemberRole | "admin";
+export type AppRole = MemberRole | "admin" | "support";
+
+/** Across the whole platform: support looks at the admin area, super admins also act. */
+export type PlatformRole = "user" | "support" | "super_admin";
 
 /** The server's permission codes (`config/permissions.ts`). The UI shows or hides controls with them. */
 export type Permission =
@@ -44,7 +47,10 @@ export type Permission =
   | "report.read"
   | "notification.read"
   | "email.read"
-  | "admin.platform"
+  | "admin.read"
+  | "admin.manage"
+  | "admin.audit"
+  | "admin.technical"
   | "dashboard.read";
 
 export type MeasurementUnit = "in" | "cm";
@@ -90,7 +96,7 @@ export interface Me {
     fullName: string;
     phone: string | null;
     timeZone: string;
-    platformRole: "user" | "super_admin";
+    platformRole: PlatformRole;
     deletionScheduledFor: ISODate | null;
     /** Null when the guide was never opened for them (team members, older accounts). */
     onboarding: OnboardingState | null;
@@ -98,6 +104,8 @@ export interface Me {
   business: Business;
   roles: AppRole[];
   permissions: Permission[];
+  /** How to reach Tailor Seamless support; `whatsapp` is digits only, or null when not set up. */
+  support: { whatsapp: string | null };
 }
 
 export interface RegisterInput {

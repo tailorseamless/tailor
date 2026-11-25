@@ -1,5 +1,5 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
-import { LogOut, MoreHorizontal, Plus, Settings } from "lucide-react";
+import { LifeBuoy, LogOut, MoreHorizontal, Plus, Settings } from "lucide-react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { OnboardingProvider, useOnboarding } from "../../contexts/OnboardingContext";
@@ -33,6 +33,10 @@ function Shell() {
   const tabs = items.filter((i) => i.primary).slice(0, 4);
   const more = items.filter((i) => !tabs.includes(i));
   const moreActive = more.some((i) => location.pathname.startsWith(i.to));
+  // WhatsApp with a first line that says which business is asking (never anything about its customers).
+  const supportLink = me.support?.whatsapp
+    ? `https://wa.me/${me.support.whatsapp}?text=${encodeURIComponent(`Hello, I need help with Tailor Seamless (${business.name}).`)}`
+    : null;
   const initials = me.user.fullName
     .split(/\s+/)
     .map((w) => w[0])
@@ -110,6 +114,13 @@ function Shell() {
                 <Menu.Item onSelect={() => navigate("/settings")} className={menuItem} data-cy="menu-settings">
                   <Settings className="size-4" aria-hidden /> Settings
                 </Menu.Item>
+                {supportLink && (
+                  <Menu.Item asChild className={menuItem}>
+                    <a href={supportLink} target="_blank" rel="noopener noreferrer" data-cy="menu-support">
+                      <LifeBuoy className="size-4" aria-hidden /> Contact support
+                    </a>
+                  </Menu.Item>
+                )}
                 <Menu.Item onSelect={() => void signOut()} className={menuItem} data-cy="menu-sign-out">
                   <LogOut className="size-4" aria-hidden /> Sign out
                 </Menu.Item>

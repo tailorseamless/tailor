@@ -1,4 +1,5 @@
 import { AUTH_CACHE_TTL_MS } from "../../../config/constants";
+import { env } from "../../../config/env";
 import { PERMISSIONS, type AppRole, type Permission } from "../../../config/permissions";
 import { AppError } from "../../../shared/errors/AppError";
 import { rolesFromFlags, type Actor, type AuthUser } from "../../../shared/services/access.service";
@@ -88,6 +89,7 @@ export class UserService {
       business,
       roles,
       permissions: permissionsFor(roles),
+      support: env.support,
     };
   }
 

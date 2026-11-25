@@ -1,5 +1,5 @@
 import type { ISODate } from "./api.types";
-import type { MemberRole } from "./auth.types";
+import type { MemberRole, PlatformRole } from "./auth.types";
 import type { OrderImage } from "./order.types";
 import type { PaymentMethod } from "./payment.types";
 
@@ -277,9 +277,54 @@ export interface AdminUser {
   fullName: string;
   email: string;
   status: "active" | "disabled";
-  platformRole: "user" | "super_admin";
+  /** As stored; someone named in the server's PLATFORM_ADMIN_EMAILS may show `user` (see the Admins tab). */
+  platformRole: PlatformRole;
   hasSignedIn: boolean;
   businessName: string;
   role: MemberRole | null;
   createdAt: ISODate;
+}
+
+/** Someone with platform power, and where it comes from (server: `PlatformAdminDTO`). */
+export interface PlatformAdmin {
+  email: string;
+  role: "support" | "super_admin";
+  /** `database` = granted with admin:grant; `setting` = named in PLATFORM_ADMIN_EMAILS (always super admin). */
+  sources: ("database" | "setting")[];
+  user: {
+    id: string;
+    fullName: string;
+    status: "active" | "disabled";
+    businessName: string;
+    hasSignedIn: boolean;
+  } | null;
+}
+
+export type AuditActorKind = "user" | "admin" | "system" | "portal" | "public";
+
+/** One entry of the platform audit trail (server: `AuditEntryDTO`). */
+export interface AuditEntry {
+  id: string;
+  createdAt: ISODate;
+  action: string;
+  outcome: "success" | "denied" | "failed";
+  actorKind: AuditActorKind;
+  actor: { id: string; fullName: string; email: string } | null;
+  business: { id: string; name: string } | null;
+  entityType: string;
+  entityId: string | null;
+  payload: Record<string, unknown>;
+  requestId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+}
+
+export interface AuditFilters {
+  cursor?: string;
+  businessId?: string;
+  actorKind?: AuditActorKind;
+  /** An exact action ("payment.voided") or a domain ("payment."). */
+  action?: string;
+  from?: string;
+  to?: string;
 }

@@ -5,7 +5,7 @@ import type { BusinessRecord, BusinessStatus, MemberStatus } from "../../busines
 export const USER_STATUSES = ["active", "disabled"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 
-export const PLATFORM_ROLES = ["user", "super_admin"] as const;
+export const PLATFORM_ROLES = ["user", "support", "super_admin"] as const;
 
 /** The getting-started guide a new owner is walked through, in order. */
 export const ONBOARDING_STEPS = ["templates", "customers", "order", "designs"] as const;
@@ -62,4 +62,6 @@ export interface MeDTO {
   roles: AppRole[];
   /** For showing or hiding UI only — the API checks again on every request. */
   permissions: Permission[];
+  /** How to reach Tailor Seamless support (SUPPORT_WHATSAPP_NUMBER); null hides the link. */
+  support: { whatsapp: string | null };
 }

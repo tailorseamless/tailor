@@ -41,6 +41,16 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
   // Who is a platform admin: email addresses, separated by commas. Each person needs an account here and a VERIFIED email.
   PLATFORM_ADMIN_EMAILS: z.string().optional(),
+  // Where businesses reach Tailor Seamless support: a WhatsApp number in international form, digits only
+  // (spaces, dashes and a leading + are dropped), e.g. 2348012345678. Empty hides the "Contact support" link.
+  SUPPORT_WHATSAPP_NUMBER: z
+    .string()
+    .optional()
+    .transform((value) => value?.replace(/[\s()+-]/g, "") || undefined)
+    .refine(
+      (value) => value === undefined || /^\d{8,15}$/.test(value),
+      "write it as 8 to 15 digits, country code first",
+    ),
   // How long a sign-in lasts, counted from when the person signed in; then they sign in again. Written with its unit:
   // 60d, 12h, 30m, 45s.
   SESSION_LIFETIME: duration("60d", DURATION_LIMITS.min, DURATION_LIMITS.max, "1 second", "3650 days"),
@@ -286,6 +296,7 @@ function load() {
     apiPrefix: raw.API_PREFIX.replace(/\/+$/, "") || "/",
     appUrl: raw.APP_URL.replace(/\/+$/, ""),
     platformAdmins: platformAdminEmails(raw.PLATFORM_ADMIN_EMAILS),
+    support: { whatsapp: raw.SUPPORT_WHATSAPP_NUMBER ?? null },
     session: {
       /** Firebase sign-ins never lapse by themselves, so this is the limit the API enforces (SESSION_LIFETIME). */
       lifetimeMs: raw.SESSION_LIFETIME,

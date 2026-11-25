@@ -5,7 +5,11 @@ import { env } from "../../config/env";
  * Who is acting (Backend Guide §7, §23). Services take an Actor as their first
  * argument and never read a user from a request or a global.
  */
-export type PlatformRole = "user" | "super_admin";
+/**
+ * What a person may do across the whole platform. `support` can look at the admin area but change nothing;
+ * `super_admin` can also act (suspend, disable, edit, read the raw audit log). Everyone else is `user`.
+ */
+export type PlatformRole = "user" | "support" | "super_admin";
 
 export interface Actor {
   id: string;
@@ -34,7 +38,9 @@ export interface FirebaseIdentity {
 
 /**
  * Roles are derived, not stored (Backend Guide §23.1): an ACTIVE membership
- * gives its role; a platform super-admin is also `admin`.
+ * gives its role; a platform super-admin is also `admin`, platform support is
+ * also `support`. Neither adds anything inside a business: that comes from the
+ * membership alone.
  */
 export function rolesFromFlags(flags: {
   platformRole: PlatformRole;
@@ -44,6 +50,7 @@ export function rolesFromFlags(flags: {
   const roles: AppRole[] = [];
   if (flags.memberRole && flags.memberStatus === "active") roles.push(flags.memberRole);
   if (flags.platformRole === "super_admin") roles.push("admin");
+  if (flags.platformRole === "support") roles.push("support");
   return roles;
 }
 

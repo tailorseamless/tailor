@@ -4,6 +4,7 @@ import { ApiResponse } from "../../../shared/response/apiResponse";
 import { AdminService } from "../services/admin.service";
 import {
   adminBusinessIdSchema,
+  listAuditLogsSchema,
   listBusinessesSchema,
   listUsersSchema,
   setBusinessStatusSchema,
@@ -49,5 +50,26 @@ export class AdminController {
     const { params, body } = input(req, setUserStatusSchema);
     const user = await AdminService.Instance.setUserStatus(authUser(req), params.id, body.status, body.reason);
     res.json(ApiResponse.ok(body.status === "disabled" ? "Account disabled" : "Account enabled", user));
+  }
+
+  static async admins(_req: Request, res: Response): Promise<void> {
+    res.json(ApiResponse.ok("Platform admins fetched", await AdminService.Instance.admins()));
+  }
+
+  /** Keyset-paged: `meta.nextCursor` is the cursor for the next page (null on the last). */
+  static async auditLogs(req: Request, res: Response): Promise<void> {
+    const { query } = input(req, listAuditLogsSchema);
+    const page = await AdminService.Instance.auditLogs(query);
+    res.json(
+      ApiResponse.ok("Audit log fetched", page.data, {
+        page: 1,
+        limit: query.limit,
+        total: 0,
+        totalPages: 0,
+        hasNext: page.nextCursor !== null,
+        hasPrev: Boolean(query.cursor),
+        nextCursor: page.nextCursor,
+      }),
+    );
   }
 }

@@ -53,6 +53,8 @@ export const AUDIT_ACTIONS = [
   "admin.business_updated",
   "admin.user_disabled",
   "admin.user_enabled",
+  "admin.role_granted",
+  "admin.role_revoked",
   "design.created",
   "design.updated",
   "design.deleted",
@@ -61,12 +63,55 @@ export const AUDIT_ACTIONS = [
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
+/** Who acted. Worked out from the request when not given (see `actorKindFor`). */
+export const ACTOR_KINDS = ["user", "admin", "system", "portal", "public"] as const;
+export type ActorKind = (typeof ACTOR_KINDS)[number];
+
+export const AUDIT_OUTCOMES = ["success", "denied", "failed"] as const;
+export type AuditOutcome = (typeof AUDIT_OUTCOMES)[number];
+
 export interface AuditInput {
-  businessId: string;
+  /** NULL only for platform events that belong to no business. */
+  businessId: string | null;
   actorId: string | null;
   action: AuditAction;
   entityType: string;
   entityId?: string | null;
   /** What changed — field names and ids, never personal details. */
   payload?: Record<string, unknown>;
+  /** Set it only when the request can't tell (a script acting for the platform). */
+  actorKind?: ActorKind;
+  outcome?: AuditOutcome;
+}
+
+/** One row of the platform audit view: the entry, plus who and which business, by name. */
+export interface AuditEntryDTO {
+  id: string;
+  createdAt: Date;
+  action: string;
+  outcome: AuditOutcome;
+  actorKind: ActorKind;
+  actor: { id: string; fullName: string; email: string } | null;
+  business: { id: string; name: string } | null;
+  entityType: string;
+  entityId: string | null;
+  payload: Record<string, unknown>;
+  requestId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+}
+
+export interface ListAuditParams {
+  limit: number;
+  /** Opaque: the `nextCursor` of the previous page. */
+  cursor?: string;
+  businessId?: string;
+  actorId?: string;
+  actorKind?: ActorKind;
+  /** An exact action, or a domain prefix ending in a dot ("admin.", "payment."). */
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  from?: Date;
+  to?: Date;
 }

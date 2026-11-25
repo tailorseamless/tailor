@@ -35,7 +35,7 @@ export const NAV: NavItem[] = [
   { to: "/expenses", label: "Expenses", icon: Receipt, permission: "expense.read" },
   { to: "/reports", label: "Reports", icon: BarChart3, permission: "report.read" },
   { to: "/team", label: "Team", icon: UserCog, permission: "team.read" },
-  { to: "/admin", label: "Platform", icon: ShieldCheck, permission: "admin.platform" },
+  { to: "/admin", label: "Platform", icon: ShieldCheck, permission: "admin.read" },
   { to: "/settings", label: "Settings", icon: Settings, permission: "profile.update" },
 ];
 

@@ -11,7 +11,7 @@ import type { OnboardingState, UserStatus } from "../dto/user.dto";
 @Entity("users")
 @Index("UQ_users_email_live", ["email"], { unique: true, where: `"deleted_at" IS NULL` })
 @Index("UQ_users_firebase_uid", ["firebaseUid"], { unique: true, where: `"firebase_uid" IS NOT NULL` })
-@Check(`"platform_role" IN ('user','super_admin')`)
+@Check(`"platform_role" IN ('user','support','super_admin')`)
 @Check(`"status" IN ('active','disabled')`)
 export class User extends BaseEntity {
   @Index()

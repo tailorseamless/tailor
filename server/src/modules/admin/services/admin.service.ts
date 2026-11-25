@@ -1,11 +1,15 @@
+import { env } from "../../../config/env";
 import { AppError } from "../../../shared/errors/AppError";
 import type { Paginated } from "../../../shared/pagination/paginate";
 import { runInTransaction } from "../../../shared/repositories/transaction";
 import type { Actor } from "../../../shared/services/access.service";
+import type { ListAuditParams } from "../../activity/dto/activity.dto";
+import type { AuditPage } from "../../activity/repositories/audit.repository";
 import { ActivityService } from "../../activity/services/activity.service";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
 import { UserService } from "../../users/services/user.service";
-import type { AdminBusinessDTO, AdminUserDTO, PlatformOverviewDTO } from "../dto/admin.dto";
+import { auditedChanges, canChangeCurrency } from "../domain/adminRules";
+import type { AdminBusinessDTO, AdminUserDTO, PlatformAdminDTO, PlatformOverviewDTO } from "../dto/admin.dto";
 import { AdminRepository } from "../repositories/admin.repository";
 import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } from "../validators/admin.schema";
 
@@ -36,6 +40,16 @@ export class AdminService {
     const business = await this.admin.findBusiness(id);
     if (!business) throw AppError.notFound("Business not found");
     return business;
+  }
+
+  /** Who holds platform power right now, from the database and from PLATFORM_ADMIN_EMAILS. */
+  admins(): Promise<PlatformAdminDTO[]> {
+    return this.admin.listPlatformAdmins([...env.platformAdmins]);
+  }
+
+  /** The raw audit trail across every business. */
+  auditLogs(params: ListAuditParams): Promise<AuditPage> {
+    return this.activity.list(params);
   }
 
   /** Suspending a business signs all its people out of it and closes its public pages. */
@@ -71,16 +85,27 @@ export class AdminService {
 
   /**
    * Changes a business's details, including the email, currency and time zone its owner can't
-   * touch. The audit entry (in that business's log) records what each field was and became.
+   * touch. The audit entry (in that business's log) records what each field was and became, except
+   * contact details, which are recorded as changed without their values. The currency is locked
+   * once the business has taken a payment.
    */
   async updateBusinessProfile(actor: Actor, id: string, input: UpdateBusinessProfileInput): Promise<AdminBusinessDTO> {
     const { reason, ...changes } = input;
     await runInTransaction(async (tx) => {
       const before = await this.businessRows.findBusiness(id, tx);
       if (!before) throw AppError.notFound("Business not found");
+      if (
+        changes.currency !== undefined &&
+        changes.currency !== before.currency &&
+        !canChangeCurrency(before.currency, changes.currency, await this.admin.businessHasPayments(id, tx))
+      ) {
+        throw AppError.conflict("This business has taken payments, so its currency can no longer change", [
+          { field: "currency", message: "locked_after_payments" },
+        ]);
+      }
       const updated = await this.businessRows.updateBusiness(id, changes, tx);
       if (!updated) throw AppError.notFound("Business not found");
-      const fields = Object.keys(changes) as (keyof typeof changes)[];
+      const fields = Object.keys(changes) as (keyof typeof changes & string)[];
       await this.activity.audit(
         {
           businessId: id,
@@ -88,10 +113,7 @@ export class AdminService {
           action: "admin.business_updated",
           entityType: "business",
           entityId: id,
-          payload: {
-            reason: reason ?? null,
-            changes: Object.fromEntries(fields.map((field) => [field, { from: before[field], to: updated[field] }])),
-          },
+          payload: { reason: reason ?? null, changes: auditedChanges(before, updated, fields) },
         },
         tx,
       );
@@ -115,6 +137,12 @@ export class AdminService {
       const user = await this.admin.findUser(id, tx);
       if (!user) throw AppError.notFound("Person not found");
       if (user.status === status) return;
+      // Only a super admin may lock out another platform admin. `admin.manage` is super-admin only
+      // today; this still holds if that ever widens.
+      const targetIsAdmin = user.platformRole !== "user" || env.platformAdmins.has(user.email);
+      if (targetIsAdmin && status === "disabled" && actor.platformRole !== "super_admin") {
+        throw AppError.forbidden("Only a super admin can disable another platform admin");
+      }
       await this.admin.setUserStatus(id, status, tx);
       await this.activity.audit(
         {
@@ -123,7 +151,7 @@ export class AdminService {
           action: status === "disabled" ? "admin.user_disabled" : "admin.user_enabled",
           entityType: "user",
           entityId: id,
-          payload: { reason: reason ?? null },
+          payload: { reason: reason ?? null, ...(targetIsAdmin ? { targetWasPlatformAdmin: true } : {}) },
         },
         tx,
       );

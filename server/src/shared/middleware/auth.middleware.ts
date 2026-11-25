@@ -53,11 +53,16 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
   const user = await UserService.Instance.resolveAuthUser(identity.uid);
   if (!user) throw AppError.unauthorised("Account not linked or disabled");
   req.firebase = identity;
-  // A person named in PLATFORM_ADMIN_EMAILS is a platform admin for this request. Nothing is written
-  // to the database (and the cached `user` is left alone), so removing them from the setting ends it.
+  // A person named in PLATFORM_ADMIN_EMAILS is a super admin for this request (raised from user or support).
+  // Nothing is written to the database (and the cached `user` is left alone), so removing them from the
+  // setting ends it. GET /admin/admins lists them beside the database grants.
   req.user =
     user.platformRole !== "super_admin" && isConfiguredAdmin(identity)
-      ? { ...user, platformRole: "super_admin", roles: [...user.roles, "admin"] }
+      ? {
+          ...user,
+          platformRole: "super_admin",
+          roles: [...user.roles.filter((role) => role !== "support"), "admin"],
+        }
       : user;
   next();
 }

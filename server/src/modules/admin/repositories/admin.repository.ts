@@ -1,12 +1,14 @@
 import { AppDataSource } from "../../../infrastructure/database/dataSource";
 import { buildMeta, getOffset, type Paginated } from "../../../shared/pagination/paginate";
-import { likePattern, returnedRows } from "../../../shared/repositories/baseRepository";
+import { likePattern } from "../../../shared/repositories/baseRepository";
 import type { Tx } from "../../../shared/repositories/transaction";
+import type { PlatformRole } from "../../../shared/services/access.service";
 import type {
   AdminBusinessDTO,
   AdminUserDTO,
   ListAdminBusinessesParams,
   ListAdminUsersParams,
+  PlatformAdminDTO,
   PlatformOverviewDTO,
 } from "../dto/admin.dto";
 
@@ -207,12 +209,76 @@ export class AdminRepository {
     ]);
   }
 
-  /** Used by the admin:grant script only. Returns the user id, or null. */
-  async setPlatformRole(email: string, role: "user" | "super_admin"): Promise<string | null> {
-    const result: unknown = await AppDataSource.query(
-      `UPDATE users SET platform_role = $2, updated_at = now() WHERE email = $1 AND deleted_at IS NULL RETURNING id`,
-      [email.toLowerCase(), role],
+  /** Whether the business has ever taken a payment (voided and refunded ones count: they are on receipts). */
+  async businessHasPayments(businessId: string, tx?: Tx): Promise<boolean> {
+    const rows: { found: boolean }[] = await (tx ?? AppDataSource.manager).query(
+      `SELECT EXISTS (SELECT 1 FROM payments WHERE business_id = $1) AS found`,
+      [businessId],
     );
-    return returnedRows<{ id: string }>(result)[0]?.id ?? null;
+    return rows[0]?.found === true;
+  }
+
+  /**
+   * Everyone with platform power: the database grants, plus the addresses in PLATFORM_ADMIN_EMAILS
+   * (with or without an account). Merged by email; the setting always means super admin.
+   */
+  async listPlatformAdmins(settingEmails: readonly string[]): Promise<PlatformAdminDTO[]> {
+    const rows: {
+      id: string;
+      email: string;
+      fullName: string;
+      status: AdminUserDTO["status"];
+      platformRole: PlatformRole;
+      businessName: string;
+      hasSignedIn: boolean;
+    }[] = await AppDataSource.query(
+      `SELECT u.id, u.email, u.full_name AS "fullName", u.status, u.platform_role AS "platformRole",
+              b.name AS "businessName", u.firebase_uid IS NOT NULL AS "hasSignedIn"
+         FROM users u
+         JOIN businesses b ON b.id = u.business_id
+        WHERE u.deleted_at IS NULL AND (u.platform_role <> 'user' OR u.email = ANY($1::text[]))
+        ORDER BY u.email`,
+      [settingEmails],
+    );
+    const inSetting = new Set(settingEmails);
+    const admins: PlatformAdminDTO[] = rows.map((row) => {
+      const sources: PlatformAdminDTO["sources"] = [];
+      if (row.platformRole !== "user") sources.push("database");
+      if (inSetting.has(row.email)) sources.push("setting");
+      return {
+        email: row.email,
+        role: inSetting.has(row.email) || row.platformRole === "super_admin" ? "super_admin" : "support",
+        sources,
+        user: {
+          id: row.id,
+          fullName: row.fullName,
+          status: row.status,
+          businessName: row.businessName,
+          hasSignedIn: row.hasSignedIn,
+        },
+      };
+    });
+    const found = new Set(rows.map((row) => row.email));
+    for (const email of settingEmails) {
+      if (!found.has(email)) admins.push({ email, role: "super_admin", sources: ["setting"], user: null });
+    }
+    return admins;
+  }
+
+  /** Used by the admin:grant script only. The user's id and role before the change, or null. */
+  async setPlatformRole(
+    email: string,
+    role: PlatformRole,
+    tx: Tx,
+  ): Promise<{ id: string; previous: PlatformRole } | null> {
+    const [before]: { id: string; previous: PlatformRole }[] = await tx.query(
+      `SELECT id, platform_role AS previous FROM users WHERE email = $1 AND deleted_at IS NULL FOR UPDATE`,
+      [email.toLowerCase()],
+    );
+    if (!before) return null;
+    if (before.previous !== role) {
+      await tx.query(`UPDATE users SET platform_role = $2, updated_at = now() WHERE id = $1`, [before.id, role]);
+    }
+    return before;
   }
 }

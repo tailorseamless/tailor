@@ -58,6 +58,9 @@ services:
       # Who is a platform admin: email addresses, comma-separated. Change it here and redeploy.
       - key: PLATFORM_ADMIN_EMAILS
         sync: false
+      # The WhatsApp number behind "Contact support", digits only with the country code (2348012345678).
+      - key: SUPPORT_WHATSAPP_NUMBER
+        sync: false
       # How long a sign-in lasts before the person must sign in again, with a unit: 60d, 12h, 30m, 45s. Change it here and redeploy.
       - key: SESSION_LIFETIME
         value: 60d

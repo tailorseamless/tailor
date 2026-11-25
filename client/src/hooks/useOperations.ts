@@ -10,6 +10,7 @@ import type {
   AdminBusiness,
   AdminBusinessInput,
   AdminUser,
+  AuditFilters,
   ExpenseFilters,
   ExpenseInput,
   ExportKey,
@@ -147,6 +148,14 @@ export function useAdminBusinesses(params: { search?: string; page?: number }) {
 
 export function useAdminUsers(params: { search?: string; page?: number }) {
   return usePaginatedQuery([...admin, "users", params], () => adminEndpoints.users(params));
+}
+
+export function useAdminAdmins() {
+  return useApiQuery([...admin, "admins"], () => adminEndpoints.admins());
+}
+
+export function useAdminAuditLogs(params: AuditFilters, enabled = true) {
+  return usePaginatedQuery([...admin, "audit", params], () => adminEndpoints.auditLogs(params), { enabled });
 }
 
 export function useAdminActions() {

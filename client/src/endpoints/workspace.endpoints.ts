@@ -4,6 +4,8 @@ import type {
   AdminBusiness,
   AdminBusinessInput,
   AdminUser,
+  AuditEntry,
+  AuditFilters,
   Branch,
   BranchInput,
   Design,
@@ -19,6 +21,7 @@ import type {
   MaterialInput,
   MovementInput,
   Period,
+  PlatformAdmin,
   PlatformOverview,
   StockMovement,
   Task,
@@ -119,4 +122,8 @@ export const adminEndpoints = {
     wrapPage<AdminUser>(() => http.get("/admin/users", { params: cleanParams({ limit: 20, ...params }) })),
   setUserStatus: (id: string, status: AdminUser["status"], reason?: string) =>
     wrapCall<unknown>(() => http.post(`/admin/users/${id}/status`, { status, reason: reason || undefined })),
+  admins: () => wrapCall<PlatformAdmin[]>(() => http.get("/admin/admins")),
+  /** Keyset-paged: `meta.nextCursor` opens the next (older) page. */
+  auditLogs: (params: AuditFilters) =>
+    wrapPage<AuditEntry>(() => http.get("/admin/audit-logs", { params: cleanParams({ limit: 50, ...params }) })),
 };

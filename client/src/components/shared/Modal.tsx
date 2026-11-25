@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Button } from "./Button";
-import { Field, Textarea } from "./Field";
+import { Field, Input, Textarea } from "./Field";
 
 interface ModalProps {
   open: boolean;
@@ -114,6 +114,10 @@ interface PromptProps {
   message?: ReactNode;
   confirmLabel?: string;
   required?: boolean;
+  /** The text must be at least this long (implies `required`). */
+  minLength?: number;
+  /** For drastic actions: the person must also type this exactly (a business's name) to go ahead. */
+  confirmText?: string;
   danger?: boolean;
   loading?: boolean;
 }
@@ -128,14 +132,21 @@ export function PromptDialog({
   message,
   confirmLabel = "Save",
   required,
+  minLength,
+  confirmText,
   danger,
   loading,
 }: PromptProps) {
   const [value, setValue] = useState("");
+  const [typed, setTyped] = useState("");
   const close = () => {
     setValue("");
+    setTyped("");
     onClose();
   };
+  const needed = minLength ?? (required ? 1 : 0);
+  const short = value.trim().length < needed;
+  const unconfirmed = confirmText !== undefined && typed.trim() !== confirmText.trim();
   return (
     <Modal
       open={open}
@@ -149,7 +160,7 @@ export function PromptDialog({
           </Button>
           <Button
             variant={danger ? "danger" : "primary"}
-            disabled={required && !value.trim()}
+            disabled={short || unconfirmed}
             loading={loading}
             onClick={() => onSubmit(value.trim())}
             data-cy="prompt-ok"
@@ -160,17 +171,35 @@ export function PromptDialog({
       }
     >
       {message && <div className="mb-3 text-sm text-fg-muted">{message}</div>}
-      <Field label={required ? label : `${label} (optional)`}>
-        {(p) => (
-          <Textarea
-            {...p}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            maxLength={500}
-            data-cy="prompt-input"
-          />
+      <div className="space-y-4">
+        <Field
+          label={needed ? label : `${label} (optional)`}
+          hint={minLength ? `At least ${minLength} characters.` : undefined}
+        >
+          {(p) => (
+            <Textarea
+              {...p}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              maxLength={500}
+              data-cy="prompt-input"
+            />
+          )}
+        </Field>
+        {confirmText !== undefined && (
+          <Field label={`Type "${confirmText}" to confirm`}>
+            {(p) => (
+              <Input
+                {...p}
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                autoComplete="off"
+                data-cy="prompt-confirm"
+              />
+            )}
+          </Field>
         )}
-      </Field>
+      </div>
     </Modal>
   );
 }
