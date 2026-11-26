@@ -84,6 +84,9 @@ export default function AdminBusinessPage() {
                 </p>
               )}
 
+              {/* First, so an admin helping someone on the phone doesn't have to scroll for it. */}
+              <PublicPageCard detail={d} />
+
               <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard label="Customers" value={d.counts.customers} />
                 <StatCard
@@ -153,8 +156,6 @@ export default function AdminBusinessPage() {
                   )}
                 </Card>
               </div>
-
-              <PublicPageCard detail={d} />
 
               <Card className="mb-5">
                 <div className="border-b border-line px-4 py-3">

@@ -9,7 +9,7 @@ import { AuditLogPanel } from "../../components/admin/AuditLogPanel";
 import { GrowthPanel } from "../../components/admin/GrowthPanel";
 import { SystemHealthPanel } from "../../components/admin/SystemHealthPanel";
 import { BusinessEditModal } from "../../components/admin/BusinessEditModal";
-import { Button } from "../../components/shared/Button";
+import { Button, ButtonLink } from "../../components/shared/Button";
 import { Badge, Card, FilterChips, PageHeader, Pagination, StatCard } from "../../components/shared/Display";
 import { PromptDialog } from "../../components/shared/Modal";
 import { EmptyState, QueryState } from "../../components/shared/States";
@@ -189,6 +189,15 @@ export default function AdminPage() {
                           <Badge tone={b.status === "active" ? "success" : "danger"}>
                             {b.status === "active" ? "Active" : "Suspended"}
                           </Badge>
+                          {/* The name links there too, but doesn't look like something to tap. */}
+                          <ButtonLink
+                            size="sm"
+                            variant="secondary"
+                            to={`/admin/businesses/${b.id}`}
+                            data-cy="admin-business-help"
+                          >
+                            {manage ? "Help set up" : "Open"}
+                          </ButtonLink>
                           {audit && (
                             <Button
                               size="sm"

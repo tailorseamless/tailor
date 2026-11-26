@@ -23,6 +23,14 @@ export function PublicPageCard({ detail }: { detail: AdminBusinessDetail }) {
   const { business, publicPage, designVisibility: seen, counts } = detail;
   const something = seen.hidden > 0 || !publicPage.pageEnabled || !publicPage.bookingEnabled;
   const closed = business.status !== "active" || Boolean(business.deletionScheduledFor);
+  // Say why there is no button, rather than leaving the admin looking for it.
+  const noButton = closed
+    ? "Nothing can be switched on while the business is suspended or closing."
+    : !something
+      ? "Nothing to switch on: their designs, public page and appointment requests are already on."
+      : !can("admin.manage")
+        ? "Only a super admin can switch things on."
+        : null;
 
   return (
     <Card className="mb-5">
@@ -42,8 +50,10 @@ export function PublicPageCard({ detail }: { detail: AdminBusinessDetail }) {
           <Detail label="Measurements recorded">{counts.measurements}</Detail>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {can("admin.manage") && something && !closed && (
-            <Button size="sm" onClick={() => setOpen(true)} data-cy="admin-switch-on">
+          {noButton ? (
+            <p className="text-sm text-fg-muted">{noButton}</p>
+          ) : (
+            <Button onClick={() => setOpen(true)} data-cy="admin-switch-on">
               Switch on for them
             </Button>
           )}
