@@ -269,5 +269,17 @@ export function useAdminActions() {
     (vars: { id: string; input: AdminBusinessInput }) => adminEndpoints.updateBusiness(vars.id, vars.input),
     { invalidate: [admin], success: "Business updated", toastError: false },
   );
-  return { businessStatus, userStatus, updateBusiness };
+  const switchOn = useApiMutation(
+    (vars: { id: string; input: Parameters<typeof adminEndpoints.switchOn>[1] }) =>
+      adminEndpoints.switchOn(vars.id, vars.input),
+    {
+      invalidate: [admin],
+      success: (r) =>
+        r.designsShown || r.pagePublished || r.bookingOpened
+          ? "Switched on. The owner has been told."
+          : "Everything was already on",
+      toastError: false,
+    },
+  );
+  return { businessStatus, userStatus, updateBusiness, switchOn };
 }

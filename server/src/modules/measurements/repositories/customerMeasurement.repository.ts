@@ -59,6 +59,11 @@ export class CustomerMeasurementRepository extends BaseRepository<CustomerMeasur
     return { data: page.data.map(toRecord), meta: page.meta };
   }
 
+  /** Whether the business has any measurement on record. */
+  anyForBusiness(businessId: string): Promise<boolean> {
+    return this.repo().exists({ where: { businessId } });
+  }
+
   async createMeasurement(
     data: Omit<CustomerMeasurementRecord, "id" | "createdAt">,
     tx?: Tx,

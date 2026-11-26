@@ -32,6 +32,8 @@ function sentence(item: ActivityItem): string {
       return `${who} suspended the business`;
     case "admin.business_reactivated":
       return `${who} reactivated the business`;
+    case "admin.switched_on":
+      return `${who} switched things on for the business`;
     case "admin.user_disabled":
       return `${who} disabled an account`;
     case "admin.user_enabled":

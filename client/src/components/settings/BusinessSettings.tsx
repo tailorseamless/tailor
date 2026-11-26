@@ -5,6 +5,7 @@ import { useUpdateBusiness } from "../../hooks/useAccount";
 import { useSharePage } from "../../hooks/useSharePage";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { BusinessInput, MeasurementUnit } from "../../types/auth.types";
+import { bankAccountProblem } from "../../utils/bankAccount";
 import { errorMessage } from "../../utils/errors";
 import { isReservedSlug, shopPath, shopUrl } from "../../utils/shopPath";
 import { isPhone, orNull, whatsappLink } from "../../utils/validation";
@@ -14,7 +15,6 @@ import { Field, FormError, Input, Select, Toggle } from "../shared/Field";
 import { PhoneInput } from "../shared/PhoneInput";
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/;
-const ACCOUNT_NUMBER = /^[A-Za-z0-9]{4,34}$/;
 const suggestSlug = (name: string) =>
   name
     .toLowerCase()
@@ -91,7 +91,14 @@ export function BusinessSettings({ children }: { children: (cards: BusinessCards
         return setProblem(problemWithSlug);
       }
     }
-    update.mutate(body, { onSuccess: () => void refresh(), onError: onFail });
+    update.mutate(body, {
+      onSuccess: (saved) => {
+        // Publishing may have picked the address for them: show the one they actually got.
+        if (body.pageEnabled !== undefined && saved.slug) set("slug", saved.slug);
+        void refresh();
+      },
+      onError: onFail,
+    });
   };
 
   /** Saves the account details shown on the public page; `clear` removes them. */
@@ -104,18 +111,11 @@ export function BusinessSettings({ children }: { children: (cards: BusinessCards
           accountNumber: orNull(form.accountNumber),
           accountName: orNull(form.accountName),
         };
-    const filled = Object.values(account).filter(Boolean).length;
-    if (filled > 0 && filled < 3) {
-      return setAccountProblem(
-        "Add the bank name, account number and account name together, or leave all three empty.",
-      );
-    }
-    if (account.accountNumber && !ACCOUNT_NUMBER.test(account.accountNumber.replace(/[\s-]/g, ""))) {
-      return setAccountProblem("The account number can use letters and digits only, 4 to 34 characters.");
-    }
+    const wrong = bankAccountProblem(account);
+    if (wrong) return setAccountProblem(wrong);
     updateAccount.mutate(account, {
       onSuccess: () => {
-        if (filled === 0) setForm((f) => ({ ...f, bankName: "", accountNumber: "", accountName: "" }));
+        if (clear) setForm((f) => ({ ...f, bankName: "", accountNumber: "", accountName: "" }));
         void refresh();
       },
     });
@@ -189,7 +189,10 @@ export function BusinessSettings({ children }: { children: (cards: BusinessCards
             onChange={(on) => {
               set("pageEnabled", on);
               if (!on) set("bookingEnabled", false); // the booking form goes down with the page
-              save({ pageEnabled: on, slug: form.slug.trim() || null }, () => {
+              // Left at our suggestion on a first publish? Send none, so a taken name gets another instead of an error.
+              const typed = form.slug.trim();
+              const untouched = !business.slug && typed === suggestSlug(business.name);
+              save({ pageEnabled: on, ...(untouched ? {} : { slug: typed || null }) }, () => {
                 set("pageEnabled", !on);
                 if (!on) set("bookingEnabled", business.bookingEnabled);
               });

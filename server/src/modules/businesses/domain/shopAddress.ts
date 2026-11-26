@@ -69,6 +69,23 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
 export const isReservedSlug = (slug: string): boolean => RESERVED_SLUGS.has(slug.toLowerCase());
 
 /**
+ * A starting address made from the business name ("Adé Stitches" → "ade-stitches"), for publishing a page
+ * without asking the owner to invent one. Null when the name leaves too little to use. Short enough to take
+ * a "-2" style ending and stay within 60 characters.
+ */
+export function slugFromName(name: string): string | null {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "") // accents and tone marks
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 50)
+    .replace(/-+$/, "");
+  return slug.length >= 3 ? slug : null;
+}
+
+/**
  * Where a business's page lives. A reserved slug can only exist on a business from before the page had a
  * short address, so it keeps its old `/book/<slug>` link instead of being shadowed by an app page.
  */

@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { AppError } from "../../../shared/errors/AppError";
-import { runInTransaction } from "../../../shared/repositories/transaction";
+import { runInTransaction, type Tx } from "../../../shared/repositories/transaction";
 import type { Actor } from "../../../shared/services/access.service";
 import { ActivityService } from "../../activity/services/activity.service";
+import { isReservedSlug, slugFromName } from "../domain/shopAddress";
 import type { BusinessRecord } from "../dto/business.dto";
 import { BusinessRepository } from "../repositories/business.repository";
 import type { UpdateBusinessInput } from "../validators/business.schema";
@@ -31,8 +33,12 @@ export class BusinessService {
           throw AppError.conflict("This booking page address is taken", [{ field: "slug", message: "duplicate" }]);
         }
       }
-      const slug = input.slug !== undefined ? input.slug : current.slug;
       const pageEnabled = input.pageEnabled ?? current.pageEnabled;
+      // Publishing for the first time without choosing an address: choose one for them.
+      const assigned =
+        pageEnabled && !input.slug && !current.slug ? await this.freeSlug(input.name ?? current.name, tx) : null;
+      const changes = assigned ? { ...input, slug: assigned } : input;
+      const slug = changes.slug !== undefined ? changes.slug : current.slug;
       // Taking the page down takes its booking form with it, unless the same request says otherwise.
       const bookingEnabled = input.bookingEnabled ?? (pageEnabled ? current.bookingEnabled : false);
       if (pageEnabled && !slug) {
@@ -56,7 +62,7 @@ export class BusinessService {
           missing.map((field) => ({ field, message: "Required" })),
         );
       }
-      const business = await this.businesses.updateBusiness(actor.businessId, { ...input, bookingEnabled }, tx);
+      const business = await this.businesses.updateBusiness(actor.businessId, { ...changes, bookingEnabled }, tx);
       if (!business) throw AppError.notFound("Business not found");
       await this.activity.audit(
         {
@@ -65,11 +71,44 @@ export class BusinessService {
           action: "business.updated",
           entityType: "business",
           entityId: business.id,
-          payload: { fields: Object.keys(input) },
+          payload: { fields: Object.keys(changes) },
         },
         tx,
       );
       return business;
     });
+  }
+
+  /**
+   * Switches a business's page on for the platform admin, choosing an address if it never had one. False when it
+   * was already on. The caller checks who may do this and writes the audit entry.
+   */
+  async publishPageFor(businessId: string, tx: Tx): Promise<boolean> {
+    const current = await this.businesses.findBusiness(businessId, tx);
+    if (!current) throw AppError.notFound("Business not found");
+    if (current.pageEnabled) return false;
+    const slug = current.slug ?? (await this.freeSlug(current.name, tx));
+    await this.businesses.updateBusiness(businessId, { pageEnabled: true, slug }, tx);
+    return true;
+  }
+
+  /** As `publishPageFor`, for appointment requests, which need the page to be on. False when already on. */
+  async openBookingFor(businessId: string, tx: Tx): Promise<boolean> {
+    const current = await this.businesses.findBusiness(businessId, tx);
+    if (!current) throw AppError.notFound("Business not found");
+    if (current.bookingEnabled) return false;
+    if (!current.pageEnabled) throw AppError.unprocessable("Switch their public page on first");
+    await this.businesses.updateBusiness(businessId, { bookingEnabled: true }, tx);
+    return true;
+  }
+
+  /** The name as an address, then "-2" to "-5"; a random ending if those are all taken. */
+  private async freeSlug(name: string, tx: Tx): Promise<string> {
+    const base = slugFromName(name) ?? "shop";
+    for (const candidate of [base, ...[2, 3, 4, 5].map((n) => `${base}-${n}`)]) {
+      if (isReservedSlug(candidate)) continue;
+      if (!(await this.businesses.findBySlug(candidate, tx))) return candidate;
+    }
+    return `${base}-${randomBytes(3).toString("hex")}`;
   }
 }

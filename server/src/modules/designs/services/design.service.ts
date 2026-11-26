@@ -82,6 +82,23 @@ export class DesignService {
     return this.detail(actor, id);
   }
 
+  /** Switches several saved designs on for customers at once. Ids that aren't this business's are ignored. */
+  async show(actor: Actor, ids: string[]): Promise<{ shown: number }> {
+    return runInTransaction(async (tx) => {
+      const changed = await this.designs.showToCustomers([...new Set(ids)], actor.businessId, tx);
+      for (const id of changed) await this.audit(actor, "design.updated", id, { fields: ["visibility"] }, tx);
+      return { shown: changed.length };
+    });
+  }
+
+  /**
+   * Switches on every hidden design that has a photo, for the platform admin; returns their ids. The caller
+   * checks who may do this and writes the audit entry.
+   */
+  async showAllFor(businessId: string, tx: Tx): Promise<string[]> {
+    return this.designs.showToCustomers(await this.designs.hiddenWithPhoto(businessId, tx), businessId, tx);
+  }
+
   /** A soft delete. Orders that used the design keep pointing at it; its pictures stay for them. */
   async remove(actor: Actor, id: string): Promise<void> {
     await runInTransaction(async (tx) => {

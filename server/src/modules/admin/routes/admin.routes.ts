@@ -16,6 +16,7 @@ router.get("/admin/businesses", read, validate(s.listBusinessesSchema), A.busine
 router.get("/admin/businesses/:id", read, validate(s.adminBusinessIdSchema), A.business);
 router.patch("/admin/businesses/:id", manage, validate(s.updateBusinessProfileSchema), A.updateBusinessProfile);
 router.post("/admin/businesses/:id/status", manage, validate(s.setBusinessStatusSchema), A.setBusinessStatus);
+router.post("/admin/businesses/:id/switch-on", manage, validate(s.switchOnSchema), A.switchOn);
 router.get("/admin/users", read, validate(s.listUsersSchema), A.users);
 router.post("/admin/users/:id/status", manage, validate(s.setUserStatusSchema), A.setUserStatus);
 router.get("/admin/businesses/:id/detail", read, validate(s.adminBusinessIdSchema), A.businessDetail);

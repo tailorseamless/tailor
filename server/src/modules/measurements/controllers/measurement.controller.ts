@@ -11,6 +11,10 @@ export class MeasurementController {
     res.json(ApiResponse.ok("Measurements fetched", result.data, result.meta));
   }
 
+  static async status(req: Request, res: Response): Promise<void> {
+    res.json(ApiResponse.ok("Measurement status fetched", await MeasurementService.Instance.status(authUser(req))));
+  }
+
   static async detail(req: Request, res: Response): Promise<void> {
     const { params } = input(req, measurementIdSchema);
     const measurement = await MeasurementService.Instance.detail(authUser(req), params.customerId, params.id);

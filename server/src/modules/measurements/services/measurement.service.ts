@@ -33,6 +33,11 @@ export class MeasurementService {
     return this.measurements.listForCustomer({ ...query, customerId, businessId: actor.businessId });
   }
 
+  /** Whether any measurement has ever been recorded, for offering help with the first one. */
+  async status(actor: Actor): Promise<{ recorded: boolean }> {
+    return { recorded: await this.measurements.anyForBusiness(actor.businessId) };
+  }
+
   async detail(actor: Actor, customerId: string, id: string): Promise<CustomerMeasurementRecord> {
     const measurement = await this.measurements.findForCustomer(id, customerId, actor.businessId);
     if (!measurement) throw AppError.notFound("Measurement not found");

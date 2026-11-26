@@ -2,6 +2,7 @@ import { Search, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomerForm } from "../../components/customers/CustomerForm";
+import { MeasurementHelp } from "../../components/help/SetupHelp";
 import { Button } from "../../components/shared/Button";
 import { Card, FilterChips, PageHeader, Pagination } from "../../components/shared/Display";
 import { EmptyState, QueryState } from "../../components/shared/States";
@@ -44,6 +45,7 @@ export default function CustomersPage() {
           )
         }
       />
+      <MeasurementHelp />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative sm:w-80">
           <Search

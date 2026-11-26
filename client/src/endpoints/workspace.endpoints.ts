@@ -69,6 +69,7 @@ export const designEndpoints = {
   create: (input: DesignInput) => wrapCall<Design>(() => http.post("/designs", input)),
   update: (id: string, input: DesignInput) => wrapCall<Design>(() => http.patch(`/designs/${id}`, input)),
   remove: (id: string) => wrapCall<null>(() => http.delete(`/designs/${id}`)),
+  show: (ids: string[]) => wrapCall<{ shown: number }>(() => http.post("/designs/show", { ids })),
   addImages: (id: string, files: File[]) => wrapUpload<OrderImage[]>(`/designs/${id}/images`, "images", files),
   removeImage: (id: string, imageId: string) => wrapCall<null>(() => http.delete(`/designs/${id}/images/${imageId}`)),
 };
@@ -132,6 +133,10 @@ export const adminEndpoints = {
     wrapCall<unknown>(() => http.post(`/admin/businesses/${id}/status`, { status, reason: reason || undefined })),
   updateBusiness: (id: string, input: AdminBusinessInput) =>
     wrapCall<AdminBusiness>(() => http.patch(`/admin/businesses/${id}`, input)),
+  switchOn: (id: string, input: { designs: boolean; page: boolean; booking: boolean; reason: string }) =>
+    wrapCall<{ designsShown: number; pagePublished: boolean; bookingOpened: boolean }>(() =>
+      http.post(`/admin/businesses/${id}/switch-on`, input),
+    ),
   users: (params?: { search?: string; status?: string; page?: number }) =>
     wrapPage<AdminUser>(() => http.get("/admin/users", { params: cleanParams({ limit: 20, ...params }) })),
   setUserStatus: (id: string, status: AdminUser["status"], reason?: string) =>

@@ -7,6 +7,7 @@ import {
   designIdSchema,
   designImageSchema,
   listDesignsSchema,
+  showDesignsSchema,
   updateDesignSchema,
 } from "../validators/design.schema";
 
@@ -35,6 +36,11 @@ export class DesignController {
   static async update(req: Request, res: Response): Promise<void> {
     const { params, body } = input(req, updateDesignSchema);
     res.json(ApiResponse.ok("Design updated", await DesignService.Instance.update(authUser(req), params.id, body)));
+  }
+
+  static async show(req: Request, res: Response): Promise<void> {
+    const { body } = input(req, showDesignsSchema);
+    res.json(ApiResponse.ok("Designs shown", await DesignService.Instance.show(authUser(req), body.ids)));
   }
 
   static async remove(req: Request, res: Response): Promise<void> {

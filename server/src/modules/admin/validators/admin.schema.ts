@@ -64,6 +64,19 @@ export const updateBusinessProfileSchema = z.object({
     .refine((body) => Object.keys(body).some((key) => key !== "reason"), "Provide at least one field to update"),
 });
 
+/** Making a business's things public for them needs a reason the audit log can show. */
+export const switchOnSchema = z.object({
+  params: idParams("id"),
+  body: z
+    .object({
+      designs: z.boolean(),
+      page: z.boolean(),
+      booking: z.boolean(),
+      reason: trimmed(STOP_REASON_MIN, 500),
+    })
+    .refine((body) => body.designs || body.page || body.booking, "Choose what to switch on"),
+});
+
 export const setUserStatusSchema = z.object({
   params: idParams("id"),
   body: statusBody(["active", "disabled"], "disabled"),
@@ -176,6 +189,7 @@ export const createAnnouncementSchema = z.object({
 export const announcementIdSchema = z.object({ params: idParams("id") });
 
 export type UpdateBusinessProfileInput = z.infer<typeof updateBusinessProfileSchema>["body"];
+export type SwitchOnInput = z.infer<typeof switchOnSchema>["body"];
 export type ListBusinessesQuery = z.infer<typeof listBusinessesSchema>["query"];
 export type ListUsersQuery = z.infer<typeof listUsersSchema>["query"];
 export type ListAuditLogsQuery = z.infer<typeof listAuditLogsSchema>["query"];

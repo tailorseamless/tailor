@@ -27,6 +27,7 @@ export const customerEndpoints = {
 };
 
 export const measurementEndpoints = {
+  status: () => wrapCall<{ recorded: boolean }>(() => http.get("/measurements/status")),
   templates: () => wrapPage<MeasurementTemplate>(() => http.get("/measurement-templates", { params: { limit: 100 } })),
   createTemplate: (input: TemplateInput) =>
     wrapCall<MeasurementTemplate>(() => http.post("/measurement-templates", input)),

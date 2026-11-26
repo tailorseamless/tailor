@@ -71,7 +71,9 @@ export interface AdminMemberDTO {
  */
 export interface AdminBusinessDetailDTO {
   business: AdminBusinessDTO;
-  publicPage: { slug: string | null; pageEnabled: boolean; bookingEnabled: boolean };
+  publicPage: { slug: string | null; pageEnabled: boolean; bookingEnabled: boolean; hasBankDetails: boolean };
+  /** How many designs people can see, are switched off, or lack the photo needed to be seen. Counts only. */
+  designVisibility: { showing: number; hidden: number; noPhoto: number };
   members: AdminMemberDTO[];
   /** The owner's getting-started guide; null when it was never opened. */
   onboarding: OnboardingState | null;
@@ -87,6 +89,7 @@ export interface AdminBusinessDetailDTO {
     requestsPending: number;
     tasksOpen: number;
     designs: number;
+    measurements: number;
     materials: number;
     expenses: number;
   };

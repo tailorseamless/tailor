@@ -84,6 +84,7 @@ export interface DesignFilters {
   search?: string;
   category?: string;
   favourite?: boolean;
+  visibility?: DesignVisibility;
   page?: number;
   limit?: number;
 }
@@ -392,7 +393,8 @@ export interface AdminMember {
 /** Business 360 (server: `AdminBusinessDetailDTO`). Counts only, never the business's records. */
 export interface AdminBusinessDetail {
   business: AdminBusiness;
-  publicPage: { slug: string | null; pageEnabled: boolean; bookingEnabled: boolean };
+  publicPage: { slug: string | null; pageEnabled: boolean; bookingEnabled: boolean; hasBankDetails: boolean };
+  designVisibility: { showing: number; hidden: number; noPhoto: number };
   members: AdminMember[];
   onboarding: OnboardingState | null;
   counts: {
@@ -407,6 +409,7 @@ export interface AdminBusinessDetail {
     requestsPending: number;
     tasksOpen: number;
     designs: number;
+    measurements: number;
     materials: number;
     expenses: number;
   };

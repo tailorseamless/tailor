@@ -5,6 +5,7 @@ export const NOTIFICATION_TYPES = [
   "appointment.requested",
   "appointment.confirmed",
   "platform.announcement",
+  "platform.support_change",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

@@ -1,7 +1,10 @@
 import { Eye, Globe, Palette, Plus, Search, Share2, Star } from "lucide-react";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DesignModal } from "../../components/designs/DesignModal";
-import { Button, ButtonLink } from "../../components/shared/Button";
+import { ShowDesignsDialog } from "../../components/designs/ShowDesignsDialog";
+import { VisibilityBanner } from "../../components/designs/VisibilityBanner";
+import { Button } from "../../components/shared/Button";
 import { FilterChips, PageHeader, Pagination } from "../../components/shared/Display";
 import { EmptyState, QueryState } from "../../components/shared/States";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -17,7 +20,15 @@ export default function DesignsPage() {
   const [term, setTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [open, setOpen] = useState<string | null>(null);
+  // `?open=<id>` (from the dashboard's "Add a photo") lands straight on that design.
+  const [params, setParams] = useSearchParams();
+  const [open, setOpen] = useState<string | null>(() => params.get("open"));
+  // The helper that gets designs seen: for all of them, or for the ones named.
+  const [helping, setHelping] = useState<{ only?: string[] } | null>(null);
+  const closeDesign = () => {
+    setOpen(null);
+    if (params.has("open")) setParams({}, { replace: true });
+  };
   const search = useDebounce(term.trim(), 300);
   const categories = useDesignCategories();
   const query = useDesigns({
@@ -45,13 +56,16 @@ export default function DesignsPage() {
                 Share my page
               </Button>
             ) : (
-              <ButtonLink
-                variant="secondary"
-                to="/settings?tab=customers"
-                icon={<Globe className="size-4" aria-hidden />}
-              >
-                Publish my page
-              </ButtonLink>
+              can("business.update") && (
+                <Button
+                  variant="secondary"
+                  icon={<Globe className="size-4" aria-hidden />}
+                  onClick={() => setHelping({})}
+                  data-cy="design-publish"
+                >
+                  Publish my page
+                </Button>
+              )
             )}
             {can("design.manage") && (
               <Button
@@ -65,6 +79,7 @@ export default function DesignsPage() {
           </>
         }
       />
+      <VisibilityBanner onShow={() => setHelping({})} onAddPhoto={setOpen} />
       <div className="mb-4 space-y-3">
         <div className="relative sm:w-80">
           <Search
@@ -152,12 +167,22 @@ export default function DesignsPage() {
             <EmptyState
               icon={<Palette className="size-6" aria-hidden />}
               title={search || filter !== "all" ? "No designs match" : "No designs yet"}
-              message="Add photos of styles you make, with a price range. Mark them to show customers on your public page."
+              message="Add photos of styles you make, with a price range. We'll help you show them to people."
             />
           )
         }
       </QueryState>
-      {open && <DesignModal designId={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <DesignModal
+          designId={open}
+          onClose={closeDesign}
+          onHelp={(id) => {
+            closeDesign();
+            setHelping({ only: [id] });
+          }}
+        />
+      )}
+      {helping && <ShowDesignsDialog only={helping.only} onClose={() => setHelping(null)} />}
     </>
   );
 }

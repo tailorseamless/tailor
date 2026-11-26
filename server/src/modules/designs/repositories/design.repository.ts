@@ -96,6 +96,32 @@ export class DesignRepository extends BaseRepository<Design> {
     await this.repo(tx).update({ id, businessId }, { ...data, updatedAt: new Date() });
   }
 
+  /** Turns hidden designs of this business on for customers; returns the ids that actually changed. */
+  async showToCustomers(ids: string[], businessId: string, tx: Tx): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.repo(tx).find({
+      where: { id: In(ids), businessId, visibility: "private" },
+      select: { id: true },
+    });
+    const hidden = rows.map((row) => row.id);
+    if (hidden.length) {
+      await this.repo(tx).update({ id: In(hidden), businessId }, { visibility: "customers", updatedAt: new Date() });
+    }
+    return hidden;
+  }
+
+  /** This business's hidden designs that have a photo: the ones switching on would make visible. */
+  async hiddenWithPhoto(businessId: string, tx: Tx): Promise<string[]> {
+    const rows: { id: string }[] = await tx.query(
+      `SELECT d.id
+         FROM designs d
+        WHERE d.business_id = $1 AND d.deleted_at IS NULL AND d.visibility = 'private'
+          AND EXISTS (SELECT 1 FROM images i WHERE i.design_id = d.id AND i.deleted_at IS NULL)`,
+      [businessId],
+    );
+    return rows.map((row) => row.id);
+  }
+
   /** Soft delete: orders that used the design still point at it. */
   async removeInBusiness(id: string, businessId: string, tx: Tx): Promise<void> {
     await this.repo(tx).softDelete({ id, businessId });

@@ -61,6 +61,8 @@ const values = z
   .max(MEASUREMENT_LIMITS.maxValues)
   .refine((items) => !hasDuplicateNames(items), "Each measurement can only appear once");
 
+export const measurementStatusSchema = z.object({});
+
 export const listMeasurementsSchema = z.object({
   params: idParams("customerId"),
   query: z.object({ ...paginationQuery, templateId: uuid.optional() }),

@@ -21,6 +21,7 @@ const images = uploadFiles("images", UPLOAD_LIMITS.filesPerRequest, {
 router.get("/designs", read, validate(s.listDesignsSchema), D.list);
 router.get("/designs/categories", read, validate(s.noInputSchema), D.categories);
 router.post("/designs", manage, validate(s.createDesignSchema), D.create);
+router.post("/designs/show", manage, validate(s.showDesignsSchema), D.show);
 router.get("/designs/:id", read, validate(s.designIdSchema), D.detail);
 router.patch("/designs/:id", manage, validate(s.updateDesignSchema), D.update);
 router.delete("/designs/:id", manage, validate(s.designIdSchema), D.remove);

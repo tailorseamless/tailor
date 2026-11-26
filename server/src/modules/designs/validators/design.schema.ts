@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { PAGINATION } from "../../../config/constants";
 import { paginationQuery } from "../../../shared/pagination/paginate";
-import { idParams, optionalText, queryBool, trimmed } from "../../../shared/utils/zod";
+import { idParams, optionalText, queryBool, trimmed, uuid } from "../../../shared/utils/zod";
 import { DESIGN_LIMITS, DESIGN_VISIBILITIES } from "../dto/design.dto";
 
 /** A price with at most two decimals. Either end of the range may be left out. */
@@ -44,6 +45,9 @@ export const listDesignsSchema = z.object({
 export const designIdSchema = z.object({ params: idParams("id") });
 export const designImageSchema = z.object({ params: idParams("id", "imageId") });
 export const noInputSchema = z.object({});
+export const showDesignsSchema = z.object({
+  body: z.object({ ids: z.array(uuid).min(1).max(PAGINATION.maxLimit) }),
+});
 
 export const createDesignSchema = z.object({
   body: z

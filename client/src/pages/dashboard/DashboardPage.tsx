@@ -1,6 +1,7 @@
 import { BranchFilter, useBranchFilter } from "../../components/shared/BranchFilter";
 import { CalendarDays, Plus, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SetupHelp } from "../../components/help/SetupHelp";
 import { OrderRow } from "../../components/orders/OrderRow";
 import { ButtonLink } from "../../components/shared/Button";
 import { Badge, Card, PageHeader, StatCard } from "../../components/shared/Display";
@@ -48,6 +49,7 @@ export default function DashboardPage() {
           </>
         }
       />
+      <SetupHelp />
       <QueryState query={query} loadingLabel="Loading your dashboard">
         {(d) => {
           const money = (n: number) => formatMoney(n, d.currency);

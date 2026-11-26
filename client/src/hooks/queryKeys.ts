@@ -10,6 +10,7 @@ export const keys = {
   },
   measurements: {
     templates: ["measurement-templates"] as const,
+    status: ["measurements", "status"] as const,
     forCustomer: (customerId: string) => ["measurements", customerId] as const,
   },
   orders: {

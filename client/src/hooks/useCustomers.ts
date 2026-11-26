@@ -76,9 +76,14 @@ export function useMeasurements(customerId: string) {
   });
 }
 
+/** Whether the business has any measurement on record yet. */
+export function useMeasurementStatus(enabled: boolean) {
+  return useApiQuery(keys.measurements.status, () => measurementEndpoints.status(), { enabled });
+}
+
 export function useRecordMeasurement(customerId: string) {
   return useApiMutation((input: MeasurementInput) => measurementEndpoints.record(customerId, input), {
-    invalidate: [keys.measurements.forCustomer(customerId)],
+    invalidate: [keys.measurements.forCustomer(customerId), keys.measurements.status],
     success: "Measurements saved",
     toastError: false,
   });
@@ -86,7 +91,7 @@ export function useRecordMeasurement(customerId: string) {
 
 export function useDeleteMeasurement(customerId: string) {
   return useApiMutation((id: string) => measurementEndpoints.remove(customerId, id), {
-    invalidate: [keys.measurements.forCustomer(customerId)],
+    invalidate: [keys.measurements.forCustomer(customerId), keys.measurements.status],
     success: "Measurement removed",
   });
 }

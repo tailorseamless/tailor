@@ -1,3 +1,4 @@
+import { useAuth } from "../contexts/AuthContext";
 import { businessEndpoints, authEndpoints } from "../endpoints/auth.endpoints";
 import { branchEndpoints, designEndpoints, teamEndpoints } from "../endpoints/workspace.endpoints";
 import type {
@@ -61,8 +62,26 @@ export function useBranchActions() {
   return { create, update };
 }
 
-export function useDesigns(params: DesignFilters) {
-  return usePaginatedQuery([...designs, "list", params], () => designEndpoints.list(params));
+export function useDesigns(params: DesignFilters, enabled = true) {
+  return usePaginatedQuery([...designs, "list", params], () => designEndpoints.list(params), { enabled });
+}
+
+/** One go at getting designs seen: publish the page if asked, then switch the chosen designs on. */
+export function useShowDesigns() {
+  const { refresh } = useAuth();
+  return useApiMutation(
+    async ({ ids, publish }: { ids: string[]; publish: boolean }) => {
+      try {
+        // No address is sent: the server keeps theirs, or picks one from the business name.
+        if (publish) await businessEndpoints.update({ pageEnabled: true });
+        if (ids.length) await designEndpoints.show(ids);
+      } finally {
+        // Even on failure the page may already be on, so the screen must be re-read.
+        if (publish) await refresh();
+      }
+    },
+    { invalidate: [designs, keys.business], toastError: false },
+  );
 }
 
 export function useDesignCategories() {

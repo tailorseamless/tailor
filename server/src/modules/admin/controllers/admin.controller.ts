@@ -22,6 +22,7 @@ import {
   resolveAlertSchema,
   listBusinessesSchema,
   listUsersSchema,
+  switchOnSchema,
   setBusinessStatusSchema,
   setUserStatusSchema,
   updateBusinessProfileSchema,
@@ -53,6 +54,12 @@ export class AdminController {
     const { params, body } = input(req, updateBusinessProfileSchema);
     const business = await AdminService.Instance.updateBusinessProfile(authUser(req), params.id, body);
     res.json(ApiResponse.ok("Business updated", business));
+  }
+
+  static async switchOn(req: Request, res: Response): Promise<void> {
+    const { params, body } = input(req, switchOnSchema);
+    const result = await AdminService.Instance.switchOn(authUser(req), params.id, body);
+    res.json(ApiResponse.ok("Switched on", result));
   }
 
   static async users(req: Request, res: Response): Promise<void> {

@@ -1,3 +1,4 @@
+import { useAuth } from "../contexts/AuthContext";
 import { authEndpoints, businessEndpoints } from "../endpoints/auth.endpoints";
 import { dashboardEndpoints, notificationEndpoints, publicEndpoints } from "../endpoints/misc.endpoints";
 import type { BusinessInput, OnboardingState, RegisterInput } from "../types/auth.types";
@@ -37,6 +38,30 @@ export function useUpdateBusiness() {
     success: "Business details saved",
     toastError: false,
   });
+}
+
+/** The one-tap "let customers ask for an appointment" from the app's offers of help. */
+export function useSwitchOnBooking() {
+  const { refresh } = useAuth();
+  return useApiMutation(
+    async () => {
+      await businessEndpoints.update({ bookingEnabled: true });
+      await refresh();
+    },
+    { invalidate: [keys.business], success: "Customers can now ask for an appointment" },
+  );
+}
+
+/** Bank details added outside Settings. The dialog shows the server's errors itself. */
+export function useSaveBankAccount() {
+  const { refresh } = useAuth();
+  return useApiMutation(
+    async (account: Pick<BusinessInput, "bankName" | "accountNumber" | "accountName">) => {
+      await businessEndpoints.update(account);
+      await refresh();
+    },
+    { invalidate: [keys.business], success: "Your bank details are on your page", toastError: false },
+  );
 }
 
 export function useNotifications(unreadOnly = false) {

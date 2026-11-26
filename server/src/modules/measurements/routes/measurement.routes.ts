@@ -30,6 +30,8 @@ router.delete(
   T.remove,
 );
 
+router.get("/measurements/status", authorise("measurement.read"), validate(s.measurementStatusSchema), M.status);
+
 // A customer's measurements: a history of immutable records.
 const base = "/customers/:customerId/measurements";
 router.get(base, authorise("measurement.read"), validate(s.listMeasurementsSchema), M.list);

@@ -1,5 +1,6 @@
 import { Ruler, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useDeleteMeasurement, useMeasurements } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { CustomerGender, Measurement } from "../../types/customer.types";
@@ -121,7 +122,13 @@ export function MeasurementsCard({
   const { can } = useWorkspace();
   const query = useMeasurements(customerId);
   const remove = useDeleteMeasurement(customerId);
-  const [recording, setRecording] = useState(false);
+  // `?record=1` (from the app's offer to take a first measurement) lands with the form already open.
+  const [params, setParams] = useSearchParams();
+  const [recording, setRecording] = useState(() => params.get("record") === "1" && can("measurement.record"));
+  const stopRecording = () => {
+    setRecording(false);
+    if (params.has("record")) setParams({}, { replace: true });
+  };
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   // A pick here wins over the customer's gender, so editing the customer still updates the default.
@@ -209,7 +216,7 @@ export function MeasurementsCard({
       {recording && (
         <MeasurementForm
           open
-          onClose={() => setRecording(false)}
+          onClose={stopRecording}
           customerId={customerId}
           previous={query.data?.data[0]}
           build={build}

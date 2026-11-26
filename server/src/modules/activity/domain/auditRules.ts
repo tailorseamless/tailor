@@ -40,6 +40,7 @@ export const FEED_ACTIONS = [
   "account.deleted",
   "admin.business_suspended",
   "admin.business_reactivated",
+  "admin.switched_on",
   "admin.user_disabled",
   "admin.user_enabled",
   "admin.role_granted",

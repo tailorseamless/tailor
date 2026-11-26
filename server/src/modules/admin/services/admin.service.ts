@@ -10,6 +10,9 @@ import type { ListAuditParams } from "../../activity/dto/activity.dto";
 import type { AuditPage } from "../../activity/repositories/audit.repository";
 import { ActivityService } from "../../activity/services/activity.service";
 import { BusinessRepository } from "../../businesses/repositories/business.repository";
+import { BusinessService } from "../../businesses/services/business.service";
+import { DesignService } from "../../designs/services/design.service";
+import { NotificationService } from "../../notifications/services/notification.service";
 import { UserService } from "../../users/services/user.service";
 import type { SystemHealthDTO } from "../../system/dto/system.dto";
 import { SystemHealthService } from "../../system/services/systemHealth.service";
@@ -27,7 +30,12 @@ import { AdminRepository } from "../repositories/admin.repository";
 import { AlertRepository } from "../repositories/alert.repository";
 import { AlertService } from "./alert.service";
 import { InsightsService } from "./insights.service";
-import type { ListBusinessesQuery, ListUsersQuery, UpdateBusinessProfileInput } from "../validators/admin.schema";
+import type {
+  ListBusinessesQuery,
+  ListUsersQuery,
+  SwitchOnInput,
+  UpdateBusinessProfileInput,
+} from "../validators/admin.schema";
 
 /**
  * The platform admin area. Every change is written to the audit log of the
@@ -48,6 +56,9 @@ export class AdminService {
     private readonly alerts = AlertRepository.Instance,
     private readonly alertService = AlertService.Instance,
     private readonly health = SystemHealthService.Instance,
+    private readonly businessService = BusinessService.Instance,
+    private readonly designs = DesignService.Instance,
+    private readonly notifications = NotificationService.Instance,
   ) {}
 
   async overview(): Promise<PlatformOverviewDTO> {
@@ -221,6 +232,63 @@ export class AdminService {
     });
     this.userService.invalidateBusiness(id); // the time zone is part of what signed-in people have cached
     return this.business(id);
+  }
+
+  /**
+   * Does for a business what the app's own offers of help do, for an owner who asks support to. The admin never
+   * sees the designs, so every hidden one with a photo is switched on. Bank details are deliberately not here:
+   * only the business says where its customers' money goes. The reason is kept in the business's audit log and
+   * the owner is told, so they can switch anything back off.
+   */
+  async switchOn(
+    actor: Actor,
+    id: string,
+    input: SwitchOnInput,
+  ): Promise<{ designsShown: number; pagePublished: boolean; bookingOpened: boolean }> {
+    return runInTransaction(async (tx) => {
+      const business = await this.admin.findBusiness(id, tx);
+      if (!business) throw AppError.notFound("Business not found");
+      if (business.status !== "active" || business.deletionScheduledFor) {
+        throw AppError.conflict("This business is suspended or closing, so nothing can be switched on for it");
+      }
+      // The page first: appointment requests need it on.
+      const pagePublished = input.page && (await this.businessService.publishPageFor(id, tx));
+      const bookingOpened = input.booking && (await this.businessService.openBookingFor(id, tx));
+      const designIds = input.designs ? await this.designs.showAllFor(id, tx) : [];
+      const result = { designsShown: designIds.length, pagePublished, bookingOpened };
+      const what = [
+        designIds.length > 0 && `${designIds.length} design${designIds.length === 1 ? "" : "s"}`,
+        pagePublished && "your public page",
+        bookingOpened && "appointment requests",
+      ].filter((part): part is string => Boolean(part));
+      if (what.length === 0) return result; // already so: nothing to record or announce
+
+      await this.activity.audit(
+        {
+          businessId: id,
+          actorId: actor.id,
+          action: "admin.switched_on",
+          entityType: "business",
+          entityId: id,
+          payload: { reason: input.reason, pagePublished, bookingOpened, designIds },
+        },
+        tx,
+      );
+      if (business.owner) {
+        await this.notifications.notify(
+          {
+            businessId: id,
+            userIds: [business.owner.id],
+            type: "platform.support_change",
+            title: `Tailor Seamless support switched on ${what.join(", ")}`,
+            body: "If you didn't want this, you can switch designs off in Designs, and your page or appointment requests off in Settings.",
+            linkPath: "/designs",
+          },
+          tx,
+        );
+      }
+      return result;
+    });
   }
 
   users(query: ListUsersQuery): Promise<Paginated<AdminUserDTO>> {

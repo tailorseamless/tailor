@@ -215,7 +215,9 @@ export class AdminRepository {
   /** Business 360, without the business row itself (the service adds it). One query per concern, all by business id. */
   async businessDetail(id: string): Promise<Omit<AdminBusinessDetailDTO, "business" | "openAlerts" | "churnRisk">> {
     const [page] = await AppDataSource.query(
-      `SELECT slug, page_enabled AS "pageEnabled", booking_enabled AS "bookingEnabled" FROM businesses WHERE id = $1`,
+      `SELECT slug, page_enabled AS "pageEnabled", booking_enabled AS "bookingEnabled",
+              (bank_name IS NOT NULL AND account_number IS NOT NULL AND account_name IS NOT NULL) AS "hasBankDetails"
+         FROM businesses WHERE id = $1`,
       [id],
     );
     const members: AdminMemberDTO[] = await AppDataSource.query(
@@ -249,8 +251,19 @@ export class AdminRepository {
          (SELECT COUNT(*) FROM production_tasks WHERE business_id = $1 AND deleted_at IS NULL
              AND status IN ('todo', 'in_progress')) AS tasks_open,
          (SELECT COUNT(*) FROM designs WHERE business_id = $1 AND deleted_at IS NULL) AS designs,
+         (SELECT COUNT(*) FROM customer_measurements WHERE business_id = $1 AND deleted_at IS NULL) AS measurements,
          (SELECT COUNT(*) FROM materials WHERE business_id = $1 AND deleted_at IS NULL) AS materials,
          (SELECT COUNT(*) FROM expenses WHERE business_id = $1 AND deleted_at IS NULL) AS expenses`,
+      [id],
+    );
+    const [seen] = await AppDataSource.query(
+      `SELECT COUNT(*) FILTER (WHERE has_photo AND visibility = 'customers') AS showing,
+              COUNT(*) FILTER (WHERE has_photo AND visibility = 'private') AS hidden,
+              COUNT(*) FILTER (WHERE NOT has_photo) AS no_photo
+         FROM (SELECT d.visibility,
+                      EXISTS (SELECT 1 FROM images i WHERE i.design_id = d.id AND i.deleted_at IS NULL) AS has_photo
+                 FROM designs d
+                WHERE d.business_id = $1 AND d.deleted_at IS NULL) AS catalogue`,
       [id],
     );
     const [mail] = await AppDataSource.query(
@@ -274,7 +287,9 @@ export class AdminRepository {
         slug: (page?.slug as string | null) ?? null,
         pageEnabled: page?.pageEnabled === true,
         bookingEnabled: page?.bookingEnabled === true,
+        hasBankDetails: page?.hasBankDetails === true,
       },
+      designVisibility: { showing: toInt(seen.showing), hidden: toInt(seen.hidden), noPhoto: toInt(seen.no_photo) },
       members,
       onboarding: (owner?.onboarding as OnboardingState | null) ?? null,
       counts: {
@@ -289,6 +304,7 @@ export class AdminRepository {
         requestsPending: toInt(c.requests_pending),
         tasksOpen: toInt(c.tasks_open),
         designs: toInt(c.designs),
+        measurements: toInt(c.measurements),
         materials: toInt(c.materials),
         expenses: toInt(c.expenses),
       },

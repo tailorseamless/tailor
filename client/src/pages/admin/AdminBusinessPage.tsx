@@ -4,6 +4,7 @@ import { ActivityFeed } from "../../components/admin/ActivityFeed";
 import { AdminNotesCard } from "../../components/admin/AdminNotesCard";
 import { AuditLogPanel } from "../../components/admin/AuditLogPanel";
 import { BusinessEditModal } from "../../components/admin/BusinessEditModal";
+import { PublicPageCard } from "../../components/admin/PublicPageCard";
 import { TrendBars } from "../../components/admin/TrendBars";
 import { GUIDE_STEPS } from "../../components/onboarding/guideSteps";
 import { Button } from "../../components/shared/Button";
@@ -152,6 +153,8 @@ export default function AdminBusinessPage() {
                   )}
                 </Card>
               </div>
+
+              <PublicPageCard detail={d} />
 
               <Card className="mb-5">
                 <div className="border-b border-line px-4 py-3">

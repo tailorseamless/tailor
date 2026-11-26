@@ -82,8 +82,8 @@ export const GUIDE_STEPS: GuideStep[] = [
     tips: [
       "Tap New design and add a photo of a style you make.",
       "Give it a name, a category and a price range.",
-      "Turn on Show to customers to put it on your public page.",
-      "Tap Save. Next time you take an order, you can attach this design to it.",
+      "Tap Create. We'll ask if people should see it, and switch it on for you.",
+      "Next time you take an order, you can attach this design to it.",
     ],
     path: "/designs",
     startLabel: "Open designs",

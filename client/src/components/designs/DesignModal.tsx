@@ -2,6 +2,7 @@ import { ImagePlus, Star, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useToast } from "../../contexts/ToastContext";
+import { useNotNow } from "../../hooks/useNotNow";
 import { useDesign, useDesignActions } from "../../hooks/useTeam";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { Design, DesignVisibility } from "../../types/workspace.types";
@@ -31,8 +32,15 @@ function parsePrice(text: string): number | null | undefined {
   return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE ? Math.round(value * 100) / 100 : undefined;
 }
 
+interface DesignModalProps {
+  designId: string | "new";
+  onClose: () => void;
+  /** Closes this and offers to get the design seen: after adding one, or from "Switch on my page". */
+  onHelp: (id: string) => void;
+}
+
 /** Create a design, or view and edit one with its pictures. */
-export function DesignModal({ designId, onClose }: { designId: string | "new"; onClose: () => void }) {
+export function DesignModal({ designId, onClose, onHelp }: DesignModalProps) {
   const [current, setCurrent] = useState(designId);
   const isNew = current === "new";
   const query = useDesign(isNew ? null : current);
@@ -44,23 +52,74 @@ export function DesignModal({ designId, onClose }: { designId: string | "new"; o
     );
   }
   return (
-    <DesignEditor key={current} design={isNew ? undefined : query.data} onClose={onClose} onCreated={setCurrent} />
+    <DesignEditor
+      key={current}
+      design={isNew ? undefined : query.data}
+      onClose={onClose}
+      onHelp={onHelp}
+      onCreated={setCurrent}
+    />
+  );
+}
+
+/** Whether people can actually see this saved design, and if not, what is in the way. */
+function SeenBy({
+  shown,
+  hasPhoto,
+  pageOn,
+  onPublish,
+}: {
+  shown: boolean;
+  hasPhoto: boolean;
+  pageOn: boolean;
+  onPublish?: () => void;
+}) {
+  const seen = shown && hasPhoto && pageOn;
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-sm",
+        seen ? "bg-success-bg text-success-fg" : "bg-warning-bg text-warning-fg",
+      )}
+      role="status"
+      data-cy="design-seen-by"
+    >
+      <span className="min-w-0 flex-1">
+        {seen
+          ? "People can see this design on your page."
+          : !shown
+            ? "Only your team can see this design."
+            : !hasPhoto
+              ? "Add a photo above. People can't see a design without one."
+              : onPublish
+                ? "Your public page is switched off, so the public can't see this yet."
+                : "Your public page is switched off. Ask the business owner to switch it on."}
+      </span>
+      {shown && hasPhoto && !pageOn && onPublish && (
+        <Button size="sm" variant="secondary" onClick={onPublish} data-cy="design-publish-page">
+          Switch on my page
+        </Button>
+      )}
+    </div>
   );
 }
 
 function DesignEditor({
   design,
   onClose,
+  onHelp,
   onCreated,
 }: {
   design?: Design;
   onClose: () => void;
+  onHelp: (id: string) => void;
   onCreated: (id: string) => void;
 }) {
   const { can, business } = useWorkspace();
   const toast = useToast();
   const guide = useOnboarding();
   const actions = useDesignActions();
+  const { keep, forget } = useNotNow();
   const canEdit = can("design.manage");
   const [name, setName] = useState(design?.name ?? "");
   const [category, setCategory] = useState(design?.category ?? "");
@@ -79,7 +138,8 @@ function DesignEditor({
   const pricePreview =
     typedMin === undefined || typedMax === undefined ? null : formatPriceRange(typedMin, typedMax, business.currency);
 
-  const save = () => {
+  /** `then` runs once a saved design's changes are in, before this closes for something else. */
+  const save = (then?: () => void) => {
     setProblem(null);
     if (name.trim().length < 2) return setProblem("Name the design.");
     const min = parsePrice(priceMin);
@@ -100,7 +160,15 @@ function DesignEditor({
       isFavourite: favourite,
     };
     if (design)
-      actions.update.mutate({ id: design.id, input: body }, { onSuccess: () => toast.success("Design saved") });
+      actions.update.mutate(
+        { id: design.id, input: body },
+        {
+          onSuccess: () => {
+            toast.success("Design saved");
+            then?.();
+          },
+        },
+      );
     else
       actions.createWithPictures.mutate(
         { input: body, files: pending },
@@ -113,7 +181,9 @@ function DesignEditor({
                   ? `${created.name} added with ${uploaded} picture${uploaded === 1 ? "" : "s"}`
                   : `${created.name} added`,
               );
-              return onClose();
+              // Saved but still unseen, and something can be done about it: ask now, while it's on their mind.
+              const unseen = visibility === "private" || (!business.pageEnabled && can("business.update"));
+              return uploaded && unseen ? onHelp(created.id) : onClose();
             }
             // The design is saved; keep it open so the missing pictures can be added again.
             toast.error(
@@ -123,6 +193,26 @@ function DesignEditor({
           },
         },
       );
+  };
+
+  /** On a saved design the switch saves by itself, so closing without "Save" can't lose it. */
+  const changeVisibility = (on: boolean) => {
+    const next: DesignVisibility = on ? "customers" : "private";
+    setVisibility(next);
+    if (!design) return;
+    // Switching one off is a choice to keep it private; don't offer to switch it back on.
+    if (on) forget([design.id]);
+    else keep([design.id]);
+    actions.update.mutate(
+      { id: design.id, input: { visibility: next } },
+      {
+        onSuccess: () => toast.success(on ? "Switched on for customers" : "Hidden from customers"),
+        onError: (error) => {
+          setVisibility(visibility);
+          toast.error(errorMessage(error));
+        },
+      },
+    );
   };
 
   const pick = (list: FileList | null) => {
@@ -169,7 +259,7 @@ function DesignEditor({
             <Button variant="secondary" onClick={onClose} data-cy="design-close">
               {design ? "Close" : "Cancel"}
             </Button>
-            <Button onClick={save} loading={mutation.isPending} data-cy="design-save">
+            <Button onClick={() => save()} loading={mutation.isPending} data-cy="design-save">
               {design
                 ? "Save"
                 : pending.length
@@ -294,14 +384,28 @@ function DesignEditor({
                 : "Optional. Customers see “Ask for price” if you leave both empty. Fill one box for “From …” or “Up to …”."}
             </p>
           </div>
-          <Toggle
-            label="Show to customers"
-            description="Appears on your public page (once it's published) and on customers' private pages. A design needs a picture to be listed."
-            checked={visibility === "customers"}
-            onChange={(on) => setVisibility(on ? "customers" : "private")}
-            disabled={!canEdit}
-            data-cy="design-visibility"
-          />
+          <div>
+            <Toggle
+              label="Show to customers"
+              description={
+                design
+                  ? "Saves as soon as you tap it."
+                  : "Puts it on your public page and your customers' private pages."
+              }
+              checked={visibility === "customers"}
+              onChange={changeVisibility}
+              disabled={!canEdit || actions.update.isPending}
+              data-cy="design-visibility"
+            />
+            {design && (
+              <SeenBy
+                shown={visibility === "customers"}
+                hasPhoto={design.images.length > 0}
+                pageOn={business.pageEnabled}
+                onPublish={can("business.update") ? () => save(() => onHelp(design.id)) : undefined}
+              />
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setFavourite(!favourite)}
