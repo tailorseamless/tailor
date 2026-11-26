@@ -83,12 +83,10 @@ export class RiskRepository {
    * up), or for one business when `businessId` is given (any age).
    */
   async churnInputs(options: { minAgeDays: number; businessId?: string }): Promise<ChurnRow[]> {
-    const args: unknown[] = [options.minAgeDays];
-    let scope = `b.created_at < now() - make_interval(days => $1::int)`;
-    if (options.businessId) {
-      args.push(options.businessId);
-      scope = `b.id = $2`;
-    }
+    // Pass only what the SQL uses: Postgres refuses a parameter it can't find a type for ($1 left unmentioned).
+    const [scope, value] = options.businessId
+      ? [`b.id = $1`, options.businessId]
+      : [`b.created_at < now() - make_interval(days => $1::int)`, options.minAgeDays];
     const rows: Record<string, unknown>[] = await AppDataSource.query(
       `WITH people AS (
          SELECT a.business_id,
@@ -112,7 +110,7 @@ export class RiskRepository {
          LEFT JOIN business_members om ON om.business_id = b.id AND om.role = 'owner' AND om.deleted_at IS NULL
          LEFT JOIN users o ON o.id = om.user_id
         WHERE b.deleted_at IS NULL AND b.status = 'active' AND ${scope}`,
-      args,
+      [value],
     );
     return rows.map((row) => {
       const guide = row.onboarding as OnboardingState | null;
