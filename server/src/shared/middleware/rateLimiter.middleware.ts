@@ -43,6 +43,9 @@ export const uploadRateLimiter = limiter(15, 30, "Too many uploads. Please wait 
 /** Exports and PDFs (heavier queries): 30 / 15 min / user. */
 export const exportRateLimiter = limiter(15, 30, "Too many downloads. Please wait a few minutes.", byUser);
 
+/** Anything that calls an AI provider (it costs money per call): 30 / 15 min / user. Place after authorise. */
+export const aiRateLimiter = limiter(15, 30, "Too many AI requests. Please wait a few minutes.", byUser);
+
 /** The customer portal (opened by secret link): 120 / 15 min / IP. */
 export const portalRateLimiter = limiter(15, 120, "Too many requests. Please try again shortly.");
 

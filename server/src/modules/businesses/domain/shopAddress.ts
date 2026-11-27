@@ -24,6 +24,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "admin",
   "notifications",
   "settings",
+  "capture",
   // Things a visitor expects to be the site itself, not one tailor.
   "api",
   "app",

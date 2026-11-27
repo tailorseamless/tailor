@@ -33,6 +33,7 @@ export const router = createBrowserRouter([
           gated("dashboard.read", [{ path: "dashboard", lazy: page(() => import("./pages/dashboard/DashboardPage")) }]),
           { path: "customers", lazy: page(() => import("./pages/customers/CustomersPage")) },
           { path: "customers/:id", lazy: page(() => import("./pages/customers/CustomerDetailPage")) },
+          gated("customer.create", [{ path: "capture", lazy: page(() => import("./pages/capture/CapturePage")) }]),
           { path: "orders", lazy: page(() => import("./pages/orders/OrdersPage")) },
           gated("order.create", [{ path: "orders/new", lazy: page(() => import("./pages/orders/NewOrderPage")) }]),
           { path: "orders/:id", lazy: page(() => import("./pages/orders/OrderDetailPage")) },

@@ -49,6 +49,7 @@ export class AlertService {
       { find: () => this.rules.securityBursts() },
       { find: () => this.rules.storageNearlyFull(), clears: "storage_credits" },
       { find: () => this.rules.auditLogSize(), clears: "audit_log_size" },
+      { find: () => this.rules.aiKeyFailing(), clears: "ai_key_failing" },
     ];
   }
 

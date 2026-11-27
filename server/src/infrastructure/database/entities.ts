@@ -3,6 +3,10 @@ import { AdminAlert } from "../../modules/admin/entities/adminAlert.entity";
 import { AdminNote } from "../../modules/admin/entities/adminNote.entity";
 import { PlatformAnnouncement } from "../../modules/admin/entities/platformAnnouncement.entity";
 import { PlatformDailyStat } from "../../modules/admin/entities/platformDailyStat.entity";
+import { AiCredential } from "../../modules/ai/entities/aiCredential.entity";
+import { AiDailyUsage } from "../../modules/ai/entities/aiDailyUsage.entity";
+import { AiSettings } from "../../modules/ai/entities/aiSettings.entity";
+import { AiUsageLog } from "../../modules/ai/entities/aiUsageLog.entity";
 import { JobStatus } from "../../modules/system/entities/jobStatus.entity";
 import { SecurityCounter } from "../../modules/system/entities/securityCounter.entity";
 import { Appointment } from "../../modules/appointments/entities/appointment.entity";
@@ -70,4 +74,8 @@ export const ENTITIES = [
   PlatformDailyStat,
   JobStatus,
   SecurityCounter,
+  AiCredential,
+  AiUsageLog,
+  AiDailyUsage,
+  AiSettings,
 ];

@@ -51,6 +51,8 @@ export type Permission =
   | "admin.manage"
   | "admin.audit"
   | "admin.technical"
+  | "admin.ai"
+  | "ai.use"
   | "dashboard.read";
 
 export type MeasurementUnit = "in" | "cm";

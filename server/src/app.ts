@@ -6,6 +6,7 @@ import { env } from "./config/env";
 import { httpLogger } from "./infrastructure/logger/logger";
 import { accountDeletionRoutes } from "./modules/accounts/routes/accountDeletion.routes";
 import { adminRoutes } from "./modules/admin/routes/admin.routes";
+import { aiRoutes } from "./modules/ai/routes/ai.routes";
 import { appointmentRoutes } from "./modules/appointments/routes/appointment.routes";
 import { branchRoutes } from "./modules/branches/routes/branch.routes";
 import { businessRoutes } from "./modules/businesses/routes/business.routes";
@@ -78,6 +79,7 @@ export function createApp(): Express {
     reportRoutes,
     notificationRoutes,
     dashboardRoutes,
+    aiRoutes,
     adminRoutes,
   ].forEach((routes) => app.use(env.apiPrefix, routes));
 

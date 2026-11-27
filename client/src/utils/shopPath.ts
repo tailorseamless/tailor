@@ -21,6 +21,7 @@ const RESERVED = new Set([
   "admin",
   "notifications",
   "settings",
+  "capture",
   "api",
   "app",
   "www",

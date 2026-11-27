@@ -102,6 +102,14 @@ const schema = z.object({
   EMAIL_FROM_NAME: z.string().default("Tailor Seamless"),
   EMAIL_FROM_ADDRESS: z.string().email("must be an email address, like you@example.com").optional(),
   EMAIL_REPLY_TO: z.string().email("must be an email address, like you@example.com").optional(),
+
+  // AI. Encrypts the saved provider API keys. Optional, but without it no key can be saved and AI is off.
+  // Make one with `openssl rand -base64 32`. Changing it makes every saved key unreadable (save them again).
+  AI_KEYS_SECRET: z.string().min(32, "must be at least 32 characters (openssl rand -base64 32)").optional(),
+  /** How long one AI request may take, in milliseconds. */
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(600_000).default(90_000),
+  /** For the few very long generations only. */
+  AI_LONG_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(3_600_000).default(1_200_000),
 });
 
 /** cloudinary://<api_key>:<api_secret>@<cloud_name>. The separate variables win when both are set. */
@@ -286,6 +294,8 @@ function load() {
   if (isProduction && (raw.EMAIL_PROVIDER === "none" || (!mail.smtpConfigured && !mail.appsScript.configured))) {
     console.warn("Email is not configured: emails are queued, not sent");
   }
+  if (isProduction && !raw.AI_KEYS_SECRET)
+    console.warn("AI_KEYS_SECRET is not set: AI keys cannot be saved, AI is off");
 
   return {
     nodeEnv: raw.NODE_ENV,
@@ -328,6 +338,13 @@ function load() {
     push: {
       /** FCM needs the service account (an ID-token-only setup cannot send). */
       enabled: raw.PUSH_ENABLED && serviceAccount !== null,
+    },
+    ai: {
+      keysSecret: raw.AI_KEYS_SECRET ?? null,
+      /** Keys can be stored (and so AI can be used) only with a secret to encrypt them. */
+      configured: Boolean(raw.AI_KEYS_SECRET),
+      requestTimeoutMs: raw.AI_REQUEST_TIMEOUT_MS,
+      longRequestTimeoutMs: raw.AI_LONG_REQUEST_TIMEOUT_MS,
     },
     jobs: {
       /** Run the job scheduler inside the API process. On by default, except in tests. */

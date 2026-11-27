@@ -61,6 +61,10 @@ services:
       # The WhatsApp number behind "Contact support", digits only with the country code (2348012345678).
       - key: SUPPORT_WHATSAPP_NUMBER
         sync: false
+      # Encrypts the AI keys saved in Admin → AI (openssl rand -base64 32). Without it AI is off. Never change it casually:
+      # saved keys become unreadable and must be saved again.
+      - key: AI_KEYS_SECRET
+        sync: false
       # How long a sign-in lasts before the person must sign in again, with a unit: 60d, 12h, 30m, 45s. Change it here and redeploy.
       - key: SESSION_LIFETIME
         value: 60d

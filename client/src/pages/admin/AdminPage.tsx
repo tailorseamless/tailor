@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ActivityFeed } from "../../components/admin/ActivityFeed";
 import { AdminsPanel } from "../../components/admin/AdminsPanel";
+import { AiPanel } from "../../components/admin/AiPanel";
 import { AlertsPanel } from "../../components/admin/AlertsPanel";
 import { AnnouncementsPanel } from "../../components/admin/AnnouncementsPanel";
 import { AuditLogPanel } from "../../components/admin/AuditLogPanel";
@@ -25,7 +26,17 @@ import { ROLE } from "../../utils/labels";
 const STOP_REASON_MIN = 10;
 const PREFIX = "admin";
 
-const VIEWS = ["directory", "alerts", "activity", "growth", "announcements", "audit", "health", "admins"] as const;
+const VIEWS = [
+  "directory",
+  "alerts",
+  "activity",
+  "growth",
+  "announcements",
+  "audit",
+  "health",
+  "ai",
+  "admins",
+] as const;
 type View = (typeof VIEWS)[number];
 const isView = (value: string | null): value is View => VIEWS.includes(value as View);
 
@@ -79,6 +90,7 @@ export default function AdminPage() {
     { id: "announcements", label: "Announcements" },
     ...(audit ? [{ id: "audit", label: "Audit log" }] : []),
     { id: "health", label: "System health" },
+    { id: "ai", label: "AI" },
     { id: "admins", label: "Admins" },
   ];
 
@@ -332,6 +344,10 @@ export default function AdminPage() {
 
       <TabPanel idPrefix={PREFIX} id="health" active={view === "health"}>
         {view === "health" && <SystemHealthPanel />}
+      </TabPanel>
+
+      <TabPanel idPrefix={PREFIX} id="ai" active={view === "ai"}>
+        {view === "ai" && <AiPanel />}
       </TabPanel>
 
       <TabPanel idPrefix={PREFIX} id="admins" active={view === "admins"}>

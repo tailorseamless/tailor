@@ -1,4 +1,5 @@
 import { ALERTS, SECURITY } from "../../../config/constants";
+import { AiUsageRepository } from "../../ai/repositories/aiUsage.repository";
 import { SecurityCounterRepository } from "../../system/repositories/securityCounter.repository";
 import { SystemHealthRepository } from "../../system/repositories/systemHealth.repository";
 import { SystemHealthService } from "../../system/services/systemHealth.service";
@@ -21,6 +22,27 @@ export class AlertRulesRepository {
   static Instance = new AlertRulesRepository();
 
   private constructor() {}
+
+  /**
+   * Businesses' AI requests failing because of the platform's key or model (rejected key, account out of
+   * credit, model refused). Members are only told "try later", so this is how the admin finds out.
+   */
+  async aiKeyFailing(): Promise<AlertCandidate[]> {
+    const rows = await AiUsageRepository.Instance.recentSetupFailures();
+    const what: Record<string, string> = {
+      auth: "rejected the API key",
+      account: "refused because of the account behind the key (plan, quota or balance)",
+      invalid_request: "could not run the model",
+    };
+    return rows.map((row) => ({
+      type: "ai_key_failing",
+      severity: row.errorKind === "invalid_request" ? "high" : "critical",
+      title: `AI is failing for businesses: ${row.provider} ${what[row.errorKind] ?? "failed"}`,
+      detail: `${row.failures} request${row.failures === 1 ? "" : "s"} in the last hour failed with "${row.model}". Check the key, or choose another model, in Admin → AI.`,
+      data: { provider: row.provider, model: row.model, errorKind: row.errorKind, failures: row.failures },
+      dedupeKey: `ai_key_failing:${row.provider}:${row.model}:${row.errorKind}`,
+    }));
+  }
 
   /** A background job failing run after run. */
   async failingJobs(): Promise<AlertCandidate[]> {

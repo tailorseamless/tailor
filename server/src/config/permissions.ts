@@ -107,6 +107,12 @@ export const PERMISSIONS = {
   "admin.audit": PLATFORM_ACT,
   /** Technical diagnostics (job errors, failed-delivery error text). */
   "admin.technical": PLATFORM_ACT,
+  /** The platform's AI: provider keys, which model each feature uses, each business's daily allowance. */
+  "admin.ai": PLATFORM_ACT,
+
+  // AI features run on the platform's key. Seeing whether AI is available (and what is left today) is for anyone;
+  // each AI feature is also guarded by the permission for the records it drafts.
+  "ai.use": ANY,
 
   // Shows takings and balances, so it follows who may see payments.
   "dashboard.read": TILL,

@@ -1,6 +1,7 @@
 import { Search, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { SnapRecordButton } from "../../components/capture/SnapRecordButton";
 import { CustomerForm } from "../../components/customers/CustomerForm";
 import { MeasurementHelp } from "../../components/help/SetupHelp";
 import { Button } from "../../components/shared/Button";
@@ -35,13 +36,16 @@ export default function CustomersPage() {
         title="Customers"
         actions={
           can("customer.create") && (
-            <Button
-              icon={<UserPlus className="size-4" aria-hidden />}
-              onClick={() => setCreating(true)}
-              data-cy="new-customer"
-            >
-              New customer
-            </Button>
+            <>
+              <SnapRecordButton />
+              <Button
+                icon={<UserPlus className="size-4" aria-hidden />}
+                onClick={() => setCreating(true)}
+                data-cy="new-customer"
+              >
+                New customer
+              </Button>
+            </>
           )
         }
       />
@@ -112,8 +116,9 @@ export default function CustomersPage() {
                 message={
                   search
                     ? "Try part of their name or phone number."
-                    : "Add the people you sew for to keep their measurements and orders together."
+                    : "Add the people you sew for to keep their measurements and orders together. Have them in a notebook? Snap a photo of a page and the app fills them in."
                 }
+                action={search ? undefined : <SnapRecordButton variant="primary" />}
               />
             )
           }
