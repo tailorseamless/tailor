@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import multer from "multer";
 import { AppError } from "../errors/AppError";
-import { sniffMatches, typeAllowed } from "../utils/fileTypes";
+import { extensionOf, sniffMatches, typeAllowed } from "../utils/fileTypes";
 
 const LIMIT_MESSAGES: Record<string, (field: string, maxMb: number, maxCount: number) => string> = {
   LIMIT_FILE_SIZE: (_f, maxMb) => `Each file must be ${maxMb} MB or smaller`,
@@ -46,7 +46,10 @@ export function uploadFiles(
       if (fake) {
         return next(
           AppError.unprocessable("A file's content does not match its type", [
-            { field, message: `${fake.originalname} is not a real image` },
+            {
+              field,
+              message: `${fake.originalname} is not a real ${extensionOf(fake.originalname).toUpperCase()} file`,
+            },
           ]),
         );
       }

@@ -18,6 +18,14 @@ export interface AiImage {
   data: string;
 }
 
+export interface AiDocument {
+  mimeType: "application/pdf";
+  /** base64, no data: prefix */
+  data: string;
+  /** A neutral name ("record-1.pdf"), never the person's own file name. */
+  filename: string;
+}
+
 export interface AiGenerateRequest {
   model: string;
   /** Default: env.ai.requestTimeoutMs */
@@ -28,6 +36,8 @@ export interface AiGenerateRequest {
   prompt: string;
   /** A model that cannot see must fail with kind "invalid_request". */
   images?: AiImage[];
+  /** PDFs the model reads itself. One that cannot must fail with kind "invalid_request". */
+  documents?: AiDocument[];
   schemaName: string;
   /** Every property required, additionalProperties: false. */
   jsonSchema: Record<string, unknown>;

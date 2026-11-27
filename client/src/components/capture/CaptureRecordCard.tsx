@@ -60,7 +60,7 @@ function Checkbox({
 export function CaptureRecordCard({ index, record, onChange, templates, currency, timeZone, today, busy }: Props) {
   const lookup = useCustomerLookup();
   const saved = isSaved(record);
-  const problems = record.include && !saved ? problemsOf(record) : [];
+  const problems = record.include && !saved ? problemsOf(record, templates) : [];
   const set = (patch: Partial<EditableRecord>) => onChange({ ...record, ...patch, error: null });
   const customerLocked = busy || record.customerId !== null;
   const title =

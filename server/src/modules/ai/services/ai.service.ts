@@ -4,6 +4,7 @@ import {
   AI_PROVIDER_LABELS,
   AiProviderError,
   redactKey,
+  type AiDocument,
   type AiGenerateResult,
   type AiImage,
   type AiProvider,
@@ -15,15 +16,16 @@ import type { Actor } from "../../../shared/services/access.service";
 import {
   AiRequestError,
   badOutputError,
-  limitReachedError,
   notSetUpError,
+  outOfTokensError,
   toRequestError,
   type AiAudience,
 } from "../domain/aiErrors";
-import type { AiFeature, AiUsageFeature } from "../domain/aiFeatures";
+import { HOLD_TOKENS, type AiFeature, type AiUsageFeature } from "../domain/aiFeatures";
 import { describeRejection, parseJson } from "../domain/lenient";
 import type { AiStatusDTO, AiTestResultDTO, ResolvedCredential } from "../dto/ai.dto";
-import { AiAllowanceRepository, AiSettingsRepository } from "../repositories/aiAllowance.repository";
+import { AiSettingsRepository } from "../repositories/aiSettings.repository";
+import { AiTokenRepository } from "../repositories/aiToken.repository";
 import { AiUsageRepository } from "../repositories/aiUsage.repository";
 import { AiCredentialService } from "./aiCredential.service";
 
@@ -32,6 +34,8 @@ export interface GenerateJsonRequest<T> {
   system: string;
   prompt: string;
   images?: AiImage[];
+  /** PDFs for the model to read. Always required: a model that can't fails with a clear message. */
+  documents?: AiDocument[];
   /**
    * The photos ARE the material (reading a photographed record): a model that can't see fails with a clear
    * message instead of being asked again without them.
@@ -56,9 +60,11 @@ export interface GenerateJsonResult<T> {
   provider: AiProviderId;
   providerLabel: string;
   model: string;
+  /** Taken from the business's balance (0 for the admin test). */
+  tokensUsed: number;
 }
 
-/** Who a request is for, and whether it counts against a business's daily allowance. */
+/** Who a request is for, and whether it is paid from a business's tokens. */
 interface Caller {
   userId: string;
   businessId: string | null;
@@ -66,7 +72,7 @@ interface Caller {
   metered: boolean;
 }
 
-/** A reply that came back but could not be used: its tokens are still logged, and the use is given back. */
+/** A reply that came back but could not be used: its tokens are logged, but the business isn't charged. */
 class UnusableReply extends Error {
   constructor(
     public readonly result: AiGenerateResult,
@@ -87,9 +93,9 @@ const TEST_JSON_SCHEMA = {
 };
 
 /**
- * The ONLY thing feature code calls for AI. It picks the platform key and model, takes one use of the
- * business's daily allowance, calls the provider, parses and checks the reply (asking once more with what
- * was wrong), logs counts only, gives the use back when nothing usable came of it, and turns provider
+ * The ONLY thing feature code calls for AI. It picks the platform key and model, sets aside some of the
+ * business's tokens, calls the provider, parses and checks the reply (asking once more with what was wrong),
+ * takes the tokens really used (nothing when nothing usable came of it), logs counts only, and turns provider
  * failures into messages a person can act on.
  */
 export class AiService {
@@ -97,13 +103,13 @@ export class AiService {
 
   private constructor(
     private readonly credentials = AiCredentialService.Instance,
-    private readonly allowance = AiAllowanceRepository.Instance,
+    private readonly tokens = AiTokenRepository.Instance,
     private readonly settings = AiSettingsRepository.Instance,
     private readonly usage = AiUsageRepository.Instance,
     private readonly providers: AiProviderResolver = providerFor,
   ) {}
 
-  /** A structured draft for a business member: counts against the business's allowance. */
+  /** A structured draft for a business member: paid from the business's tokens. */
   generateJson<T>(actor: Actor, request: GenerateJsonRequest<T>): Promise<GenerateJsonResult<T>> {
     return this.generate(
       { userId: actor.id, businessId: actor.businessId, audience: "member", metered: true },
@@ -112,30 +118,21 @@ export class AiService {
     );
   }
 
-  /** What a screen needs to offer an AI feature: available or not (and why), and what's left today. */
+  /** What a screen needs to offer an AI feature: available or not (and why), and the tokens left. */
   async status(actor: Actor, feature?: AiFeature): Promise<AiStatusDTO> {
-    const [credential, settings, usedToday] = await Promise.all([
-      this.credentials.resolveFor(feature),
-      this.settings.get(),
-      this.allowance.usedToday(actor.businessId),
-    ]);
-    const dailyLimit = settings.dailyLimit;
-    const remainingToday = Math.max(0, dailyLimit - usedToday);
+    const [credential, tokensLeft] = await Promise.all([this.credentials.resolveFor(feature), this.tokensLeft(actor)]);
     let unavailableReason: string | null = null;
     if (!credential) unavailableReason = notSetUpError("member").message;
-    else if (dailyLimit === 0 || remainingToday === 0) unavailableReason = limitReachedError(dailyLimit).message;
-    return {
-      available: unavailableReason === null,
-      unavailableReason,
-      providerLabel: credential ? AI_PROVIDER_LABELS[credential.provider] : null,
-      model: credential?.model ?? null,
-      dailyLimit,
-      usedToday,
-      remainingToday,
-    };
+    else if (tokensLeft === 0) unavailableReason = outOfTokensError().message;
+    return { configured: credential !== null, available: unavailableReason === null, unavailableReason, tokensLeft };
   }
 
-  /** The platform admin's check that a key and model really answer. Belongs to no business, uses no allowance. */
+  async tokensLeft(actor: Actor): Promise<number> {
+    const { startingTokens } = await this.settings.get();
+    return this.tokens.balance(actor.businessId, startingTokens);
+  }
+
+  /** The platform admin's check that a key and model really answer. Belongs to no business, costs no tokens. */
   async test(actor: Actor, feature?: AiFeature): Promise<AiTestResultDTO> {
     const started = Date.now();
     const caller: Caller = { userId: actor.id, businessId: null, audience: "admin", metered: false };
@@ -175,8 +172,8 @@ export class AiService {
   }
 
   /**
-   * Shared by every request: key → allowance → call → log. On ANY failure the allowance use is given back
-   * (a request that produced nothing usable costs nobody anything) and the error is mapped for the caller.
+   * Shared by every request: key → set tokens aside → call → settle → log. On ANY failure what was set aside
+   * goes back (a request that produced nothing usable costs nobody anything) and the error is mapped.
    */
   private async attempt<T>(
     caller: Caller,
@@ -190,12 +187,12 @@ export class AiService {
     const credential = await this.credentials.resolveFor(feature);
     if (!credential) throw notSetUpError(caller.audience);
 
-    let reservedDay: string | null = null;
+    // Tokens are only known after the call, so some are set aside first: parallel requests can't spend them too.
+    let held: number | null = null;
     if (caller.metered && caller.businessId) {
-      const { dailyLimit } = await this.settings.get();
-      if (dailyLimit === 0) throw limitReachedError(0);
-      reservedDay = await this.allowance.reserve(caller.businessId, dailyLimit);
-      if (!reservedDay) throw limitReachedError(dailyLimit);
+      const { startingTokens } = await this.settings.get();
+      held = await this.tokens.reserve(caller.businessId, startingTokens, HOLD_TOKENS);
+      if (held === null) throw outOfTokensError();
     }
 
     const providerLabel = AI_PROVIDER_LABELS[credential.provider];
@@ -220,8 +217,21 @@ export class AiService {
 
     try {
       const result = await call(this.providers(credential.provider), credential);
+      let tokensUsed = 0;
+      if (held !== null && caller.businessId) {
+        const used = result.tokens.inputTokens + result.tokens.outputTokens;
+        // Bookkeeping must never fail the request it describes.
+        tokensUsed = await this.tokens
+          .settle(caller.businessId, held, used, { feature: usageFeature, actorId: caller.userId })
+          .then((settled) => settled.charged)
+          .catch((err: unknown) => {
+            logger.error({ err, used }, "could not take AI tokens");
+            return 0;
+          });
+      }
       await log(result.tokens, null);
       return {
+        tokensUsed,
         data: result.data,
         imagesIgnored: result.imagesIgnored,
         provider: credential.provider,
@@ -229,10 +239,10 @@ export class AiService {
         model: credential.model,
       };
     } catch (err) {
-      if (reservedDay && caller.businessId) {
-        await this.allowance
-          .release(caller.businessId, reservedDay)
-          .catch((releaseErr: unknown) => logger.error({ err: releaseErr }, "could not give back an AI allowance use"));
+      if (held !== null && caller.businessId) {
+        await this.tokens
+          .release(caller.businessId, held)
+          .catch((releaseErr: unknown) => logger.error({ err: releaseErr }, "could not give back AI tokens"));
       }
       if (err instanceof UnusableReply) {
         await log(err.result, "invalid_output");
@@ -240,8 +250,9 @@ export class AiService {
         throw err.mapped;
       }
       if (err instanceof AiRequestError) {
-        // Only the "this model can't read photos" case reaches here: the provider refused the request itself.
-        await log(noTokens, "invalid_request");
+        // Only "the model can't read these photos / this PDF" reaches here. A PDF may simply be damaged or too
+        // long, so it is logged apart and doesn't raise the "AI is failing" admin alert.
+        await log(noTokens, err.reason === "unreadable_file" ? "unreadable_file" : "invalid_request");
         this.warn(caller, usageFeature, credential, err);
         throw err;
       }
@@ -263,6 +274,7 @@ export class AiService {
     request: GenerateJsonRequest<T>,
   ): Promise<{ data: T; imagesIgnored: boolean; tokens: { inputTokens: number; outputTokens: number } }> {
     let images = request.images ?? [];
+    const documents = request.documents ?? [];
     let imagesIgnored = false;
 
     const send = (prompt: string, pictures: AiImage[]) =>
@@ -272,6 +284,7 @@ export class AiService {
         system: request.system,
         prompt,
         images: pictures,
+        documents,
         schemaName: request.schemaName,
         jsonSchema: request.jsonSchema,
         maxOutputTokens: request.maxOutputTokens ?? 16_000,
@@ -282,6 +295,16 @@ export class AiService {
       try {
         return await send(prompt, images);
       } catch (err) {
+        if (documents.length > 0 && err instanceof AiProviderError && err.kind === "invalid_request") {
+          throw new AiRequestError(
+            caller.audience === "admin"
+              ? `"${credential.model}" couldn't read the PDF. Choose a model that reads PDF files.`
+              : "The AI couldn't read this PDF. It may be too long or password protected, or the AI in use can't read PDFs. Take photos of the pages instead.",
+            422,
+            "unreadable_file",
+            { status: err.status, message: err.detail.slice(0, 600) },
+          );
+        }
         const visionProblem =
           images.length > 0 &&
           err instanceof AiProviderError &&

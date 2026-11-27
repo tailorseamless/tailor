@@ -32,23 +32,36 @@ export interface ResolvedCredential {
   baseUrl: string | null;
 }
 
-/** What any team member's screen needs to offer (or not offer) an AI feature. */
+/**
+ * What any team member's screen needs to offer (or not offer) an AI feature. Which company or model runs it is
+ * the platform's business, so it is not told here.
+ */
 export interface AiStatusDTO {
+  /** The platform has AI switched on. */
+  configured: boolean;
+  /** On, and this business has tokens. */
   available: boolean;
   /** Why it isn't, in words for the person: null when available. */
   unavailableReason: string | null;
-  providerLabel: string | null;
-  model: string | null;
-  dailyLimit: number;
-  usedToday: number;
-  remainingToday: number;
+  tokensLeft: number;
 }
 
 export interface AiSettingsDTO {
-  dailyLimit: number;
+  /** The tokens a business has until it first spends or is given some. */
+  startingTokens: number;
   /** AI_KEYS_SECRET is set, so keys can be saved. */
   storageReady: boolean;
   updatedAt: Date | null;
+}
+
+/** One business's balance, for the admin. */
+export interface AiTokenBalanceDTO {
+  businessId: string;
+  name: string;
+  tokens: number;
+  /** False until it has spent or been given tokens: it still has the starting amount. */
+  started: boolean;
+  usedLast30Days: number;
 }
 
 /** The admin's AI page in one call. */
@@ -73,8 +86,8 @@ export interface AiUsageSummaryDTO {
   /** Failures by kind: the first place to look when AI misbehaves. */
   byError: { errorKind: string; requests: number }[];
   topBusinesses: { businessId: string; name: string; requests: number }[];
-  /** Businesses that used every request of their allowance on at least one day. */
-  businessesAtLimit: number;
+  /** Businesses with no tokens left. */
+  businessesOutOfTokens: number;
 }
 
 /** An existing customer a captured record is probably about. */
@@ -99,10 +112,8 @@ export interface RecordCaptureDraftDTO {
   unreadable: string[];
   /** What to double-check. */
   caveats: string[];
-  provider: AiProviderId;
-  providerLabel: string;
-  model: string;
-  remainingToday: number;
+  tokensUsed: number;
+  tokensLeft: number;
 }
 
 export interface AiTestResultDTO {

@@ -27,13 +27,17 @@ function client(apiKey: string, timeoutMs?: number): Anthropic {
   return new Anthropic({ apiKey, timeout: timeoutMs ?? env.ai.requestTimeoutMs, maxRetries: 1 });
 }
 
-/** Image blocks go BEFORE the text. */
+/** Document and image blocks go BEFORE the text. */
 export function anthropicUserContent(request: AiGenerateRequest): Anthropic.ContentBlockParam[] {
+  const documents: Anthropic.ContentBlockParam[] = (request.documents ?? []).map((document) => ({
+    type: "document",
+    source: { type: "base64", media_type: document.mimeType, data: document.data },
+  }));
   const images: Anthropic.ContentBlockParam[] = (request.images ?? []).map((image) => ({
     type: "image",
     source: { type: "base64", media_type: image.mimeType, data: image.data },
   }));
-  return [...images, { type: "text", text: request.prompt }];
+  return [...documents, ...images, { type: "text", text: request.prompt }];
 }
 
 export const anthropicProvider: AiProvider = {

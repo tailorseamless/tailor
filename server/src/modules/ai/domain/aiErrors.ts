@@ -8,7 +8,7 @@ import { AppError } from "../../../shared/errors/AppError";
  */
 export const AI_FAILURE_REASONS = [
   "not_set_up",
-  "limit_reached",
+  "out_of_tokens",
   "key_rejected",
   "provider_account",
   "model_rejected",
@@ -16,6 +16,7 @@ export const AI_FAILURE_REASONS = [
   "unreachable",
   "refused",
   "bad_output",
+  "unreadable_file",
 ] as const;
 export type AiFailureReason = (typeof AI_FAILURE_REASONS)[number];
 
@@ -56,13 +57,11 @@ export function notSetUpError(audience: AiAudience): AiRequestError {
   );
 }
 
-export function limitReachedError(limit: number): AiRequestError {
+export function outOfTokensError(): AiRequestError {
   return new AiRequestError(
-    limit === 0
-      ? "AI isn't available for your business at the moment."
-      : `Your business has used all ${limit} of today's AI requests. You can use AI again tomorrow.`,
-    429,
-    "limit_reached",
+    "Your business has no AI tokens left. Contact Tailor Seamless support to get more.",
+    402,
+    "out_of_tokens",
   );
 }
 

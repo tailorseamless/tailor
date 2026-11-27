@@ -32,7 +32,9 @@ function client(apiKey: string, timeoutMs?: number): GoogleGenAI {
 
 export function geminiUserParts(request: AiGenerateRequest): Part[] {
   return [
-    ...(request.images ?? []).map((image): Part => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+    ...[...(request.documents ?? []), ...(request.images ?? [])].map((file): Part => ({
+      inlineData: { mimeType: file.mimeType, data: file.data },
+    })),
     { text: request.prompt },
   ];
 }

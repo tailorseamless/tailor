@@ -4,8 +4,9 @@ import { AdminNote } from "../../modules/admin/entities/adminNote.entity";
 import { PlatformAnnouncement } from "../../modules/admin/entities/platformAnnouncement.entity";
 import { PlatformDailyStat } from "../../modules/admin/entities/platformDailyStat.entity";
 import { AiCredential } from "../../modules/ai/entities/aiCredential.entity";
-import { AiDailyUsage } from "../../modules/ai/entities/aiDailyUsage.entity";
 import { AiSettings } from "../../modules/ai/entities/aiSettings.entity";
+import { AiTokenAccount } from "../../modules/ai/entities/aiTokenAccount.entity";
+import { AiTokenTransaction } from "../../modules/ai/entities/aiTokenTransaction.entity";
 import { AiUsageLog } from "../../modules/ai/entities/aiUsageLog.entity";
 import { JobStatus } from "../../modules/system/entities/jobStatus.entity";
 import { SecurityCounter } from "../../modules/system/entities/securityCounter.entity";
@@ -76,6 +77,7 @@ export const ENTITIES = [
   SecurityCounter,
   AiCredential,
   AiUsageLog,
-  AiDailyUsage,
+  AiTokenAccount,
+  AiTokenTransaction,
   AiSettings,
 ];

@@ -45,6 +45,7 @@ export const FEED_ACTIONS = [
   "admin.user_enabled",
   "admin.role_granted",
   "admin.role_revoked",
+  "admin.ai_tokens_granted",
   "admin.alert_resolved",
   "admin.announcement_created",
 ] as const satisfies readonly AuditAction[];

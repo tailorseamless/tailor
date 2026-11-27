@@ -8,6 +8,8 @@ import { RecordCaptureService } from "../services/recordCapture.service";
 import {
   featureModelSchema,
   featureParamsSchema,
+  grantTokensSchema,
+  listBalancesSchema,
   listModelsSchema,
   noInputSchema,
   providerParamsSchema,
@@ -25,11 +27,11 @@ export class AiController {
     res.json(ApiResponse.ok("AI status fetched", await AiService.Instance.status(authUser(req), query.feature)));
   }
 
-  /** Photos of paper records → drafts to check. Saves nothing. */
+  /** Photos or files of records → drafts to check. Saves nothing. */
   static async recordCapture(req: Request, res: Response): Promise<void> {
     input(req, noInputSchema);
-    const photos = (req.files as Express.Multer.File[] | undefined) ?? [];
-    res.json(ApiResponse.ok("Photos read", await RecordCaptureService.Instance.draft(authUser(req), photos)));
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+    res.json(ApiResponse.ok("Records read", await RecordCaptureService.Instance.draft(authUser(req), files)));
   }
 
   // The platform admin's AI page.
@@ -76,8 +78,28 @@ export class AiController {
   static async updateSettings(req: Request, res: Response): Promise<void> {
     const { body } = input(req, updateSettingsSchema);
     res.json(
-      ApiResponse.ok("AI settings saved", await AiAdminService.Instance.updateSettings(authUser(req), body.dailyLimit)),
+      ApiResponse.ok(
+        "AI settings saved",
+        await AiAdminService.Instance.updateSettings(authUser(req), body.startingTokens),
+      ),
     );
+  }
+
+  static async balances(req: Request, res: Response): Promise<void> {
+    const { query } = input(req, listBalancesSchema);
+    const result = await AiAdminService.Instance.balances(query);
+    res.json(ApiResponse.ok("Balances fetched", result.data, result.meta));
+  }
+
+  static async grantTokens(req: Request, res: Response): Promise<void> {
+    const { params, body } = input(req, grantTokensSchema);
+    const result = await AiAdminService.Instance.grant(
+      authUser(req),
+      params.businessId,
+      body.amount,
+      body.note ?? null,
+    );
+    res.json(ApiResponse.ok(body.amount > 0 ? "Tokens added" : "Tokens taken back", result));
   }
 
   static async usage(req: Request, res: Response): Promise<void> {

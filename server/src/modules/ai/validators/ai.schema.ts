@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { AI_PROVIDERS } from "../../../infrastructure/ai/aiProvider";
-import { AI_FEATURES, MAX_DAILY_LIMIT } from "../domain/aiFeatures";
+import { paginationQuery } from "../../../shared/pagination/paginate";
+import { idParams, optionalText } from "../../../shared/utils/zod";
+import { AI_FEATURES, MAX_TOKEN_AMOUNT } from "../domain/aiFeatures";
 
 export const noInputSchema = z.object({});
 
@@ -39,7 +41,25 @@ export const featureModelSchema = z.object({
 export const featureParamsSchema = z.object({ params: z.object({ feature }) });
 
 export const updateSettingsSchema = z.object({
-  body: z.object({ dailyLimit: z.number().int().min(0).max(MAX_DAILY_LIMIT) }),
+  body: z.object({ startingTokens: z.number().int().min(0).max(MAX_TOKEN_AMOUNT) }),
+});
+
+export const listBalancesSchema = z.object({
+  query: z.object({ ...paginationQuery, search: z.string().trim().min(1).max(100).optional() }),
+});
+
+/** Add (or, below zero, take back) a business's tokens. */
+export const grantTokensSchema = z.object({
+  params: idParams("businessId"),
+  body: z.object({
+    amount: z
+      .number()
+      .int()
+      .min(-MAX_TOKEN_AMOUNT)
+      .max(MAX_TOKEN_AMOUNT)
+      .refine((value) => value !== 0, "Enter an amount other than zero"),
+    note: optionalText(300),
+  }),
 });
 
 export const usageSchema = z.object({

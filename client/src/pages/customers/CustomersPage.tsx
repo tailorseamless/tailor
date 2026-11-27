@@ -116,7 +116,7 @@ export default function CustomersPage() {
                 message={
                   search
                     ? "Try part of their name or phone number."
-                    : "Add the people you sew for to keep their measurements and orders together. Have them in a notebook? Snap a photo of a page and the app fills them in."
+                    : "Add the people you sew for to keep their measurements and orders together. Have them in a notebook or a spreadsheet? Snap a page or upload the file and the app fills them in."
                 }
                 action={search ? undefined : <SnapRecordButton variant="primary" />}
               />

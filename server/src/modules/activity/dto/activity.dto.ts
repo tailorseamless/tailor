@@ -70,6 +70,7 @@ export const AUDIT_ACTIONS = [
   "admin.ai_key_removed",
   "admin.ai_feature_model_set",
   "admin.ai_settings_updated",
+  "admin.ai_tokens_granted",
   "design.created",
   "design.updated",
   "design.deleted",

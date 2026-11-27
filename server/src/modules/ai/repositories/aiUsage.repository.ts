@@ -32,7 +32,7 @@ export class AiUsageRepository extends BaseRepository<AiUsageLog> {
   }
 
   /** Every list is bounded (top 10, or grouped by a handful of features, models and error kinds). */
-  async summary(days: number, dailyLimit: number): Promise<AiUsageSummaryDTO> {
+  async summary(days: number): Promise<Omit<AiUsageSummaryDTO, "businessesOutOfTokens">> {
     const since = [days];
     const window = `created_at > now() - make_interval(days => $1)`;
     const [totals] = await AppDataSource.query(
@@ -62,15 +62,6 @@ export class AiUsageRepository extends BaseRepository<AiUsageLog> {
         WHERE l.${window} GROUP BY b.id, b.name ORDER BY COUNT(*) DESC LIMIT 10`,
       since,
     );
-    const [atLimit] =
-      dailyLimit > 0
-        ? await AppDataSource.query(
-            `SELECT COUNT(DISTINCT business_id) AS n FROM ai_daily_usage
-              WHERE day > (now() - make_interval(days => $1))::date AND used >= $2`,
-            [days, dailyLimit],
-          )
-        : [{ n: 0 }];
-
     return {
       days,
       totals: {
@@ -94,7 +85,6 @@ export class AiUsageRepository extends BaseRepository<AiUsageLog> {
       })),
       byError: byError.map((row) => ({ errorKind: row.error_kind ?? "unknown", requests: toInt(row.requests) })),
       topBusinesses: top.map((row) => ({ businessId: row.id, name: row.name, requests: toInt(row.requests) })),
-      businessesAtLimit: toInt(atLimit?.n),
     };
   }
 

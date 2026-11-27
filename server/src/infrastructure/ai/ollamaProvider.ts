@@ -59,6 +59,7 @@ export const ollamaProvider: AiProvider = {
 
   async generate(apiKey, request): Promise<AiGenerateResult> {
     try {
+      if (request.documents?.length) throw new AiProviderError("invalid_request", "Ollama can't read PDF files");
       const system = ollamaSystem(request);
       const images = request.images ?? [];
       const numCtx = contextFor(system, request.prompt, images.length, Math.min(request.maxOutputTokens, 8192));

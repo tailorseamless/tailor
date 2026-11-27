@@ -20,7 +20,7 @@ router.post(
   "/ai/record-capture",
   authorise("customer.create"),
   aiRateLimiter,
-  uploadFiles("photos", CAPTURE_LIMITS.photos, { maxMb: CAPTURE_LIMITS.photoMb, allowed: FILE_TYPES.image }),
+  uploadFiles("files", CAPTURE_LIMITS.files, { maxMb: CAPTURE_LIMITS.fileMb, allowed: FILE_TYPES.record }),
   validate(s.noInputSchema),
   C.recordCapture,
 );
@@ -29,6 +29,8 @@ router.post(
 const ai = authorise("admin.ai");
 router.get("/admin/ai", ai, validate(s.noInputSchema), C.overview);
 router.get("/admin/ai/usage", authorise("admin.read"), validate(s.usageSchema), C.usage);
+router.get("/admin/ai/tokens", authorise("admin.read"), validate(s.listBalancesSchema), C.balances);
+router.post("/admin/ai/tokens/:businessId", ai, validate(s.grantTokensSchema), C.grantTokens);
 router.patch("/admin/ai/settings", ai, validate(s.updateSettingsSchema), C.updateSettings);
 // These call the provider (and cost or count against its limits), so they are rate-limited.
 router.put("/admin/ai/credentials/:provider", ai, aiRateLimiter, validate(s.saveCredentialSchema), C.saveCredential);

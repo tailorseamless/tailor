@@ -1,4 +1,5 @@
 import type { CaptureGender, CaptureMatch, RecordCaptureDraft } from "../../types/ai.types";
+import type { MeasurementTemplate } from "../../types/customer.types";
 
 /**
  * The reviewed form of a Snap-a-record draft. Everything is editable text until it is saved; the AI's draft
@@ -39,6 +40,8 @@ export interface EditableOrder {
 export interface EditableMeasurement {
   include: boolean;
   templateId: string;
+  /** No template fits: what to call a new one. */
+  suggestedTemplate: string;
   unit: "in" | "cm";
   unitAssumed: boolean;
   measuredOn: string;
@@ -86,6 +89,7 @@ export function toEditable(draft: RecordCaptureDraft): EditableRecord[] {
     measurement: r.measurement && {
       include: true,
       templateId: r.measurement.templateId ?? "",
+      suggestedTemplate: r.measurement.suggestedTemplate ?? "",
       unit: r.measurement.unit,
       unitAssumed: r.measurement.unitAssumed,
       measuredOn: r.measurement.measuredOn ?? "",
@@ -129,8 +133,18 @@ const PHONE = /^\+?\d{7,15}$/;
 export const cleanPhone = (value: string) => value.trim().replace(/[\s().-]/g, "");
 export const toNumber = (value: string) => Number(value.trim().replace(",", "."));
 
+/** How the server compares measurement and template names. */
+export const nameKey = (name: string) => name.trim().toLowerCase();
+
+/** The measurements a template insists on that these names don't include. */
+export function missingRequired(template: MeasurementTemplate | undefined, names: string[]): string[] {
+  if (!template) return [];
+  const have = new Set(names.map(nameKey));
+  return template.fields.filter((f) => f.isRequired && !have.has(nameKey(f.name))).map((f) => f.name);
+}
+
 /** What stops this record being saved, in words. Empty when it can be. */
-export function problemsOf(record: EditableRecord): string[] {
+export function problemsOf(record: EditableRecord, templates: MeasurementTemplate[]): string[] {
   const problems: string[] = [];
   if (record.target === "new") {
     if (record.fullName.trim().length < 2) problems.push("Enter the customer's name.");
@@ -145,8 +159,11 @@ export function problemsOf(record: EditableRecord): string[] {
     if (filled.some((v) => !v.name.trim())) problems.push("Every measurement needs a name.");
     if (filled.some((v) => !(toNumber(v.value) > 0 && toNumber(v.value) <= 1000)))
       problems.push("Every measurement needs a number between 0 and 1000.");
-    const names = filled.map((v) => v.name.trim().toLowerCase());
+    const names = filled.map((v) => nameKey(v.name));
     if (new Set(names).size !== names.length) problems.push("A measurement appears twice.");
+    const template = templates.find((t) => t.id === m.templateId);
+    const missing = missingRequired(template, names);
+    if (missing.length) problems.push(`The ${template?.name} template needs: ${missing.join(", ")}.`);
   }
   for (const [i, o] of record.orders.entries()) {
     if (!o.include || o.savedId) continue;

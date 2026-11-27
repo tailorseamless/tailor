@@ -1,11 +1,11 @@
 import { aiAdminEndpoints, aiEndpoints } from "../endpoints/ai.endpoints";
 import type { AiCredentialInput, AiFeature, AiProviderId } from "../types/ai.types";
-import { useApiMutation, useApiQuery } from "./useApi";
+import { useApiMutation, useApiQuery, usePaginatedQuery } from "./useApi";
 
-/** Everything AI under one key, so any AI change refreshes status and allowance. */
+/** Everything AI under one key, so any AI change refreshes status and balances. */
 const ai = ["ai"] as const;
 
-/** Is AI available to this person, and how many requests are left today. */
+/** Is AI available to this person, and how many tokens their business has left. */
 export function useAiStatus(feature?: AiFeature, enabled = true) {
   return useApiQuery([...ai, "status", feature ?? null], () => aiEndpoints.status(feature), {
     staleTime: 60_000,
@@ -13,9 +13,9 @@ export function useAiStatus(feature?: AiFeature, enabled = true) {
   });
 }
 
-/** Snap a record: photos → drafts. Saves nothing; refreshes what is left today. The page shows the error. */
+/** Snap a record: photos or files → drafts. Saves nothing; refreshes the tokens left. The page shows the error. */
 export function useRecordCapture() {
-  return useApiMutation((photos: File[]) => aiEndpoints.recordCapture(photos), {
+  return useApiMutation((files: File[]) => aiEndpoints.recordCapture(files), {
     invalidate: [[...ai, "status"]],
     toastError: false,
   });
@@ -25,6 +25,10 @@ export function useRecordCapture() {
 
 export function useAiAdmin(enabled = true) {
   return useApiQuery([...ai, "admin"], () => aiAdminEndpoints.overview(), { enabled });
+}
+
+export function useAiBalances(params: { search?: string; page?: number }) {
+  return usePaginatedQuery([...ai, "balances", params], () => aiAdminEndpoints.balances(params));
 }
 
 export function useAiUsage(days: number) {
@@ -71,13 +75,22 @@ export function useAiAdminActions() {
       aiAdminEndpoints.setFeatureModel(vars.feature, vars.choice),
     { invalidate: [ai], success: "Model saved" },
   );
-  const updateSettings = useApiMutation((dailyLimit: number) => aiAdminEndpoints.updateSettings(dailyLimit), {
+  const updateSettings = useApiMutation((startingTokens: number) => aiAdminEndpoints.updateSettings(startingTokens), {
     invalidate: [ai],
-    success: "Daily allowance saved",
+    success: "Starting tokens saved",
   });
+  const grant = useApiMutation(
+    (vars: { businessId: string; amount: number; note?: string }) =>
+      aiAdminEndpoints.grantTokens(vars.businessId, vars.amount, vars.note),
+    {
+      invalidate: [ai],
+      success: (_r, vars) => (vars.amount > 0 ? "Tokens added" : "Tokens taken back"),
+      toastError: false,
+    },
+  );
   const test = useApiMutation((feature?: AiFeature) => aiAdminEndpoints.test(feature), {
     invalidate: [[...ai, "usage"]],
     toastError: false,
   });
-  return { checkKey, save, activate, remove, setFeatureModel, updateSettings, test };
+  return { checkKey, save, activate, remove, setFeatureModel, updateSettings, grant, test };
 }

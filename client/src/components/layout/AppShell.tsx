@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { OnboardingProvider, useOnboarding } from "../../contexts/OnboardingContext";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import { cn } from "../../utils/cn";
+import { supportLink } from "../../utils/supportLink";
 import { GuideCoach } from "../onboarding/GuideCoach";
 import { Logo } from "./AuthLayout";
 import { NAV, homePath } from "./navItems";
@@ -33,10 +34,7 @@ function Shell() {
   const tabs = items.filter((i) => i.primary).slice(0, 4);
   const more = items.filter((i) => !tabs.includes(i));
   const moreActive = more.some((i) => location.pathname.startsWith(i.to));
-  // WhatsApp with a first line that says which business is asking (never anything about its customers).
-  const supportLink = me.support?.whatsapp
-    ? `https://wa.me/${me.support.whatsapp}?text=${encodeURIComponent(`Hello, I need help with Tailor Seamless (${business.name}).`)}`
-    : null;
+  const support = supportLink(me.support?.whatsapp, business.name);
   const initials = me.user.fullName
     .split(/\s+/)
     .map((w) => w[0])
@@ -114,9 +112,9 @@ function Shell() {
                 <Menu.Item onSelect={() => navigate("/settings")} className={menuItem} data-cy="menu-settings">
                   <Settings className="size-4" aria-hidden /> Settings
                 </Menu.Item>
-                {supportLink && (
+                {support && (
                   <Menu.Item asChild className={menuItem}>
-                    <a href={supportLink} target="_blank" rel="noopener noreferrer" data-cy="menu-support">
+                    <a href={support} target="_blank" rel="noopener noreferrer" data-cy="menu-support">
                       <LifeBuoy className="size-4" aria-hidden /> Contact support
                     </a>
                   </Menu.Item>

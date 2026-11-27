@@ -44,7 +44,7 @@ export interface AiCredential {
 }
 
 export interface AiSettings {
-  dailyLimit: number;
+  startingTokens: number;
   storageReady: boolean;
   updatedAt: string | null;
 }
@@ -64,13 +64,22 @@ export interface AiCredentialInput {
 }
 
 export interface AiStatus {
+  /** The platform has AI switched on. */
+  configured: boolean;
+  /** On, and this business has tokens. */
   available: boolean;
   unavailableReason: string | null;
-  providerLabel: string | null;
-  model: string | null;
-  dailyLimit: number;
-  usedToday: number;
-  remainingToday: number;
+  tokensLeft: number;
+}
+
+/** One business's token balance, for the admin. */
+export interface AiTokenBalance {
+  businessId: string;
+  name: string;
+  tokens: number;
+  /** False until it has spent or been given tokens: it still has the starting amount. */
+  started: boolean;
+  usedLast30Days: number;
 }
 
 export interface AiUsageSummary {
@@ -87,7 +96,7 @@ export interface AiUsageSummary {
   }[];
   byError: { errorKind: string; requests: number }[];
   topBusinesses: { businessId: string; name: string; requests: number }[];
-  businessesAtLimit: number;
+  businessesOutOfTokens: number;
 }
 
 export interface AiTestResult {
@@ -110,6 +119,7 @@ export const ERROR_KIND_LABEL: Record<string, string> = {
   truncated: "Answer cut off",
   unavailable: "Provider did not respond",
   invalid_output: "Answer in the wrong format",
+  unreadable_file: "PDF could not be read",
 };
 
 export const FEATURE_LABEL: Record<string, string> = {
@@ -132,6 +142,8 @@ export interface CaptureMatch {
 export interface CaptureMeasurement {
   templateId: string | null;
   templateName: string | null;
+  /** No template fits: what to call a new one. */
+  suggestedTemplate: string | null;
   unit: "in" | "cm";
   /** The record didn't say which unit: it is the business's usual one. */
   unitAssumed: boolean;
@@ -173,8 +185,6 @@ export interface RecordCaptureDraft {
   records: CaptureRecord[];
   unreadable: string[];
   caveats: string[];
-  provider: AiProviderId;
-  providerLabel: string;
-  model: string;
-  remainingToday: number;
+  tokensUsed: number;
+  tokensLeft: number;
 }

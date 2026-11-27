@@ -1,7 +1,10 @@
 /** The words Snap a record uses in more than one place, so they say the same thing everywhere. */
 export const captureCopy = {
   reading: "Reading your records… this can take up to a minute for a full page.",
-  /** What leaves the platform, and what doesn't. */
-  disclosure: (provider: string) =>
-    `The photos are sent to ${provider} to be read, with your measurement template names, unit and currency. Nothing else about your business or customers is sent. Tailor Seamless doesn't keep the photos, and nothing is saved until you check it and press Save.`,
+  /** Shown before reading: what is left, and what happens. */
+  notice: (tokens: number) =>
+    `You have ${tokens.toLocaleString()} tokens. An AI service reads your files; nothing is saved until you press Save.`,
+  /** Shown above the draft. */
+  spent: (used: number, left: number) =>
+    `This used ${used.toLocaleString()} tokens. You have ${left.toLocaleString()} left.`,
 };

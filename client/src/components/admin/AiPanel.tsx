@@ -14,15 +14,16 @@ import { errorMessage } from "../../utils/errors";
 import { relative } from "../../utils/formatDate";
 import { Button } from "../shared/Button";
 import { Badge, Card } from "../shared/Display";
-import { Field, FormError, Input, Select } from "../shared/Field";
+import { Field, FormError, Select } from "../shared/Field";
 import { ConfirmDialog } from "../shared/Modal";
 import { EmptyState, QueryState } from "../shared/States";
 import { AiKeyForm } from "./AiKeyForm";
+import { AiTokensCard, StartingTokensCard } from "./AiTokensCard";
 import { AiUsageCard } from "./AiUsageCard";
 
 /**
  * The platform's AI: the provider keys every business's AI requests run on, the model each feature uses,
- * each business's daily allowance, a connection test, and how AI is being used. Support sees usage only.
+ * each business's tokens, a connection test, and how AI is being used. Support sees usage only.
  */
 export function AiPanel() {
   const { can } = useWorkspace();
@@ -39,7 +40,7 @@ export function AiPanel() {
               <KeysCard overview={o} />
               <FeatureModelsCard overview={o} />
               <div className="grid gap-5 lg:grid-cols-2">
-                <AllowanceCard dailyLimit={o.settings.dailyLimit} />
+                <StartingTokensCard startingTokens={o.settings.startingTokens} />
                 <TestCard overview={o} />
               </div>
               <ModelGuide />
@@ -47,6 +48,7 @@ export function AiPanel() {
           )}
         </QueryState>
       )}
+      <AiTokensCard manage={manage} />
       <AiUsageCard />
     </div>
   );
@@ -75,10 +77,8 @@ function InUse({ overview }: { overview: AiAdminOverview }) {
     );
   return (
     <div className="rounded-xl bg-success-bg px-4 py-3 text-sm text-success-fg" data-cy="ai-on">
-      AI is on. Businesses use {active.providerLabel}, model <strong>{active.model}</strong>
-      {overview.settings.dailyLimit === 0
-        ? ", but the daily allowance is 0, so they can't make any requests."
-        : `, up to ${overview.settings.dailyLimit} requests per business a day.`}
+      AI is on. Businesses use {active.providerLabel}, model <strong>{active.model}</strong>. They spend tokens from
+      their own balance (below).
     </div>
   );
 }
@@ -282,50 +282,6 @@ function FeatureModelsCard({ overview }: { overview: AiAdminOverview }) {
           />
         ))}
       </ul>
-    </Card>
-  );
-}
-
-function AllowanceCard({ dailyLimit }: { dailyLimit: number }) {
-  const { updateSettings } = useAiAdminActions();
-  const [value, setValue] = useState(String(dailyLimit));
-  useEffect(() => setValue(String(dailyLimit)), [dailyLimit]);
-  const parsed = Number(value);
-  const valid = value.trim() !== "" && Number.isInteger(parsed) && parsed >= 0 && parsed <= 10_000;
-
-  return (
-    <Card title="Daily allowance">
-      <div className="space-y-3 p-4">
-        <p className="text-sm text-fg-muted">
-          How many AI requests each business may make a day on the platform's key. It starts again at midnight in the
-          business's time zone. Requests that fail don't count. 0 switches AI off for every business.
-        </p>
-        <Field label="Requests per business per day" error={valid ? undefined : "A whole number from 0 to 10,000"}>
-          {(p) => (
-            <Input
-              {...p}
-              type="number"
-              min={0}
-              max={10_000}
-              inputMode="numeric"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              data-cy="ai-daily-limit"
-            />
-          )}
-        </Field>
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={() => updateSettings.mutate(parsed)}
-            loading={updateSettings.isPending}
-            disabled={!valid || parsed === dailyLimit}
-            data-cy="ai-daily-limit-save"
-          >
-            Save
-          </Button>
-        </div>
-      </div>
     </Card>
   );
 }

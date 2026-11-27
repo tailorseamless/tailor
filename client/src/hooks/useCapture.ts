@@ -3,14 +3,17 @@ import { useState } from "react";
 import {
   cleanPhone,
   isSaved,
+  nameKey,
   problemsOf,
   toNumber,
   type EditableOrder,
   type EditableRecord,
 } from "../components/capture/captureDraft";
+import { MAX_TEMPLATE_FIELDS, type TemplateProposal } from "../components/capture/templatePlan";
 import { customerEndpoints, measurementEndpoints } from "../endpoints/customer.endpoints";
 import { orderEndpoints } from "../endpoints/order.endpoints";
 import { ApiError } from "../transport/http";
+import type { MeasurementTemplate } from "../types/customer.types";
 import { errorMessage } from "../utils/errors";
 import { formatMoney } from "../utils/money";
 import { keys } from "./queryKeys";
@@ -24,6 +27,55 @@ import { useApiMutation } from "./useApi";
 /** Looks up the customer the server says already has a phone number, to add the record to them. */
 export function useCustomerLookup() {
   return useApiMutation((id: string) => customerEndpoints.get(id), { toastError: false });
+}
+
+/**
+ * Adds the new measurement names to their templates (or makes new templates), and says which template each
+ * record should now use. Updating a template REPLACES its list, so what is there goes back as it was.
+ */
+export function useSaveTemplates() {
+  const client = useQueryClient();
+  return useApiMutation(async (proposals: TemplateProposal[]) => {
+    const assigned = new Map<string, MeasurementTemplate>(); // record key → template
+    try {
+      const existing = (await measurementEndpoints.templates()).data;
+      for (const proposal of proposals) {
+        const name = proposal.name.trim();
+        let template = proposal.templateId
+          ? existing.find((t) => t.id === proposal.templateId)
+          : existing.find((t) => nameKey(t.name) === nameKey(name));
+        if (template) {
+          const have = new Set(template.fields.map((f) => nameKey(f.name)));
+          const added = proposal.fields
+            .filter((f) => !have.has(nameKey(f)))
+            .slice(0, Math.max(0, MAX_TEMPLATE_FIELDS - template.fields.length));
+          if (added.length) {
+            const updated = await measurementEndpoints.updateTemplate(template.id, {
+              fields: [
+                ...[...template.fields]
+                  .sort((a, b) => a.position - b.position)
+                  .map((f) => ({ name: f.name, isRequired: f.isRequired, landmark: f.landmark })),
+                ...added.map((field) => ({ name: field, isRequired: false })),
+              ],
+            });
+            existing.splice(existing.indexOf(template), 1, updated);
+            template = updated;
+          }
+        } else {
+          template = await measurementEndpoints.createTemplate({
+            name,
+            fields: proposal.fields.slice(0, MAX_TEMPLATE_FIELDS).map((field) => ({ name: field, isRequired: false })),
+          });
+          existing.push(template);
+        }
+        for (const key of proposal.recordKeys) assigned.set(key, template);
+      }
+    } finally {
+      // Even a partial run changed something.
+      await client.invalidateQueries({ queryKey: keys.measurements.templates });
+    }
+    return assigned;
+  });
 }
 
 /** What was paid on paper isn't recorded as a payment (the method isn't known): it is noted on the order. */
@@ -124,6 +176,7 @@ export function useSaveCapture(currency: string) {
   const [saving, setSaving] = useState(false);
   const save = async (
     records: EditableRecord[],
+    templates: MeasurementTemplate[],
     onRecord: (record: EditableRecord) => void,
   ): Promise<{ saved: number; failed: number }> => {
     setSaving(true);
@@ -131,7 +184,7 @@ export function useSaveCapture(currency: string) {
     let failed = 0;
     try {
       for (const record of records) {
-        if (!record.include || isSaved(record) || problemsOf(record).length) continue;
+        if (!record.include || isSaved(record) || problemsOf(record, templates).length) continue;
         const result = await saveRecord(record, currency);
         onRecord(result);
         if (result.error) failed += 1;

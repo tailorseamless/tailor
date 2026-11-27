@@ -44,11 +44,7 @@ export function AiUsageCard() {
                 value={number(u.totals.inputTokens + u.totals.outputTokens)}
                 hint={`${number(u.totals.inputTokens)} in · ${number(u.totals.outputTokens)} out`}
               />
-              <StatCard
-                label="Reached the daily allowance"
-                value={number(u.businessesAtLimit)}
-                hint="businesses, on at least one day"
-              />
+              <StatCard label="Out of tokens" value={number(u.businessesOutOfTokens)} hint="businesses, right now" />
             </div>
 
             {u.totals.requests === 0 ? (

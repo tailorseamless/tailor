@@ -1,4 +1,4 @@
-import { cleanParams, http, wrapCall } from "../transport/http";
+import { cleanParams, http, wrapCall, wrapPage } from "../transport/http";
 import type {
   AiAdminOverview,
   AiCredential,
@@ -8,6 +8,7 @@ import type {
   AiProviderId,
   AiSettings,
   AiStatus,
+  AiTokenBalance,
   AiTestResult,
   AiUsageSummary,
   RecordCaptureDraft,
@@ -24,10 +25,10 @@ const CAPTURE_TIMEOUT = 200_000;
 export const aiEndpoints = {
   status: (feature?: AiFeature) =>
     wrapCall<AiStatus>(() => http.get("/ai/status", { params: cleanParams({ feature }) })),
-  /** Photos of paper records → drafts. Saves nothing. */
-  recordCapture: (photos: File[]) => {
+  /** Photos or files of records → drafts. Saves nothing. */
+  recordCapture: (files: File[]) => {
     const form = new FormData();
-    for (const photo of photos) form.append("photos", photo);
+    for (const file of files) form.append("files", file);
     return wrapCall<RecordCaptureDraft>(() => http.post("/ai/record-capture", form, { timeout: CAPTURE_TIMEOUT }));
   },
 };
@@ -35,7 +36,14 @@ export const aiEndpoints = {
 export const aiAdminEndpoints = {
   overview: () => wrapCall<AiAdminOverview>(() => http.get("/admin/ai")),
   usage: (days: number) => wrapCall<AiUsageSummary>(() => http.get("/admin/ai/usage", { params: { days } })),
-  updateSettings: (dailyLimit: number) => wrapCall<AiSettings>(() => http.patch("/admin/ai/settings", { dailyLimit })),
+  updateSettings: (startingTokens: number) =>
+    wrapCall<AiSettings>(() => http.patch("/admin/ai/settings", { startingTokens })),
+  balances: (params: { search?: string; page?: number }) =>
+    wrapPage<AiTokenBalance>(() => http.get("/admin/ai/tokens", { params: cleanParams({ limit: 10, ...params }) })),
+  grantTokens: (businessId: string, amount: number, note?: string) =>
+    wrapCall<{ tokens: number }>(() =>
+      http.post(`/admin/ai/tokens/${businessId}`, { amount, note: note || undefined }),
+    ),
   models: (provider: AiProviderId, input: { apiKey?: string; baseUrl?: string }) =>
     wrapCall<AiModel[]>(() =>
       http.post(`/admin/ai/credentials/${provider}/models`, input, { timeout: KEY_CHECK_TIMEOUT }),

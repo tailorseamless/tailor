@@ -42,6 +42,8 @@ function sentence(item: ActivityItem): string {
       return "Platform admin access was granted";
     case "admin.role_revoked":
       return "Platform admin access was removed";
+    case "admin.ai_tokens_granted":
+      return `${who} changed the business's AI tokens`;
     case "admin.alert_resolved":
       return `${who} resolved an alert`;
     default:

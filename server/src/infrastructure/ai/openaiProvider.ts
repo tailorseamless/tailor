@@ -29,6 +29,10 @@ function client(apiKey: string, timeoutMs?: number): OpenAI {
 export function openAiUserContent(request: AiGenerateRequest): OpenAI.Chat.ChatCompletionContentPart[] {
   return [
     { type: "text", text: request.prompt },
+    ...(request.documents ?? []).map((document): OpenAI.Chat.ChatCompletionContentPart => ({
+      type: "file",
+      file: { filename: document.filename, file_data: `data:${document.mimeType};base64,${document.data}` },
+    })),
     ...(request.images ?? []).map((image): OpenAI.Chat.ChatCompletionContentPart => ({
       type: "image_url",
       image_url: { url: `data:${image.mimeType};base64,${image.data}` },
