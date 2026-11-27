@@ -5,10 +5,15 @@ import { useApiMutation, useApiQuery, usePaginatedQuery } from "./useApi";
 /** Everything AI under one key, so any AI change refreshes status and balances. */
 const ai = ["ai"] as const;
 
-/** Is AI available to this person, and how many tokens their business has left. */
+/**
+ * Is AI available to this person, and how many tokens their business has left. Shown in the header, so while AI
+ * is on it refreshes every minute: teammates spend, and the platform admin tops up.
+ */
 export function useAiStatus(feature?: AiFeature, enabled = true) {
   return useApiQuery([...ai, "status", feature ?? null], () => aiEndpoints.status(feature), {
     staleTime: 60_000,
+    refetchInterval: (query) => (query.state.data?.configured ? 60_000 : false),
+    refetchIntervalInBackground: false,
     enabled,
   });
 }

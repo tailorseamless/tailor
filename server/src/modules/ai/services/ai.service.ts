@@ -101,6 +101,12 @@ const TEST_JSON_SCHEMA = {
 export class AiService {
   static Instance = new AiService();
 
+  /**
+   * Tokens set aside for requests now running, per business. Only for what screens show: without it the total
+   * would drop during a read and jump back after it. The stored balance alone decides what may be spent.
+   */
+  private readonly inFlight = new Map<string, number>();
+
   private constructor(
     private readonly credentials = AiCredentialService.Instance,
     private readonly tokens = AiTokenRepository.Instance,
@@ -127,9 +133,17 @@ export class AiService {
     return { configured: credential !== null, available: unavailableReason === null, unavailableReason, tokensLeft };
   }
 
+  /** What the business has, counting what is only set aside for a request still running. */
   async tokensLeft(actor: Actor): Promise<number> {
     const { startingTokens } = await this.settings.get();
-    return this.tokens.balance(actor.businessId, startingTokens);
+    const balance = await this.tokens.balance(actor.businessId, startingTokens);
+    return balance + (this.inFlight.get(actor.businessId) ?? 0);
+  }
+
+  private noteInFlight(businessId: string, change: number): void {
+    const total = (this.inFlight.get(businessId) ?? 0) + change;
+    if (total > 0) this.inFlight.set(businessId, total);
+    else this.inFlight.delete(businessId);
   }
 
   /** The platform admin's check that a key and model really answer. Belongs to no business, costs no tokens. */
@@ -193,6 +207,7 @@ export class AiService {
       const { startingTokens } = await this.settings.get();
       held = await this.tokens.reserve(caller.businessId, startingTokens, HOLD_TOKENS);
       if (held === null) throw outOfTokensError();
+      this.noteInFlight(caller.businessId, held);
     }
 
     const providerLabel = AI_PROVIDER_LABELS[credential.provider];
@@ -263,6 +278,9 @@ export class AiService {
         throw mapped;
       }
       throw err;
+    } finally {
+      // Settled or given back by now: the stored balance says it all again.
+      if (held !== null && caller.businessId) this.noteInFlight(caller.businessId, -held);
     }
   }
 
