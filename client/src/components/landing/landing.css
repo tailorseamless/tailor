@@ -114,6 +114,21 @@ html.lp-smooth {
   }
 }
 
+/* ---------- Snap: the ruled notebook page and the line that reads it ---------- */
+.lp-paper {
+  background-color: #fdf8ef;
+  background-image: repeating-linear-gradient(transparent 0 31px, #cfd8ea 31px 32px);
+}
+.lp-scan {
+  top: 6%;
+  animation: lp-scan 1.3s ease-in-out infinite alternate;
+}
+@keyframes lp-scan {
+  to {
+    top: 92%;
+  }
+}
+
 /* ---------- Floating pieces ---------- */
 .lp-float {
   animation: lp-float 6s ease-in-out infinite;

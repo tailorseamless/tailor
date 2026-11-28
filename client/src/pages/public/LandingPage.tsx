@@ -7,6 +7,7 @@ import { JourneySection } from "../../components/landing/JourneySection";
 import { LandingHeader } from "../../components/landing/LandingHeader";
 import { Marquee } from "../../components/landing/Marquee";
 import { MeasureSection } from "../../components/landing/MeasureSection";
+import { SnapSection } from "../../components/landing/SnapSection";
 import { Faq, Steps } from "../../components/landing/StepsFaq";
 import "../../components/landing/landing.css";
 
@@ -35,6 +36,7 @@ export default function LandingPage() {
       <main id="main" tabIndex={-1} className="outline-none">
         <Hero />
         <Marquee />
+        <SnapSection />
         <MeasureSection />
         <JourneySection />
         <FeatureBento />

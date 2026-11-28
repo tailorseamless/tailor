@@ -88,8 +88,7 @@ export function toEditable(draft: RecordCaptureDraft, phoneCountry: string): Edi
     phone: toInternational(r.customer.phone, phoneCountry),
     // A code added here is a guess: show what the paper had, to check against.
     phoneAsWritten:
-      r.customer.phoneAsWritten ??
-      (r.customer.phone && !r.customer.phone.startsWith("+") ? r.customer.phone : null),
+      r.customer.phoneAsWritten ?? (r.customer.phone && !r.customer.phone.startsWith("+") ? r.customer.phone : null),
     gender: r.customer.gender ?? "",
     notes: r.customer.notes ?? "",
     measurement: r.measurement && {

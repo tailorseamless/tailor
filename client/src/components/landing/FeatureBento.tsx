@@ -3,6 +3,7 @@ import {
   Bell,
   Boxes,
   CalendarDays,
+  Camera,
   Images,
   Moon,
   Palette,
@@ -80,6 +81,7 @@ const FEATURES: Feature[] = [
 ];
 
 const EXTRAS: { icon: LucideIcon; label: string }[] = [
+  { icon: Camera, label: "Snap or upload old records" },
   { icon: Smartphone, label: "Installs on your phone" },
   { icon: Bell, label: "Phone notifications" },
   { icon: Images, label: "Photos on every order" },

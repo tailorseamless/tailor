@@ -7,11 +7,13 @@ import { useScrolled } from "./useLandingMotion";
 export const SIGN_UP = "/sign-in?mode=signUp";
 export const SIGN_IN = "/sign-in";
 
-const LINKS = [
+/** `wide` links show only on very wide screens, where there is room for all of them. */
+const LINKS: { href: string; label: string; wide?: boolean }[] = [
+  { href: "#snap", label: "Snap a record" },
   { href: "#measurements", label: "Measurements" },
   { href: "#journey", label: "Customers" },
   { href: "#features", label: "Features" },
-  { href: "#install", label: "Get the app" },
+  { href: "#install", label: "Get the app", wide: true },
   { href: "#faq", label: "Questions" },
 ];
 
@@ -45,11 +47,11 @@ export function LandingHeader() {
         <nav aria-label="Page sections" className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {LINKS.map((l) => (
-              <li key={l.href}>
+              <li key={l.href} className={cn(l.wide && "hidden xl:block")}>
                 <a
                   href={l.href}
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                     scrolled
                       ? "text-fg-muted hover:bg-subtle hover:text-fg"
                       : "text-[#e9d3de] hover:bg-white/10 hover:text-white",

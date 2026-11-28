@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Camera, Check } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { SIGN_IN, SIGN_UP } from "./LandingHeader";
@@ -54,10 +54,13 @@ export function Hero() {
             your customers in the loop. No more lost notebooks. No more <q>Is my outfit ready?</q> calls.
           </p>
 
-          <div className="lp-fade-up mt-9 flex flex-col gap-3 sm:flex-row sm:items-center" style={delay(800)}>
+          <div
+            className="lp-fade-up mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
+            style={delay(800)}
+          >
             <Link
               to={SIGN_UP}
-              className="group relative inline-flex h-13 items-center justify-center gap-2 overflow-hidden rounded-full bg-(--lp-cream) px-7 text-base font-semibold text-(--lp-plum) shadow-[0_10px_40px_-10px_rgb(232_180_205/0.6)] transition-transform hover:-translate-y-0.5"
+              className="group relative inline-flex h-13 items-center justify-center gap-2 overflow-hidden rounded-full bg-(--lp-cream) px-7 text-base font-semibold whitespace-nowrap text-(--lp-plum) lg:px-5 xl:px-7shadow-[0_10px_40px_-10px_rgb(232_180_205/0.6)] transition-transform hover:-translate-y-0.5"
               data-cy="hero-create-account"
             >
               Open your workshop
@@ -65,12 +68,29 @@ export function Hero() {
             </Link>
             <Link
               to={SIGN_IN}
-              className="inline-flex h-13 items-center justify-center rounded-full border border-white/25 bg-(--lp-ink)/40 px-7 text-base font-medium text-(--lp-cream) backdrop-blur-sm transition-colors hover:border-white/50 hover:bg-white/10"
+              className="inline-flex h-13 items-center justify-center rounded-full border border-white/25 bg-(--lp-ink)/40 px-7 text-base font-medium whitespace-nowrap text-(--lp-cream) backdrop-blur-sm lg:px-5 xl:px-7 transition-colors hover:border-white/50 hover:bg-white/10"
               data-cy="hero-sign-in"
             >
               I already have an account
             </Link>
           </div>
+
+          {/* The headline feature, one tap from its own section. */}
+          <a
+            href="#snap"
+            className="lp-fade-up group mt-6 flex w-fit max-w-full items-center gap-3 rounded-2xl border border-white/15 bg-(--lp-ink)/40 py-2.5 pr-4 pl-2.5 text-sm text-[#e9d3de] backdrop-blur-sm transition-colors hover:border-(--lp-brass)"
+            style={delay(880)}
+            data-cy="hero-snap"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-(--lp-brass) text-(--lp-ink)">
+              <Camera className="size-5" aria-hidden />
+            </span>
+            <span>
+              <strong className="block font-semibold text-(--lp-cream)">New: snap your notebook</strong>
+              Take a photo of a page and your customers are filled in.
+            </span>
+            <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-1" aria-hidden />
+          </a>
 
           <ul className="lp-fade-up mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#e9d3de]" style={delay(950)}>
             {PROMISES.map((p) => (

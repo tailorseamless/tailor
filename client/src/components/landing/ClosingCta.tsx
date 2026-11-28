@@ -37,8 +37,8 @@ export function ClosingCta() {
             Your craft deserves better than a <em className="lp-shimmer pr-1 font-normal italic">notebook.</em>
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-[#e9d3de] sm:text-lg">
-            Bring your customers, measurements, orders and money together today. Your future self, and your customers,
-            will thank you.
+            Bring your customers, measurements, orders and money together today. Start by snapping a page of your
+            notebook. Your future self, and your customers, will thank you.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
@@ -80,6 +80,7 @@ export function LandingFooter() {
         <nav aria-label="Footer">
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             {[
+              { href: "#snap", label: "Snap a record" },
               { href: "#features", label: "Features" },
               { href: "#measurements", label: "Measurements" },
               { href: "#install", label: "Get the app" },

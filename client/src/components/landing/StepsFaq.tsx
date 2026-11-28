@@ -7,8 +7,8 @@ const STEPS = [
     body: "Sign up with your email or Google and name your business. Add your branches and invite your team when you're ready.",
   },
   {
-    title: "Add customers and measurements",
-    body: "Build a measurement template for each kind of garment you make. Each customer's sizes are saved once and ready for every order.",
+    title: "Bring in your customers",
+    body: "Snap a page of your measurement book or upload a spreadsheet and they're filled in for you, or add them by hand. Each customer's sizes are ready for every order.",
   },
   {
     title: "Take orders and get paid",
@@ -62,6 +62,14 @@ export function Steps() {
 
 const FAQS = [
   {
+    q: "Do I have to type in all my old records?",
+    a: "No. Take a photo of a page from your measurement book or an order card, or upload an Excel, Word, CSV, text or PDF file. Tailor Seamless fills in the customers, measurements and orders it finds. Check them against your page, fix anything it misread, then save.",
+  },
+  {
+    q: "Is there a limit to snapping records?",
+    a: "Each read uses AI tokens from your workshop's balance, which you can see at the top of the app. When you run low, contact support for more.",
+  },
+  {
     q: "Does it work on my phone?",
     a: "Yes. Tailor Seamless works in any modern browser on phones, tablets and computers, and you can install it on your home screen so it opens like an app, with notifications.",
   },
@@ -83,7 +91,7 @@ const FAQS = [
   },
   {
     q: "Is my business data private?",
-    a: "Each workshop's data is kept separate, and every request is checked against the person's role. You can export your records from Reports, and delete your business from Settings at any time.",
+    a: "Each workshop's data is kept separate, and every request is checked against the person's role. When you snap or upload a record, that photo or file is sent to an AI service to be read. You can export your records from Reports, and delete your business from Settings at any time.",
   },
 ];
 
