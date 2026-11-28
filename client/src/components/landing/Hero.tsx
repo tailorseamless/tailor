@@ -31,7 +31,7 @@ export function Hero() {
 
           <h1
             id="hero-title"
-            className="mt-6 font-display text-[clamp(2.6rem,6.6vw,4.6rem)] leading-[0.98] max-[359px]:text-[2.3rem] font-semibold tracking-[-0.025em] text-(--lp-cream)"
+            className="mt-6 font-display text-[clamp(2.6rem,6.6vw,4.6rem)] leading-[0.98] max-[359px]:text-[2.3rem] lg:text-[clamp(2.6rem,6vw,4.6rem)] font-semibold tracking-[-0.025em] text-(--lp-cream)"
           >
             <span className="lp-line">
               <span style={delay(150)}>From the first</span>

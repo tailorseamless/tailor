@@ -301,6 +301,19 @@ export function cleanPhone(raw: string): string {
   return /^\+?\d{7,15}$/.test(value) ? value : "";
 }
 
+/** The digits that stay the same however a number is written: no "+", spaces or leading zeros. */
+export const significantDigits = (phone: string): string => phone.replace(/\D/g, "").replace(/^0+/, "");
+
+/**
+ * Whether two numbers are the same line. Paper says "0803 000 1234" where the app saved "+2348030001234": one
+ * ends with the other, the shared part is a whole local number, and what is extra is only a country code.
+ */
+export function samePhone(a: string, b: string): boolean {
+  const [short, long] = [significantDigits(a), significantDigits(b)].sort((x, y) => x.length - y.length);
+  if (short === long) return short.length >= 7;
+  return short.length >= 8 && long.length - short.length <= 4 && long.endsWith(short);
+}
+
 /** A real calendar day as YYYY-MM-DD, else null. `notAfter` rejects days in the future. */
 export function cleanDay(raw: string, notAfter?: string): string | null {
   const day = raw.trim();

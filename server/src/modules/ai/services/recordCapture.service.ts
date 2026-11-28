@@ -18,7 +18,9 @@ import {
   CAPTURE_SYSTEM_PROMPT,
   buildCapturePrompt,
   captureReplySchema,
+  samePhone,
   shapeCapture,
+  significantDigits,
   type CaptureRecordDraft,
 } from "../domain/recordCapture";
 import { fit } from "../domain/lenient";
@@ -194,8 +196,10 @@ export class RecordCaptureService {
   private async match(actor: Actor, record: CaptureRecordDraft): Promise<CaptureMatchDTO | null> {
     const { phone, fullName } = record.customer;
     if (phone) {
-      const found = await this.customers.list(actor, { search: phone, page: 1, limit: 5, sort: "recent" });
-      const same = found.data.find((c) => c.phone === phone);
+      // Search by the last digits, then compare: the saved number may carry a country code the paper leaves out.
+      const search = significantDigits(phone).slice(-8);
+      const found = await this.customers.list(actor, { search, page: 1, limit: 20, sort: "recent" });
+      const same = found.data.find((c) => samePhone(c.phone, phone));
       if (same) return { id: same.id, fullName: same.fullName, phone: same.phone, by: "phone" };
     }
     if (fullName.length >= 2) {

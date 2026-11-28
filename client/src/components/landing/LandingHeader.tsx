@@ -51,7 +51,7 @@ export function LandingHeader() {
                 <a
                   href={l.href}
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                    "rounded-lg px-2.5 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                     scrolled
                       ? "text-fg-muted hover:bg-subtle hover:text-fg"
                       : "text-[#e9d3de] hover:bg-white/10 hover:text-white",

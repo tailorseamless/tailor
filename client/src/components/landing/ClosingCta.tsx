@@ -43,7 +43,7 @@ export function ClosingCta() {
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               to={SIGN_UP}
-              className="group inline-flex h-13 w-full items-center justify-center gap-2 rounded-full bg-(--lp-cream) px-8 text-base font-semibold text-(--lp-plum) shadow-[0_10px_40px_-10px_rgb(232_180_205/0.6)] transition-transform hover:-translate-y-0.5 sm:w-auto"
+              className="group inline-flex h-13 w-full items-center justify-center gap-2 rounded-full bg-(--lp-cream) px-4 text-base font-semibold whitespace-nowrap text-(--lp-plum) sm:px-8shadow-[0_10px_40px_-10px_rgb(232_180_205/0.6)] transition-transform hover:-translate-y-0.5 sm:w-auto"
               data-cy="cta-create-account"
             >
               Open your workshop
