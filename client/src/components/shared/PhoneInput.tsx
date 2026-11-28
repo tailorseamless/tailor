@@ -16,6 +16,8 @@ interface PhoneInputProps {
   onChange: (value: string) => void;
   onBlur?: () => void;
   disabled?: boolean;
+  /** Where the picker starts when the number doesn't say. Left out: the country picked last time. */
+  defaultCountry?: string;
   /** Spread from <Field>: the label's id and the error wiring. */
   id?: string;
   "aria-invalid"?: boolean;
@@ -28,8 +30,8 @@ interface PhoneInputProps {
  * "NG +234" label, so phones open their own native list. The value is always one string, so it
  * drops in wherever a plain phone <Input> was. Pasting "+44 7700 900123" switches the country by itself.
  */
-export function PhoneInput({ value, onChange, onBlur, disabled, ...rest }: PhoneInputProps) {
-  const [iso, setIso] = useState(() => parsePhone(value).iso ?? rememberedCountry());
+export function PhoneInput({ value, onChange, onBlur, disabled, defaultCountry, ...rest }: PhoneInputProps) {
+  const [iso, setIso] = useState(() => parsePhone(value).iso ?? defaultCountry ?? rememberedCountry());
   const [national, setNational] = useState(() => parsePhone(value).national);
   // What we last sent up, so we can tell a change made by the form (a reset, another record) from our own.
   const sent = useRef(value);

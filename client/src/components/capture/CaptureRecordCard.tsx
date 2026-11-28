@@ -8,6 +8,7 @@ import { Button, IconButton } from "../shared/Button";
 import { Badge, Card } from "../shared/Display";
 import { DatePicker } from "../shared/DatePicker";
 import { Field, FormError, Input, Select, Textarea } from "../shared/Field";
+import { PhoneInput } from "../shared/PhoneInput";
 import {
   isSaved,
   problemsOf,
@@ -25,6 +26,8 @@ interface Props {
   currency: string;
   timeZone: string;
   today: string;
+  /** Where the phone's country picker starts when there's no number. */
+  phoneCountry: string;
   /** Saving is under way: nothing can change. */
   busy: boolean;
 }
@@ -57,7 +60,8 @@ function Checkbox({
 }
 
 /** One customer found in the photos, with their measurements and orders, ready to check and change. */
-export function CaptureRecordCard({ index, record, onChange, templates, currency, timeZone, today, busy }: Props) {
+export function CaptureRecordCard(props: Props) {
+  const { index, record, onChange, templates, currency, timeZone, today, phoneCountry, busy } = props;
   const lookup = useCustomerLookup();
   const saved = isSaved(record);
   const problems = record.include && !saved ? problemsOf(record, templates) : [];
@@ -183,13 +187,12 @@ export function CaptureRecordCard({ index, record, onChange, templates, currency
                   }
                 >
                   {(p) => (
-                    <Input
+                    <PhoneInput
                       {...p}
                       value={record.phone}
-                      inputMode="tel"
-                      maxLength={30}
+                      defaultCountry={phoneCountry}
                       disabled={customerLocked}
-                      onChange={(e) => set({ phone: e.target.value, duplicateOf: null, confirmDuplicate: false })}
+                      onChange={(phone) => set({ phone, duplicateOf: null, confirmDuplicate: false })}
                     />
                   )}
                 </Field>

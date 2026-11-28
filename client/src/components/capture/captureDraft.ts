@@ -1,5 +1,6 @@
 import type { CaptureGender, CaptureMatch, RecordCaptureDraft } from "../../types/ai.types";
 import type { MeasurementTemplate } from "../../types/customer.types";
+import { toInternational } from "../../utils/countries";
 
 /**
  * The reviewed form of a Snap-a-record draft. Everything is editable text until it is saved; the AI's draft
@@ -74,7 +75,8 @@ export interface EditableRecord {
 
 const uid = () => crypto.randomUUID();
 
-export function toEditable(draft: RecordCaptureDraft): EditableRecord[] {
+/** `phoneCountry` is assumed for numbers written without a country code. */
+export function toEditable(draft: RecordCaptureDraft, phoneCountry: string): EditableRecord[] {
   return draft.records.map((r) => ({
     key: uid(),
     include: true,
@@ -82,8 +84,12 @@ export function toEditable(draft: RecordCaptureDraft): EditableRecord[] {
     target: r.match?.by === "phone" ? "existing" : "new",
     match: r.match,
     fullName: r.customer.fullName,
-    phone: r.customer.phone,
-    phoneAsWritten: r.customer.phoneAsWritten,
+    // So the code the picker shows is the one that gets saved.
+    phone: toInternational(r.customer.phone, phoneCountry),
+    // A code added here is a guess: show what the paper had, to check against.
+    phoneAsWritten:
+      r.customer.phoneAsWritten ??
+      (r.customer.phone && !r.customer.phone.startsWith("+") ? r.customer.phone : null),
     gender: r.customer.gender ?? "",
     notes: r.customer.notes ?? "",
     measurement: r.measurement && {

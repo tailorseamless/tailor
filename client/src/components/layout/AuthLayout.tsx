@@ -26,6 +26,17 @@ export function AuthLayout({ title, subtitle, children, homeLink }: AuthLayoutPr
   const showHome = homeLink && !installPrompt.installed();
   return (
     <div className="flex min-h-dvh flex-col items-center bg-canvas px-4 py-10 sm:justify-center">
+      {/* Top on phones, where below the card is off-screen; under the card from `sm` up. */}
+      {showHome && (
+        <Link
+          to="/"
+          className="-mt-6 mb-2 -ml-3 inline-flex min-h-10 items-center gap-1.5 self-start rounded-lg px-3 text-sm text-fg-muted hover:text-fg sm:order-last sm:mt-6 sm:mb-0 sm:ml-0 sm:self-center"
+          data-cy="auth-back-home"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to home
+        </Link>
+      )}
       {showHome ? (
         <Link to="/" aria-label="Tailor Seamless home" className="mb-6 rounded-lg" data-cy="auth-logo-home">
           <Logo />
@@ -38,16 +49,6 @@ export function AuthLayout({ title, subtitle, children, homeLink }: AuthLayoutPr
         {subtitle && <p className="mt-1 text-sm text-fg-muted">{subtitle}</p>}
         <div className="mt-6">{children}</div>
       </main>
-      {showHome && (
-        <Link
-          to="/"
-          className="mt-6 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-fg-muted hover:text-fg"
-          data-cy="auth-back-home"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Back to home
-        </Link>
-      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { useSaveCapture, useSaveTemplates } from "../../hooks/useCapture";
 import { useMeasurementTemplates } from "../../hooks/useCustomers";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import type { RecordCaptureDraft } from "../../types/ai.types";
+import { parsePhone, rememberedCountry } from "../../utils/countries";
 import { errorMessage } from "../../utils/errors";
 import { prepareRecordFile, recordFileProblem } from "../../utils/recordFiles";
 import { PhotoProblem } from "../../utils/shrinkPhoto";
@@ -53,6 +54,8 @@ export default function CapturePage() {
   const [offer, setOffer] = useState<TemplateProposal[] | null>(null);
   const [startingOver, setStartingOver] = useState(false);
   const today = todayIn(timeZone);
+  // Numbers on a business's own paper are most likely local to it.
+  const phoneCountry = parsePhone(business.phone ?? "").iso ?? rememberedCountry();
   const canEditTemplates = can("measurement.template.manage");
   const support = supportLink(me.support?.whatsapp, business.name);
 
@@ -80,7 +83,7 @@ export default function CapturePage() {
     read.mutate(ready, {
       onSuccess: (data) => {
         setDraft(data);
-        setRecords(toEditable(data));
+        setRecords(toEditable(data, phoneCountry));
         setResult(null);
       },
     });
@@ -254,6 +257,7 @@ export default function CapturePage() {
                   currency={currency}
                   timeZone={timeZone}
                   today={today}
+                  phoneCountry={phoneCountry}
                   busy={busy}
                 />
               ))}

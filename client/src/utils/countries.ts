@@ -86,6 +86,20 @@ export function buildPhone(dial: string, national: string): string {
   return digits ? `+${dial}${digits}` : "";
 }
 
+/**
+ * A number as someone wrote it ("0803…", "00234…", "234803…") in international form, taking `iso` as the country
+ * when the number doesn't name one.
+ */
+export function toInternational(written: string, iso: string): string {
+  const text = written.replace(/[\s().-]/g, "");
+  if (!text || text.startsWith("+")) return text;
+  if (text.startsWith("00")) return `+${text.slice(2)}`;
+  const { dial } = findCountry(iso);
+  // It already carries the code, only without the "+": too long to be a local number.
+  if (text.startsWith(dial) && text.length > 10) return `+${text}`;
+  return buildPhone(dial, text);
+}
+
 /** The country this person picked last time, so the next phone field starts there. */
 export function rememberedCountry(): string {
   try {
